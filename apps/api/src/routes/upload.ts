@@ -28,6 +28,7 @@ export default async function uploadRoutes(
     Reply: UploadResponse;
   }>("/upload", async (request: FastifyRequest, reply: FastifyReply) => {
     try {
+      // This method is provided byt he @fastify/multipart plugin
       const data = await request.file();
 
       if (!data) {
@@ -83,12 +84,15 @@ export default async function uploadRoutes(
   });
 
   // Get upload configuration info
-  fastify.get("/upload/info", async (_request: FastifyRequest, reply: FastifyReply) => {
-    return reply.code(200).send({
-      maxFileSize: MAX_FILE_SIZE,
-      maxFileSizeMB: MAX_FILE_SIZE / (1024 * 1024),
-      allowedMimeTypes: ALLOWED_MIME_TYPES,
-      allowedExtensions: [".pdf", ".txt", ".csv", ".md"],
-    });
-  });
+  fastify.get(
+    "/upload/info",
+    async (_request: FastifyRequest, reply: FastifyReply) => {
+      return reply.code(200).send({
+        maxFileSize: MAX_FILE_SIZE,
+        maxFileSizeMB: MAX_FILE_SIZE / (1024 * 1024),
+        allowedMimeTypes: ALLOWED_MIME_TYPES,
+        allowedExtensions: [".pdf", ".txt", ".csv", ".md"],
+      });
+    }
+  );
 }
