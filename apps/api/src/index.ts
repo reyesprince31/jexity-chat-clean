@@ -3,12 +3,24 @@ import dotenv from "dotenv";
 import multipart from "@fastify/multipart";
 import uploadRoutes from "./routes/upload.js";
 
+import { fastifyPlugin } from "inngest/fastify";
+import { functions } from "./inngest/index";
+import { inngest } from "./inngest/client";
+
 dotenv.config();
 
 const PORT = process.env.PORT || 3001;
 
 const fastify = Fastify({
   logger: true,
+});
+
+// Register Inngest
+// This automatically adds the "/api/inngest" routes to your server
+fastify.register(fastifyPlugin, {
+  client: inngest,
+  functions,
+  options: {},
 });
 
 // Register multipart plugin for file uploads

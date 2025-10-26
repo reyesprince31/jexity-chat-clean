@@ -1,4 +1,5 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import { inngest } from "../inngest/client.js";
 
 // Allowed file types
 const ALLOWED_MIME_TYPES = [
@@ -18,6 +19,7 @@ interface UploadResponse {
     mimetype: string;
     size: number;
   };
+  eventId?: string;
 }
 
 export default async function uploadRoutes(
@@ -57,22 +59,30 @@ export default async function uploadRoutes(
         });
       }
 
-      // Here you would typically:
-      // 1. Save the file to disk or cloud storage
-      // 2. Process the file content
-      // 3. Store metadata in a database
-      // For now, we'll just return success with file info
+      // Send event to Inngest for background processing
+      const eventId = await inngest.send({
+        name: "app/file.uploaded",
+        data: {
+          filename: data.filename,
+          mimetype: data.mimetype,
+          size: buffer.length,
+          buffer: buffer.toString("base64"), // Convert buffer to base64 for event payload
+        },
+      });
 
-      fastify.log.info(`File uploaded: ${data.filename} (${data.mimetype})`);
+      fastify.log.info(
+        `File upload triggered processing: ${data.filename} (${data.mimetype}), Event ID: ${eventId}`
+      );
 
-      return reply.code(200).send({
+      return reply.code(202).send({
         success: true,
-        message: "File uploaded successfully",
+        message: "File uploaded successfully and queued for processing",
         file: {
           filename: data.filename,
           mimetype: data.mimetype,
           size: buffer.length,
         },
+        eventId: eventId.ids[0],
       });
     } catch (error) {
       fastify.log.error(error);
