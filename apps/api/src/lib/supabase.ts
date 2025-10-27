@@ -14,7 +14,6 @@ export interface Document {
   storage_bucket: string;
   extracted_text_length: number;
   has_embedding: boolean;
-  embedding_dimensions: number | null;
   user_id: string | null;
   created_at: string;
   updated_at: string;
@@ -30,7 +29,6 @@ export interface CreateDocumentInput {
   storage_bucket: string;
   extracted_text_length: number;
   has_embedding: boolean;
-  embedding_dimensions?: number;
   user_id?: string;
 }
 
@@ -177,7 +175,6 @@ export async function createDocumentRecord(
       storage_bucket: input.storage_bucket,
       extracted_text_length: input.extracted_text_length,
       has_embedding: input.has_embedding,
-      embedding_dimensions: input.embedding_dimensions || null,
       user_id: input.user_id || null,
     })
     .select()

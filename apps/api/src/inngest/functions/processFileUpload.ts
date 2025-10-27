@@ -1,11 +1,11 @@
-import { inngest } from "./client";
-import { createEmbedding } from "../lib/embeddings";
+import { inngest } from "../client";
+import { createEmbedding } from "../../lib/embeddings";
 import { PDFParse } from "pdf-parse";
 import {
   getDocumentById,
   updateDocumentRecord,
   downloadFileFromStorage,
-} from "../lib/supabase";
+} from "../../lib/supabase";
 
 export const processFileUpload = inngest.createFunction(
   {
@@ -26,7 +26,9 @@ export const processFileUpload = inngest.createFunction(
         throw new Error(`Document not found with ID: ${documentId}`);
       }
 
-      console.log(`Document found: ${document.filename} (${document.mimetype})`);
+      console.log(
+        `Document found: ${document.filename} (${document.mimetype})`
+      );
       console.log(`Storage path: ${document.storage_path}`);
 
       return document;
@@ -129,7 +131,6 @@ export const processFileUpload = inngest.createFunction(
 
         return {
           embedding,
-          dimensions: embedding.length,
         };
       });
     } else {
@@ -139,21 +140,23 @@ export const processFileUpload = inngest.createFunction(
     }
 
     // Step 5: Update document record with processing results
-    const updatedDocument = await step.run("update-document-metadata", async () => {
-      console.log(`Updating document metadata for: ${filename}`);
+    const updatedDocument = await step.run(
+      "update-document-metadata",
+      async () => {
+        console.log(`Updating document metadata for: ${filename}`);
 
-      const document = await updateDocumentRecord(documentId, {
-        extracted_text_length: processResult.textLength,
-        has_embedding: !!embeddingResult,
-        embedding_dimensions: embeddingResult?.dimensions,
-      });
+        const document = await updateDocumentRecord(documentId, {
+          extracted_text_length: processResult.textLength,
+          has_embedding: !!embeddingResult,
+        });
 
-      console.log(`Document updated with ID: ${document.id}`);
-      console.log(`Extracted text length: ${document.extracted_text_length}`);
-      console.log(`Has embedding: ${document.has_embedding}`);
+        console.log(`Document updated with ID: ${document.id}`);
+        console.log(`Extracted text length: ${document.extracted_text_length}`);
+        console.log(`Has embedding: ${document.has_embedding}`);
 
-      return document;
-    });
+        return document;
+      }
+    );
 
     return {
       success: true,
@@ -168,7 +171,6 @@ export const processFileUpload = inngest.createFunction(
         publicUrl: updatedDocument.public_url,
         extractedTextLength: updatedDocument.extracted_text_length,
         hasEmbedding: updatedDocument.has_embedding,
-        embeddingDimensions: updatedDocument.embedding_dimensions,
         uploadedAt: updatedDocument.created_at,
         updatedAt: updatedDocument.updated_at,
       },

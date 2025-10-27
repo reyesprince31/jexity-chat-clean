@@ -1,3 +1,3 @@
-import { processFileUpload } from "./processFileUpload";
+import { processFileUpload } from "./functions/processFileUpload";
 
 export const functions = [processFileUpload];

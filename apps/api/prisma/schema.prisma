@@ -1,0 +1,31 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model documents {
+  id                    String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  content_hash          String                 @unique(map: "idx_documents_content_hash")
+  filename              String
+  mimetype              String
+  size                  BigInt
+  storage_path          String
+  public_url            String
+  storage_bucket        String
+  extracted_text_length Int?                   @default(0)
+  has_embedding         Boolean?               @default(false)
+  user_id               String?                @db.Uuid
+  created_at            DateTime               @default(now()) @db.Timestamptz(6)
+  updated_at            DateTime               @default(now()) @db.Timestamptz(6)
+  embedding             Unsupported("vector")?
+
+  @@index([created_at(sort: Desc)], map: "idx_documents_created_at")
+  @@index([user_id], map: "idx_documents_user_id")
+}
