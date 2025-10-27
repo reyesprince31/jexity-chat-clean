@@ -1,57 +1,58 @@
 import { inngest } from "./client";
-import { createEmbedding } from "../consts/embeddings";
+import { createEmbedding } from "../lib/embeddings";
 import { PDFParse } from "pdf-parse";
-import { uploadFileToStorage } from "../lib/supabase";
+import {
+  getDocumentById,
+  updateDocumentRecord,
+  downloadFileFromStorage,
+} from "../lib/supabase";
 
 export const processFileUpload = inngest.createFunction(
   {
-    id: "process-file-upload",
-    name: "Process File Upload",
+    id: "process-document",
+    name: "Process Document",
   },
-  { event: "app/file.uploaded" },
+  { event: "app/document.process" },
   async ({ event, step }) => {
-    const { filename, mimetype, size, buffer } = event.data;
+    const { documentId } = event.data;
 
-    // Step 1: Validate and decode file buffer
-    await step.run("decode-file-buffer", async () => {
-      const fileBuffer = Buffer.from(buffer, "base64");
-      // File buffer is now ready for processing in subsequent steps
-      return { decoded: true, size: fileBuffer.length };
+    // Step 1: Fetch document from database
+    const documentResult = await step.run("fetch-document", async () => {
+      console.log(`Fetching document with ID: ${documentId}`);
+
+      const document = await getDocumentById(documentId);
+
+      if (!document) {
+        throw new Error(`Document not found with ID: ${documentId}`);
+      }
+
+      console.log(`Document found: ${document.filename} (${document.mimetype})`);
+      console.log(`Storage path: ${document.storage_path}`);
+
+      return document;
     });
 
-    // Step 2: Save file to Supabase Storage
-    const storageResult = await step.run("save-to-storage", async () => {
-      console.log(`Saving file: ${filename} (${mimetype}) - ${size} bytes`);
+    const { filename, mimetype, storage_path: storagePath } = documentResult;
 
-      // Decode the buffer from base64
-      const fileBuffer = Buffer.from(buffer, "base64");
+    // Step 2: Download file from storage
+    const fileBufferBase64 = await step.run("download-file", async () => {
+      console.log(`Downloading file from storage: ${storagePath}`);
 
-      // Upload to Supabase Storage
-      const uploadResult = await uploadFileToStorage(
-        fileBuffer,
-        filename,
-        mimetype
-      );
+      const buffer = await downloadFileFromStorage(storagePath);
 
-      console.log(`File uploaded successfully to: ${uploadResult.path}`);
-      console.log(`Public URL: ${uploadResult.publicUrl}`);
+      console.log(`File downloaded: ${buffer.length} bytes`);
 
-      return {
-        saved: true,
-        path: uploadResult.path,
-        publicUrl: uploadResult.publicUrl,
-        bucket: uploadResult.bucket,
-        timestamp: new Date().toISOString(),
-      };
+      // Return as base64 to ensure proper serialization across Inngest steps
+      return buffer.toString("base64");
     });
 
     // Step 3: Process file content and extract text
     const processResult = await step.run("process-file-content", async () => {
-      console.log(`Decoding buffer for: ${filename}`);
-      console.log(`Buffer length (base64): ${buffer.length}`);
+      // Convert base64 back to Buffer
+      const fileBuffer = Buffer.from(fileBufferBase64, "base64");
 
-      const fileBuffer = Buffer.from(buffer, "base64");
-      console.log(`Decoded buffer length: ${fileBuffer.length}`);
+      console.log(`Processing file content for: ${filename}`);
+      console.log(`Buffer length: ${fileBuffer.length} bytes`);
 
       // Check if file is text-based or PDF
       const isTextFile =
@@ -81,7 +82,7 @@ export const processFileUpload = inngest.createFunction(
       } else if (isPdf) {
         try {
           console.log(`Extracting text from PDF: ${filename}`);
-          // PDFParse v2 expects options object with data property (decoded buffer)
+          // PDFParse v2 expects options object with data property
           const parser = new PDFParse({ data: fileBuffer });
           const result = await parser.getText();
           extractedText = result.text;
@@ -105,12 +106,9 @@ export const processFileUpload = inngest.createFunction(
       }
 
       return {
-        processed: true,
-        contentLength: size,
         extractedText,
         textLength: extractedText.length,
         canCreateEmbedding,
-        processedAt: new Date().toISOString(),
       };
     });
 
@@ -132,7 +130,6 @@ export const processFileUpload = inngest.createFunction(
         return {
           embedding,
           dimensions: embedding.length,
-          createdAt: new Date().toISOString(),
         };
       });
     } else {
@@ -141,33 +138,39 @@ export const processFileUpload = inngest.createFunction(
       );
     }
 
-    // Step 5: Store metadata in database (placeholder)
-    const metadataResult = await step.run("store-metadata", async () => {
-      // Here you would:
-      // - Save file metadata to database
-      // - Create database record with file info
-      console.log(`Storing metadata for: ${filename}`);
+    // Step 5: Update document record with processing results
+    const updatedDocument = await step.run("update-document-metadata", async () => {
+      console.log(`Updating document metadata for: ${filename}`);
 
-      return {
-        id: `file_${Date.now()}`,
-        filename,
-        mimetype,
-        size,
-        storagePath: storageResult.path,
-        uploadedAt: new Date().toISOString(),
-      };
+      const document = await updateDocumentRecord(documentId, {
+        extracted_text_length: processResult.textLength,
+        has_embedding: !!embeddingResult,
+        embedding_dimensions: embeddingResult?.dimensions,
+      });
+
+      console.log(`Document updated with ID: ${document.id}`);
+      console.log(`Extracted text length: ${document.extracted_text_length}`);
+      console.log(`Has embedding: ${document.has_embedding}`);
+
+      return document;
     });
 
     return {
       success: true,
-      file: {
-        filename,
-        mimetype,
-        size,
-        storage: storageResult,
-        processing: processResult,
-        embedding: embeddingResult,
-        metadata: metadataResult,
+      message: "Document processed successfully",
+      document: {
+        id: updatedDocument.id,
+        filename: updatedDocument.filename,
+        mimetype: updatedDocument.mimetype,
+        size: updatedDocument.size,
+        contentHash: updatedDocument.content_hash,
+        storagePath: updatedDocument.storage_path,
+        publicUrl: updatedDocument.public_url,
+        extractedTextLength: updatedDocument.extracted_text_length,
+        hasEmbedding: updatedDocument.has_embedding,
+        embeddingDimensions: updatedDocument.embedding_dimensions,
+        uploadedAt: updatedDocument.created_at,
+        updatedAt: updatedDocument.updated_at,
       },
     };
   }

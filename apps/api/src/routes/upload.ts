@@ -1,5 +1,11 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import { createHash } from "crypto";
 import { inngest } from "../inngest/client.js";
+import {
+  uploadFileToStorage,
+  findDocumentByHash,
+  createDocumentRecord,
+} from "../lib/supabase.js";
 
 // Allowed file types
 const ALLOWED_MIME_TYPES = [
@@ -14,10 +20,16 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 interface UploadResponse {
   success: boolean;
   message: string;
-  file?: {
+  document?: {
+    id: string;
     filename: string;
     mimetype: string;
     size: number;
+    storagePath: string;
+    publicUrl: string;
+    contentHash: string;
+    isDuplicate: boolean;
+    uploadedAt: string;
   };
   eventId?: string;
 }
@@ -30,7 +42,7 @@ export default async function uploadRoutes(
     Reply: UploadResponse;
   }>("/upload", async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-      // This method is provided byt he @fastify/multipart plugin
+      // This method is provided by the @fastify/multipart plugin
       const data = await request.file();
 
       if (!data) {
@@ -59,28 +71,92 @@ export default async function uploadRoutes(
         });
       }
 
-      // Send event to Inngest for background processing
+      // Compute content hash for duplicate detection
+      const hash = createHash("sha256");
+      hash.update(buffer);
+      const contentHash = hash.digest("hex");
+
+      fastify.log.info(
+        `Processing file upload: ${data.filename} (${data.mimetype}), Hash: ${contentHash}`
+      );
+
+      // Check for duplicate document
+      const existingDoc = await findDocumentByHash(contentHash);
+
+      if (existingDoc) {
+        fastify.log.info(
+          `Duplicate file detected: ${data.filename}. Returning existing document ID: ${existingDoc.id}`
+        );
+
+        return reply.code(200).send({
+          success: true,
+          message: "File already exists. Returning existing document.",
+          document: {
+            id: existingDoc.id,
+            filename: existingDoc.filename,
+            mimetype: existingDoc.mimetype,
+            size: existingDoc.size,
+            storagePath: existingDoc.storage_path,
+            publicUrl: existingDoc.public_url,
+            contentHash: existingDoc.content_hash,
+            isDuplicate: true,
+            uploadedAt: existingDoc.created_at,
+          },
+        });
+      }
+
+      // Upload file to Supabase Storage
+      fastify.log.info(`Uploading file to storage: ${data.filename}`);
+      const uploadResult = await uploadFileToStorage(
+        buffer,
+        data.filename,
+        data.mimetype
+      );
+
+      fastify.log.info(
+        `File uploaded to storage: ${uploadResult.path}, Public URL: ${uploadResult.publicUrl}`
+      );
+
+      // Create document record in database
+      const document = await createDocumentRecord({
+        content_hash: contentHash,
+        filename: data.filename,
+        mimetype: data.mimetype,
+        size: buffer.length,
+        storage_path: uploadResult.path,
+        public_url: uploadResult.publicUrl,
+        storage_bucket: uploadResult.bucket,
+        extracted_text_length: 0, // Will be updated by Inngest
+        has_embedding: false, // Will be updated by Inngest
+      });
+
+      fastify.log.info(`Document record created with ID: ${document.id}`);
+
+      // Trigger Inngest for post-upload processing (embeddings, text extraction)
       const eventId = await inngest.send({
-        name: "app/file.uploaded",
+        name: "app/document.process",
         data: {
-          filename: data.filename,
-          mimetype: data.mimetype,
-          size: buffer.length,
-          buffer: buffer.toString("base64"), // Convert buffer to base64 for event payload
+          documentId: document.id,
         },
       });
 
       fastify.log.info(
-        `File upload triggered processing: ${data.filename} (${data.mimetype}), Event ID: ${eventId}`
+        `Triggered post-upload processing for document ${document.id}, Event ID: ${eventId.ids[0]}`
       );
 
-      return reply.code(202).send({
+      return reply.code(201).send({
         success: true,
         message: "File uploaded successfully and queued for processing",
-        file: {
-          filename: data.filename,
-          mimetype: data.mimetype,
-          size: buffer.length,
+        document: {
+          id: document.id,
+          filename: document.filename,
+          mimetype: document.mimetype,
+          size: document.size,
+          storagePath: document.storage_path,
+          publicUrl: document.public_url,
+          contentHash: document.content_hash,
+          isDuplicate: false,
+          uploadedAt: document.created_at,
         },
         eventId: eventId.ids[0],
       });
