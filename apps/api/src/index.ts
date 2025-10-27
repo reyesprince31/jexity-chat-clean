@@ -12,7 +12,18 @@ dotenv.config();
 const PORT = process.env.PORT || 3001;
 
 const fastify = Fastify({
-  logger: true,
+  logger:
+    process.env.NODE_ENV === "production"
+      ? true
+      : {
+          transport: {
+            target: "pino-pretty",
+            options: {
+              translateTime: "HH:MM:ss Z",
+              ignore: "pid,hostname",
+            },
+          },
+        },
 });
 
 // Register Inngest
