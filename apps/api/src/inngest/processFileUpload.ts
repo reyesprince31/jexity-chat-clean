@@ -1,6 +1,7 @@
 import { inngest } from "./client";
 import { createEmbedding } from "../consts/embeddings";
 import { PDFParse } from "pdf-parse";
+import { uploadFileToStorage } from "../lib/supabase";
 
 export const processFileUpload = inngest.createFunction(
   {
@@ -18,16 +19,28 @@ export const processFileUpload = inngest.createFunction(
       return { decoded: true, size: fileBuffer.length };
     });
 
-    // Step 2: Save file to storage (placeholder)
+    // Step 2: Save file to Supabase Storage
     const storageResult = await step.run("save-to-storage", async () => {
-      // Here you would:
-      // - Upload to S3, Google Cloud Storage, etc.
-      // - Or save to local disk
       console.log(`Saving file: ${filename} (${mimetype}) - ${size} bytes`);
+
+      // Decode the buffer from base64
+      const fileBuffer = Buffer.from(buffer, "base64");
+
+      // Upload to Supabase Storage
+      const uploadResult = await uploadFileToStorage(
+        fileBuffer,
+        filename,
+        mimetype
+      );
+
+      console.log(`File uploaded successfully to: ${uploadResult.path}`);
+      console.log(`Public URL: ${uploadResult.publicUrl}`);
 
       return {
         saved: true,
-        path: `/uploads/${Date.now()}-${filename}`,
+        path: uploadResult.path,
+        publicUrl: uploadResult.publicUrl,
+        bucket: uploadResult.bucket,
         timestamp: new Date().toISOString(),
       };
     });
@@ -61,7 +74,9 @@ export const processFileUpload = inngest.createFunction(
         extractedText = fileBuffer.toString("utf-8");
         canCreateEmbedding = true;
         console.log(`Processing text content for: ${filename}`);
-        console.log(`Extracted text length: ${extractedText.length} characters`);
+        console.log(
+          `Extracted text length: ${extractedText.length} characters`
+        );
         console.log(`First 100 chars: ${extractedText.substring(0, 100)}`);
       } else if (isPdf) {
         try {
