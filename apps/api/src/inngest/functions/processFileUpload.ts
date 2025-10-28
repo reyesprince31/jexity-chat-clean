@@ -1,11 +1,12 @@
 import { inngest } from "../client";
-import { createEmbedding } from "../../lib/embeddings";
+import { createEmbeddingsBatch } from "../../lib/embeddings";
 import { PDFParse } from "pdf-parse";
-import {
-  getDocumentById,
-  updateDocumentRecord,
-  downloadFileFromStorage,
-} from "../../lib/supabase";
+import { downloadFileFromStorage } from "../../lib/storage";
+import { getDocumentById } from "../../lib/database";
+import { chunkText, estimateTokenCount } from "../../lib/chunking";
+import { PrismaClient } from "../../generated/prisma/client";
+
+const prisma = new PrismaClient();
 
 export const processFileUpload = inngest.createFunction(
   {
@@ -114,23 +115,29 @@ export const processFileUpload = inngest.createFunction(
       };
     });
 
-    // Step 4: Create embeddings from file content (only for supported files)
-    let embeddingResult = null;
+    // Step 4: Chunk text and create embeddings (only for supported files)
+    let chunkingResult = null;
 
     if (processResult.canCreateEmbedding && processResult.extractedText) {
-      embeddingResult = await step.run("create-embeddings", async () => {
+      chunkingResult = await step.run("chunk-and-embed", async () => {
         const { extractedText } = processResult;
 
-        // Create embedding from the extracted text
-        console.log(`Creating embedding for: ${filename}`);
-        const embedding = await createEmbedding(extractedText);
+        console.log(`Chunking text for: ${filename}`);
+        const chunks = await chunkText(extractedText);
+        console.log(`Created ${chunks.length} chunks for ${filename}`);
 
+        // Extract chunk content for batch embedding
+        const chunkContents = chunks.map(chunk => chunk.content);
+
+        console.log(`Creating embeddings for ${chunks.length} chunks...`);
+        const embeddings = await createEmbeddingsBatch(chunkContents);
         console.log(
-          `Embedding created: ${embedding.length} dimensions for ${filename}`
+          `Created ${embeddings.length} embeddings (${embeddings[0]?.length || 0} dimensions each)`
         );
 
         return {
-          embedding,
+          chunks,
+          embeddings,
         };
       });
     } else {
@@ -139,15 +146,72 @@ export const processFileUpload = inngest.createFunction(
       );
     }
 
-    // Step 5: Update document record with processing results
+    // Step 5: Store chunks with embeddings in database
+    if (chunkingResult) {
+      await step.run("store-chunks", async () => {
+        console.log(`Storing ${chunkingResult.chunks.length} chunks in database...`);
+
+        // Prepare chunks for batch insert
+        const chunksToInsert = chunkingResult.chunks.map((chunk, index) => {
+          const embedding = chunkingResult.embeddings[index];
+          if (!embedding) {
+            throw new Error(`Missing embedding for chunk ${index}`);
+          }
+          const embeddingString = `[${embedding.join(',')}]`;
+
+          return {
+            document_id: documentId,
+            chunk_index: chunk.metadata.chunkIndex,
+            content: chunk.content,
+            token_count: estimateTokenCount(chunk.content),
+            embedding: embeddingString,
+            metadata: chunk.metadata,
+          };
+        });
+
+        // Delete existing chunks for this document (in case of reprocessing)
+        await prisma.document_chunks.deleteMany({
+          where: { document_id: documentId },
+        });
+
+        // Use raw query for batch insert with vector embeddings
+        for (const chunk of chunksToInsert) {
+          await prisma.$executeRaw`
+            INSERT INTO document_chunks (
+              id, document_id, chunk_index, content, token_count, embedding, metadata, created_at
+            ) VALUES (
+              gen_random_uuid(),
+              ${chunk.document_id}::uuid,
+              ${chunk.chunk_index},
+              ${chunk.content},
+              ${chunk.token_count},
+              ${chunk.embedding}::vector,
+              ${JSON.stringify(chunk.metadata)}::jsonb,
+              NOW()
+            )
+          `;
+        }
+
+        console.log(`Successfully stored ${chunksToInsert.length} chunks`);
+
+        return { chunkCount: chunksToInsert.length };
+      });
+    }
+
+    // Step 6: Update document record with processing results
     const updatedDocument = await step.run(
       "update-document-metadata",
       async () => {
         console.log(`Updating document metadata for: ${filename}`);
 
-        const document = await updateDocumentRecord(documentId, {
-          extracted_text_length: processResult.textLength,
-          has_embedding: !!embeddingResult,
+        const document = await prisma.documents.update({
+          where: { id: documentId },
+          data: {
+            extracted_text: processResult.extractedText || null,
+            extracted_text_length: processResult.textLength,
+            has_embedding: !!chunkingResult,
+            updated_at: new Date(),
+          },
         });
 
         console.log(`Document updated with ID: ${document.id}`);
@@ -158,6 +222,16 @@ export const processFileUpload = inngest.createFunction(
       }
     );
 
+    // Inngest serializes data between steps, converting Dates to ISO strings
+    // Handle both Date objects and ISO string formats
+    const toISOString = (dateValue: Date | string): string => {
+      if (typeof dateValue === 'string') return dateValue;
+      return dateValue.toISOString();
+    };
+
+    const uploadedAt = toISOString(updatedDocument.created_at);
+    const updatedAt = toISOString(updatedDocument.updated_at);
+
     return {
       success: true,
       message: "Document processed successfully",
@@ -165,14 +239,15 @@ export const processFileUpload = inngest.createFunction(
         id: updatedDocument.id,
         filename: updatedDocument.filename,
         mimetype: updatedDocument.mimetype,
-        size: updatedDocument.size,
+        size: Number(updatedDocument.size),
         contentHash: updatedDocument.content_hash,
         storagePath: updatedDocument.storage_path,
         publicUrl: updatedDocument.public_url,
         extractedTextLength: updatedDocument.extracted_text_length,
         hasEmbedding: updatedDocument.has_embedding,
-        uploadedAt: updatedDocument.created_at,
-        updatedAt: updatedDocument.updated_at,
+        chunkCount: chunkingResult?.chunks.length || 0,
+        uploadedAt,
+        updatedAt,
       },
     };
   }

@@ -1,11 +1,11 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { createHash } from "crypto";
 import { inngest } from "../inngest/client.js";
+import { uploadFileToStorage } from "../lib/storage.js";
 import {
-  uploadFileToStorage,
   findDocumentByHash,
   createDocumentRecord,
-} from "../lib/supabase.js";
+} from "../lib/database.js";
 
 // Allowed file types
 const ALLOWED_MIME_TYPES = [
@@ -95,12 +95,12 @@ export default async function uploadRoutes(
             id: existingDoc.id,
             filename: existingDoc.filename,
             mimetype: existingDoc.mimetype,
-            size: existingDoc.size,
+            size: Number(existingDoc.size),
             storagePath: existingDoc.storage_path,
             publicUrl: existingDoc.public_url,
             contentHash: existingDoc.content_hash,
             isDuplicate: true,
-            uploadedAt: existingDoc.created_at,
+            uploadedAt: existingDoc.created_at.toISOString(),
           },
         });
       }
@@ -151,12 +151,12 @@ export default async function uploadRoutes(
           id: document.id,
           filename: document.filename,
           mimetype: document.mimetype,
-          size: document.size,
+          size: Number(document.size),
           storagePath: document.storage_path,
           publicUrl: document.public_url,
           contentHash: document.content_hash,
           isDuplicate: false,
-          uploadedAt: document.created_at,
+          uploadedAt: document.created_at.toISOString(),
         },
         eventId: eventId.ids[0],
       });

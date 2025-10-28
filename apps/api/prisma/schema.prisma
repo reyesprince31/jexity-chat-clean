@@ -1,12 +1,14 @@
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider        = "prisma-client"
+  output          = "../src/generated/prisma"
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  directUrl  = env("DIRECT_URL")
+  extensions = [vector]
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
@@ -19,13 +21,46 @@ model documents {
   storage_path          String
   public_url            String
   storage_bucket        String
+  /// Full extracted text from document - stored for reference and full-text search
+  extracted_text        String?
+  /// Character count of extracted text - used for metrics and debugging
   extracted_text_length Int?                   @default(0)
+  /// Indicates if document has been chunked and embedded (true = chunks exist)
   has_embedding         Boolean?               @default(false)
   user_id               String?                @db.Uuid
   created_at            DateTime               @default(now()) @db.Timestamptz(6)
   updated_at            DateTime               @default(now()) @db.Timestamptz(6)
+  /// Legacy single embedding field - no longer used (replaced by chunk embeddings)
   embedding             Unsupported("vector")?
+  /// Relation to document chunks - one document has many chunks
+  chunks                document_chunks[]
 
   @@index([created_at(sort: Desc)], map: "idx_documents_created_at")
   @@index([user_id], map: "idx_documents_user_id")
+}
+
+/// Stores text chunks from documents with their vector embeddings for semantic search.
+/// Documents are split into overlapping chunks (1000 chars, 200 overlap) to enable
+/// precise semantic search and handle large documents within embedding token limits.
+model document_chunks {
+  id          String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// Foreign key to parent document - links chunk back to its source document
+  document_id String                 @db.Uuid
+  /// Position of chunk in document (0, 1, 2...) - used to retrieve chunks in order
+  chunk_index Int
+  /// The actual text content of this chunk - returned in search results
+  content     String
+  /// Estimated token count (~chars/4) - useful for cost tracking and debugging
+  token_count Int?
+  /// 3072-dimensional vector embedding from OpenAI (text-embedding-3-large)
+  /// Used for cosine similarity search with pgvector's <=> operator
+  embedding   Unsupported("vector")?
+  /// JSON metadata storing chunk position info: chunkIndex, startPosition, endPosition, length
+  /// Useful for highlighting matches and retrieving surrounding context
+  metadata    Json?
+  created_at  DateTime               @default(now()) @db.Timestamptz(6)
+  document    documents              @relation(fields: [document_id], references: [id], onDelete: Cascade)
+
+  @@unique([document_id, chunk_index], map: "idx_document_chunks_unique")
+  @@index([document_id], map: "idx_document_chunks_document_id")
 }
