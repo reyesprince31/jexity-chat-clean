@@ -63,4 +63,57 @@ model document_chunks {
 
   @@unique([document_id, chunk_index], map: "idx_document_chunks_unique")
   @@index([document_id], map: "idx_document_chunks_document_id")
+  message_sources message_sources[]
+}
+
+/// Stores chat conversations - each conversation is a separate chat session
+model conversations {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// Optional title for the conversation - can be auto-generated from first message
+  title      String?
+  created_at DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at DateTime  @default(now()) @db.Timestamptz(6)
+  /// Relation to messages - one conversation has many messages
+  messages   messages[]
+
+  @@index([created_at(sort: Desc)], map: "idx_conversations_created_at")
+  @@index([updated_at(sort: Desc)], map: "idx_conversations_updated_at")
+}
+
+/// Stores individual messages in conversations (user and assistant messages)
+model messages {
+  id              String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// Foreign key to parent conversation
+  conversation_id String            @db.Uuid
+  /// Message role: "user", "assistant", or "system"
+  role            String
+  /// The text content of the message
+  content         String
+  created_at      DateTime          @default(now()) @db.Timestamptz(6)
+  /// Relation to parent conversation
+  conversation    conversations     @relation(fields: [conversation_id], references: [id], onDelete: Cascade)
+  /// Relation to source chunks used to generate this message (for citations)
+  sources         message_sources[]
+
+  @@index([conversation_id], map: "idx_messages_conversation_id")
+  @@index([created_at(sort: Desc)], map: "idx_messages_created_at")
+}
+
+/// Links messages with document chunks used as context (for citation tracking)
+model message_sources {
+  id               String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// Foreign key to the message this source was used for
+  message_id       String          @db.Uuid
+  /// Foreign key to the document chunk that was used as context
+  chunk_id         String          @db.Uuid
+  /// Cosine similarity score (0-1) from vector search - indicates relevance
+  similarity_score Float
+  created_at       DateTime        @default(now()) @db.Timestamptz(6)
+  /// Relation to parent message
+  message          messages        @relation(fields: [message_id], references: [id], onDelete: Cascade)
+  /// Relation to document chunk used as source
+  chunk            document_chunks @relation(fields: [chunk_id], references: [id], onDelete: Cascade)
+
+  @@index([message_id], map: "idx_message_sources_message_id")
+  @@index([chunk_id], map: "idx_message_sources_chunk_id")
 }

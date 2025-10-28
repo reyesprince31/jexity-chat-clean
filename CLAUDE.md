@@ -111,6 +111,13 @@ pnpm generate:component
   - `POST /upload` - File upload endpoint (multipart/form-data)
   - `GET /upload/info` - Upload configuration info
   - `POST /api/inngest` - Inngest webhook endpoint
+  - `POST /conversations` - Create new conversation
+  - `GET /conversations` - List conversations (paginated)
+  - `GET /conversations/:id` - Get conversation with messages
+  - `DELETE /conversations/:id` - Delete conversation
+  - `POST /conversations/:id/messages` - Send message (streaming SSE)
+  - `GET /conversations/:id/messages` - Get conversation messages
+  - `GET /messages/:messageId/sources` - Get message citations
 
 ## Document Processing & Vector Search
 
@@ -333,6 +340,385 @@ const results = await searchWithinDocument(docId, "neural networks", 5, 0.7);
 - **Overlapping chunks** ensure important context isn't split
 - **Similarity threshold** 0.7 is recommended (0-1 scale, 1 = identical)
 - **Legacy embedding field** in documents table is no longer used
+
+## Chat System with RAG (Retrieval Augmented Generation)
+
+The API implements a conversational AI system using LangChain and OpenAI GPT-4o, with RAG to ground responses in uploaded document knowledge.
+
+### Architecture Overview
+
+```
+User sends message to conversation
+  ↓
+POST /conversations/:id/messages
+  ↓
+1. Save user message to database
+2. Retrieve conversation history
+3. Perform vector search for relevant document chunks (RAG)
+4. Build system prompt with retrieved context
+5. Stream AI response using LangChain + GPT-4o
+6. Save assistant message with source citations
+7. Auto-generate conversation title (first message only)
+  ↓
+Client receives Server-Sent Events stream
+```
+
+### Database Schema
+
+#### conversations table
+
+- Stores chat sessions
+- `id` (UUID) - Primary key
+- `title` (TEXT, nullable) - Conversation title (auto-generated or user-provided)
+- `created_at`, `updated_at` (TIMESTAMP) - Tracking timestamps
+
+#### messages table
+
+- Stores individual messages (user/assistant/system)
+- `id` (UUID) - Primary key
+- `conversation_id` (UUID) - Foreign key to conversations
+- `role` (TEXT) - Message role: "user", "assistant", or "system"
+- `content` (TEXT) - Message text content
+- `created_at` (TIMESTAMP) - Message timestamp
+- Relation: `sources` - Links to message_sources for citations
+
+#### message_sources table
+
+- Links messages to document chunks used as context (citation tracking)
+- `id` (UUID) - Primary key
+- `message_id` (UUID) - Foreign key to messages
+- `chunk_id` (UUID) - Foreign key to document_chunks
+- `similarity_score` (FLOAT) - Cosine similarity score from vector search (0-1)
+- Enables displaying which documents were used to generate each response
+
+**Cascading deletes:** Deleting a conversation deletes all messages and message_sources
+
+### RAG Service
+
+**Implementation:** `apps/api/src/lib/rag.ts`
+
+The RAG (Retrieval Augmented Generation) service retrieves relevant document context and formats it for the AI model.
+
+#### retrieveRelevantContext(query, options)
+
+- Uses existing `searchSimilarChunks()` from vectorSearch.ts
+- Default: top 5 chunks with similarity >= 0.7
+- Returns array of SearchResult with document metadata
+
+#### formatContextForPrompt(chunks)
+
+- Formats chunks into structured context string
+- Includes source numbers, document names, and relevance scores
+- Format: `[Source 1] filename.pdf (Relevance: 87.5%)\n<chunk content>`
+
+#### buildRAGSystemPrompt(context)
+
+- Creates system prompt instructing model to:
+  - Base answers on provided context
+  - Cite sources by number (e.g., "According to Source 1...")
+  - Admit when context doesn't contain relevant information
+  - Not hallucinate information beyond the context
+
+#### buildRAGPrompt(query, options)
+
+- Complete pipeline: retrieve → format → build prompt
+- Returns: `{ systemPrompt: string, sourceChunks: SearchResult[] }`
+
+### Chat Service with LangChain
+
+**Implementation:** `apps/api/src/lib/chat.ts`
+
+Uses **LangChain** with **OpenAI GPT-4o** for conversational AI with streaming.
+
+**Configuration:**
+- Model: `gpt-4o`
+- Temperature: 0.7 (configurable)
+- Max tokens: 2000 (configurable)
+- Streaming: enabled
+
+#### streamChatWithRAG(params)
+
+Main streaming function that:
+1. Retrieves RAG context if enabled (useRAG: true)
+2. Builds conversation history from database
+3. Constructs message array (system + history + user query)
+4. Streams response tokens using LangChain's `stream()` method
+5. Returns: `{ stream: AsyncIterable<string>, sourceChunks: SearchResult[] }`
+
+**Parameters:**
+- `userQuery` - Current user message
+- `conversationHistory` - Array of prior messages: `{ role, content }[]`
+- `useRAG` - Enable/disable RAG context retrieval (default: true)
+- `ragOptions` - Configure vector search: `{ limit?, similarityThreshold? }`
+
+#### generateConversationTitle(firstMessage)
+
+- Auto-generates conversation title from first user message
+- Uses GPT-4o-mini for cost efficiency
+- Limits: 6 words, 50 characters max
+- Fallback: first 50 chars of message if generation fails
+
+#### chatWithRAG(params)
+
+- Non-streaming version (collects all tokens into single response)
+- Useful for testing or non-interactive use cases
+- Returns: `{ response: string, sourceChunks: SearchResult[] }`
+
+### Chat API Endpoints
+
+**Implementation:** `apps/api/src/routes/chat.ts`
+
+All endpoints follow RESTful conventions with JSON responses.
+
+#### POST /conversations
+
+Create a new conversation.
+
+**Request body:**
+```json
+{ "title": "Optional title" }
+```
+
+**Response:** 201 Created
+```json
+{
+  "success": true,
+  "conversation": {
+    "id": "uuid",
+    "title": "Optional title",
+    "createdAt": "ISO timestamp",
+    "updatedAt": "ISO timestamp"
+  }
+}
+```
+
+#### POST /conversations/:id/messages
+
+Send a message and receive streaming AI response with RAG context.
+
+**Request body:**
+```json
+{
+  "message": "What is machine learning?",
+  "useRAG": true,
+  "ragOptions": {
+    "limit": 5,
+    "similarityThreshold": 0.7
+  }
+}
+```
+
+**Response:** Server-Sent Events (SSE) stream
+
+Event types:
+- `{ type: "token", content: "..." }` - Individual response tokens
+- `{ type: "done", sources: [...] }` - Completion with citations
+- `{ type: "title", title: "..." }` - Auto-generated title (first message only)
+- `{ type: "error", message: "..." }` - Error during streaming
+
+**Example client (JavaScript):**
+```javascript
+const response = await fetch(`/conversations/${id}/messages`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ message: 'Your question?' })
+});
+
+const reader = response.body.getReader();
+const decoder = new TextDecoder();
+
+while (true) {
+  const { done, value } = await reader.read();
+  if (done) break;
+
+  const text = decoder.decode(value);
+  const lines = text.split('\n\n');
+
+  for (const line of lines) {
+    if (line.startsWith('data: ')) {
+      const event = JSON.parse(line.slice(6));
+
+      if (event.type === 'token') {
+        console.log(event.content); // Display token
+      } else if (event.type === 'done') {
+        console.log('Sources:', event.sources); // Show citations
+      }
+    }
+  }
+}
+```
+
+#### GET /conversations
+
+List all conversations with pagination.
+
+**Query params:**
+- `limit` (default: 20) - Max conversations to return
+- `offset` (default: 0) - Skip N conversations
+
+**Response:** 200 OK
+```json
+{
+  "success": true,
+  "conversations": [
+    { "id": "uuid", "title": "...", "createdAt": "...", "updatedAt": "..." }
+  ],
+  "pagination": { "limit": 20, "offset": 0, "count": 15 }
+}
+```
+
+#### GET /conversations/:id
+
+Get a conversation with all its messages.
+
+**Response:** 200 OK
+```json
+{
+  "success": true,
+  "conversation": {
+    "id": "uuid",
+    "title": "Machine Learning Discussion",
+    "messages": [
+      { "id": "uuid", "role": "user", "content": "...", "createdAt": "..." },
+      { "id": "uuid", "role": "assistant", "content": "...", "createdAt": "..." }
+    ]
+  }
+}
+```
+
+#### GET /conversations/:id/messages
+
+Get only the messages for a conversation (lightweight endpoint).
+
+**Response:** Same as above but only `messages` array.
+
+#### DELETE /conversations/:id
+
+Delete a conversation and all its messages (cascading).
+
+**Response:** 200 OK
+```json
+{ "success": true, "message": "Conversation deleted successfully" }
+```
+
+#### GET /messages/:messageId/sources
+
+Get a message with its source document chunks (for displaying citations).
+
+**Response:** 200 OK
+```json
+{
+  "success": true,
+  "message": {
+    "id": "uuid",
+    "role": "assistant",
+    "content": "According to Source 1...",
+    "sources": [
+      {
+        "id": "uuid",
+        "chunkId": "uuid",
+        "similarityScore": 0.87,
+        "content": "Machine learning is...",
+        "document": {
+          "filename": "ml-guide.pdf",
+          "mimetype": "application/pdf"
+        }
+      }
+    ]
+  }
+}
+```
+
+### Chat Database Operations
+
+**Implementation:** `apps/api/src/lib/database.ts` (extended)
+
+All chat operations follow the same patterns as document operations:
+- Proper TypeScript types
+- Try-catch error handling
+- Descriptive error messages
+
+**Conversation operations:**
+- `createConversation(title?)` - Create new conversation
+- `getConversation(id)` - Get conversation by ID
+- `getConversationWithMessages(id)` - Get with messages (includes relation)
+- `listConversations(limit, offset)` - Paginated list (ordered by updated_at DESC)
+- `updateConversationTitle(id, title)` - Update title
+- `deleteConversation(id)` - Delete (cascades to messages/sources)
+
+**Message operations:**
+- `createMessage(input)` - Create message with optional sources
+  - Input: `{ conversation_id, role, content, sources?: [{ chunk_id, similarity_score }] }`
+  - Auto-updates conversation's `updated_at` timestamp
+- `getMessages(conversationId, limit?)` - Get messages (ordered by created_at ASC)
+- `getMessageWithSources(messageId)` - Get message with full source details
+
+### File Organization
+
+- **`src/lib/rag.ts`** - RAG service (retrieve, format, build prompts)
+- **`src/lib/chat.ts`** - LangChain chat service with streaming
+- **`src/lib/database.ts`** - Extended with conversation/message operations
+- **`src/routes/chat.ts`** - RESTful chat endpoints with SSE streaming
+
+### Key Dependencies
+
+- `@langchain/openai` - ChatOpenAI for GPT-4o integration
+- `@langchain/core` - Message types (HumanMessage, AIMessage, SystemMessage)
+- Reuses existing: `@prisma/client`, vector search, embeddings
+
+### Environment Variables
+
+Same as document processing (no additional variables required):
+- `OPENAI_API_KEY` - Used for both embeddings and chat completions
+
+### Usage Flow Example
+
+```typescript
+// 1. Create conversation
+const conv = await createConversation();
+
+// 2. Send first message (streaming)
+const { stream, sourceChunks } = await streamChatWithRAG({
+  userQuery: "What is machine learning?",
+  conversationHistory: [],
+  useRAG: true,
+  ragOptions: { limit: 5, similarityThreshold: 0.7 }
+});
+
+// 3. Collect response
+let fullResponse = '';
+for await (const token of stream) {
+  fullResponse += token;
+  // Display token in real-time
+}
+
+// 4. Save messages with citations
+await createMessage({
+  conversation_id: conv.id,
+  role: 'user',
+  content: "What is machine learning?"
+});
+
+await createMessage({
+  conversation_id: conv.id,
+  role: 'assistant',
+  content: fullResponse,
+  sources: sourceChunks.map(chunk => ({
+    chunk_id: chunk.id,
+    similarity_score: chunk.similarity
+  }))
+});
+```
+
+### Important Notes
+
+- **Streaming uses Server-Sent Events (SSE)** - Client must parse `data: {...}` format
+- **RAG is optional** - Set `useRAG: false` to disable context retrieval
+- **Conversation history is automatic** - Retrieved from database before streaming
+- **Citations are tracked** - message_sources links responses to document chunks
+- **Title auto-generation** - Only happens on first message if no title provided
+- **All database writes use transactions** - Message creation updates conversation timestamps
+- **Use LangChain patterns** - Message types (HumanMessage, AIMessage, SystemMessage)
 
 ### Turborepo Configuration
 

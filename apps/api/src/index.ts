@@ -2,6 +2,7 @@ import Fastify from "fastify";
 import dotenv from "dotenv";
 import multipart from "@fastify/multipart";
 import uploadRoutes from "./routes/upload.js";
+import chatRoutes from "./routes/chat.js";
 
 import { fastifyPlugin } from "inngest/fastify";
 import { functions } from "./inngest/index";
@@ -43,6 +44,9 @@ await fastify.register(multipart, {
 
 // Register upload routes
 await fastify.register(uploadRoutes);
+
+// Register chat routes
+await fastify.register(chatRoutes);
 
 // Hello world endpoint
 fastify.get("/", async (request, reply) => {

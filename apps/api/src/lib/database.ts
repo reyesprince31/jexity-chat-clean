@@ -128,3 +128,294 @@ export async function updateDocumentRecord(
     throw new Error(`Failed to update document record: ${error}`);
   }
 }
+
+// ============================================================================
+// CHAT DATABASE OPERATIONS
+// ============================================================================
+
+export interface Conversation {
+  id: string;
+  title: string | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface ConversationWithMessages extends Conversation {
+  messages: Message[];
+}
+
+export interface Message {
+  id: string;
+  conversation_id: string;
+  role: string;
+  content: string;
+  created_at: Date;
+}
+
+export interface MessageWithSources extends Message {
+  sources: MessageSource[];
+}
+
+export interface MessageSource {
+  id: string;
+  message_id: string;
+  chunk_id: string;
+  similarity_score: number;
+  created_at: Date;
+}
+
+export interface CreateMessageInput {
+  conversation_id: string;
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  sources?: {
+    chunk_id: string;
+    similarity_score: number;
+  }[];
+}
+
+/**
+ * Create a new conversation
+ * @param title - Optional title for the conversation
+ * @returns The created conversation
+ */
+export async function createConversation(
+  title?: string
+): Promise<Conversation> {
+  try {
+    const conversation = await prisma.conversations.create({
+      data: {
+        title: title || null,
+      },
+    });
+
+    return conversation;
+  } catch (error) {
+    throw new Error(`Failed to create conversation: ${error}`);
+  }
+}
+
+/**
+ * Get a conversation by ID
+ * @param id - The conversation ID
+ * @returns The conversation if found, null otherwise
+ */
+export async function getConversation(
+  id: string
+): Promise<Conversation | null> {
+  try {
+    const conversation = await prisma.conversations.findUnique({
+      where: {
+        id: id,
+      },
+    });
+
+    return conversation;
+  } catch (error) {
+    throw new Error(`Failed to get conversation: ${error}`);
+  }
+}
+
+/**
+ * Get a conversation with all its messages
+ * @param id - The conversation ID
+ * @returns The conversation with messages, or null if not found
+ */
+export async function getConversationWithMessages(
+  id: string
+): Promise<ConversationWithMessages | null> {
+  try {
+    const conversation = await prisma.conversations.findUnique({
+      where: {
+        id: id,
+      },
+      include: {
+        messages: {
+          orderBy: {
+            created_at: 'asc',
+          },
+        },
+      },
+    });
+
+    return conversation;
+  } catch (error) {
+    throw new Error(`Failed to get conversation with messages: ${error}`);
+  }
+}
+
+/**
+ * List all conversations with pagination
+ * @param limit - Maximum number of conversations to return (default: 20)
+ * @param offset - Number of conversations to skip (default: 0)
+ * @returns Array of conversations ordered by updated_at DESC
+ */
+export async function listConversations(
+  limit: number = 20,
+  offset: number = 0
+): Promise<Conversation[]> {
+  try {
+    const conversations = await prisma.conversations.findMany({
+      orderBy: {
+        updated_at: 'desc',
+      },
+      take: limit,
+      skip: offset,
+    });
+
+    return conversations;
+  } catch (error) {
+    throw new Error(`Failed to list conversations: ${error}`);
+  }
+}
+
+/**
+ * Update a conversation's title
+ * @param id - The conversation ID
+ * @param title - New title for the conversation
+ * @returns The updated conversation
+ */
+export async function updateConversationTitle(
+  id: string,
+  title: string
+): Promise<Conversation> {
+  try {
+    const conversation = await prisma.conversations.update({
+      where: {
+        id: id,
+      },
+      data: {
+        title: title,
+        updated_at: new Date(),
+      },
+    });
+
+    return conversation;
+  } catch (error) {
+    throw new Error(`Failed to update conversation title: ${error}`);
+  }
+}
+
+/**
+ * Delete a conversation (cascades to messages and message_sources)
+ * @param id - The conversation ID
+ * @returns The deleted conversation
+ */
+export async function deleteConversation(id: string): Promise<Conversation> {
+  try {
+    const conversation = await prisma.conversations.delete({
+      where: {
+        id: id,
+      },
+    });
+
+    return conversation;
+  } catch (error) {
+    throw new Error(`Failed to delete conversation: ${error}`);
+  }
+}
+
+/**
+ * Create a new message in a conversation
+ * @param input - Message data including optional sources
+ * @returns The created message
+ */
+export async function createMessage(
+  input: CreateMessageInput
+): Promise<Message> {
+  try {
+    const message = await prisma.messages.create({
+      data: {
+        conversation_id: input.conversation_id,
+        role: input.role,
+        content: input.content,
+        sources: input.sources
+          ? {
+              create: input.sources.map((source) => ({
+                chunk_id: source.chunk_id,
+                similarity_score: source.similarity_score,
+              })),
+            }
+          : undefined,
+      },
+    });
+
+    // Update conversation's updated_at timestamp
+    await prisma.conversations.update({
+      where: {
+        id: input.conversation_id,
+      },
+      data: {
+        updated_at: new Date(),
+      },
+    });
+
+    return message;
+  } catch (error) {
+    throw new Error(`Failed to create message: ${error}`);
+  }
+}
+
+/**
+ * Get all messages for a conversation
+ * @param conversationId - The conversation ID
+ * @param limit - Maximum number of messages to return (optional)
+ * @returns Array of messages ordered by created_at ASC
+ */
+export async function getMessages(
+  conversationId: string,
+  limit?: number
+): Promise<Message[]> {
+  try {
+    const messages = await prisma.messages.findMany({
+      where: {
+        conversation_id: conversationId,
+      },
+      orderBy: {
+        created_at: 'asc',
+      },
+      take: limit,
+    });
+
+    return messages;
+  } catch (error) {
+    throw new Error(`Failed to get messages: ${error}`);
+  }
+}
+
+/**
+ * Get a message with its source chunks (for citations)
+ * @param messageId - The message ID
+ * @returns The message with sources, or null if not found
+ */
+export async function getMessageWithSources(
+  messageId: string
+): Promise<MessageWithSources | null> {
+  try {
+    const message = await prisma.messages.findUnique({
+      where: {
+        id: messageId,
+      },
+      include: {
+        sources: {
+          include: {
+            chunk: {
+              include: {
+                document: {
+                  select: {
+                    filename: true,
+                    mimetype: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return message;
+  } catch (error) {
+    throw new Error(`Failed to get message with sources: ${error}`);
+  }
+}
