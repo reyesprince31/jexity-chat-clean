@@ -186,7 +186,7 @@ export default async function chatRoutes(fastify: FastifyInstance): Promise<void
           }));
 
         // Stream chat response with RAG
-        const { stream, sourceChunks } = await streamChatWithRAG({
+        const { stream, sourceDocuments } = await streamChatWithRAG({
           userQuery: userMessage,
           conversationHistory,
           useRAG,
@@ -210,9 +210,10 @@ export default async function chatRoutes(fastify: FastifyInstance): Promise<void
           }
 
           // Save complete assistant message with sources to database
-          const sources = sourceChunks.map((chunk) => ({
-            chunk_id: chunk.id,
-            similarity_score: chunk.similarity,
+          // Extract chunk IDs and similarity scores from Document metadata
+          const sources = sourceDocuments.map((doc) => ({
+            chunk_id: doc.metadata.id,
+            similarity_score: doc.metadata.similarity,
           }));
 
           await createMessage({
@@ -228,12 +229,12 @@ export default async function chatRoutes(fastify: FastifyInstance): Promise<void
           reply.raw.write(
             `data: ${JSON.stringify({
               type: 'done',
-              sources: sourceChunks.map((chunk) => ({
-                id: chunk.id,
-                documentId: chunk.documentId,
-                filename: chunk.document?.filename,
-                content: chunk.content.substring(0, 200), // Preview
-                similarity: chunk.similarity,
+              sources: sourceDocuments.map((doc) => ({
+                id: doc.metadata.id,
+                documentId: doc.metadata.documentId,
+                filename: doc.metadata.document?.filename,
+                content: doc.pageContent.substring(0, 200), // Preview
+                similarity: doc.metadata.similarity,
               })),
             })}\n\n`
           );

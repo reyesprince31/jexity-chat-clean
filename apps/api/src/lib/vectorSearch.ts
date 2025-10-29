@@ -1,23 +1,20 @@
 import { PrismaClient } from '../generated/prisma/client';
 import { createEmbedding } from './embeddings';
+import { Document } from '@langchain/core/documents';
 
 const prisma = new PrismaClient();
 
-export interface SearchResult {
-  id: string;
-  documentId: string;
-  chunkIndex: number;
-  content: string;
+/**
+ * LangChain Document with similarity score
+ */
+export type DocumentWithScore = {
+  document: Document;
   similarity: number;
-  metadata: any;
-  document?: {
-    id: string;
-    filename: string;
-    mimetype: string;
-    createdAt: Date;
-  };
-}
+};
 
+/**
+ * Raw result from pgvector similarity search query
+ */
 interface RawSearchResult {
   id: string;
   documentId: string;
@@ -32,17 +29,19 @@ interface RawSearchResult {
 }
 
 /**
- * Search for similar chunks across all documents using vector similarity
+ * Search for similar chunks across all documents using vector similarity.
+ * Returns results as LangChain Documents for use with LangChain chains.
+ *
  * @param queryText - The text to search for
  * @param limit - Maximum number of results to return (default: 10)
  * @param similarityThreshold - Minimum cosine similarity score (0-1, default: 0.7)
- * @returns Array of matching chunks with similarity scores
+ * @returns Array of LangChain Documents with similarity scores
  */
 export async function searchSimilarChunks(
   queryText: string,
   limit: number = 10,
   similarityThreshold: number = 0.7
-): Promise<SearchResult[]> {
+): Promise<DocumentWithScore[]> {
   // Create embedding for the query text
   const queryEmbedding = await createEmbedding(queryText);
 
@@ -50,7 +49,6 @@ export async function searchSimilarChunks(
   const embeddingString = `[${queryEmbedding.join(',')}]`;
 
   // Use Prisma raw query with pgvector's cosine similarity operator (<=>)
-  // Lower distance = higher similarity, so we use 1 - distance to get similarity score
   const results = await prisma.$queryRaw<RawSearchResult[]>`
     SELECT
       c.id,
@@ -71,37 +69,49 @@ export async function searchSimilarChunks(
     LIMIT ${limit}
   `;
 
-  // Transform results to match SearchResult interface
-  return results.map((row: RawSearchResult) => ({
-    id: row.id,
-    documentId: row.documentId,
-    chunkIndex: row.chunkIndex,
-    content: row.content,
-    similarity: typeof row.similarity === 'string' ? parseFloat(row.similarity) : row.similarity,
-    metadata: row.metadata,
-    document: {
-      id: row['document.id'],
-      filename: row['document.filename'],
-      mimetype: row['document.mimetype'],
-      createdAt: row['document.createdAt'],
-    },
-  }));
+  // Transform to LangChain Documents
+  return results.map((row: RawSearchResult) => {
+    const similarity = typeof row.similarity === 'string' ? parseFloat(row.similarity) : row.similarity;
+
+    return {
+      document: new Document({
+        pageContent: row.content,
+        metadata: {
+          id: row.id,
+          documentId: row.documentId,
+          chunkIndex: row.chunkIndex,
+          similarity: similarity,
+          document: {
+            id: row['document.id'],
+            filename: row['document.filename'],
+            mimetype: row['document.mimetype'],
+            createdAt: row['document.createdAt'],
+          },
+          // Include chunk metadata if present
+          ...(row.metadata || {}),
+        },
+      }),
+      similarity: similarity,
+    };
+  });
 }
 
 /**
- * Search for similar chunks within a specific document
+ * Search for similar chunks within a specific document using vector similarity.
+ * Returns results as LangChain Documents for use with LangChain chains.
+ *
  * @param documentId - The ID of the document to search within
  * @param queryText - The text to search for
  * @param limit - Maximum number of results to return (default: 5)
  * @param similarityThreshold - Minimum cosine similarity score (0-1, default: 0.7)
- * @returns Array of matching chunks from the specified document
+ * @returns Array of LangChain Documents with similarity scores
  */
 export async function searchWithinDocument(
   documentId: string,
   queryText: string,
   limit: number = 5,
   similarityThreshold: number = 0.7
-): Promise<SearchResult[]> {
+): Promise<DocumentWithScore[]> {
   // Create embedding for the query text
   const queryEmbedding = await createEmbedding(queryText);
 
@@ -109,7 +119,7 @@ export async function searchWithinDocument(
   const embeddingString = `[${queryEmbedding.join(',')}]`;
 
   // Use Prisma raw query with pgvector's cosine similarity operator (<=>)
-  const results = await prisma.$queryRaw<any[]>`
+  const results = await prisma.$queryRaw<RawSearchResult[]>`
     SELECT
       c.id,
       c.document_id as "documentId",
@@ -130,27 +140,39 @@ export async function searchWithinDocument(
     LIMIT ${limit}
   `;
 
-  // Transform results to match SearchResult interface
-  return results.map((row: RawSearchResult) => ({
-    id: row.id,
-    documentId: row.documentId,
-    chunkIndex: row.chunkIndex,
-    content: row.content,
-    similarity: typeof row.similarity === 'string' ? parseFloat(row.similarity) : row.similarity,
-    metadata: row.metadata,
-    document: {
-      id: row['document.id'],
-      filename: row['document.filename'],
-      mimetype: row['document.mimetype'],
-      createdAt: row['document.createdAt'],
-    },
-  }));
+  // Transform to LangChain Documents
+  return results.map((row: RawSearchResult) => {
+    const similarity = typeof row.similarity === 'string' ? parseFloat(row.similarity) : row.similarity;
+
+    return {
+      document: new Document({
+        pageContent: row.content,
+        metadata: {
+          id: row.id,
+          documentId: row.documentId,
+          chunkIndex: row.chunkIndex,
+          similarity: similarity,
+          document: {
+            id: row['document.id'],
+            filename: row['document.filename'],
+            mimetype: row['document.mimetype'],
+            createdAt: row['document.createdAt'],
+          },
+          // Include chunk metadata if present
+          ...(row.metadata || {}),
+        },
+      }),
+      similarity: similarity,
+    };
+  });
 }
 
 /**
- * Get all chunks for a specific document (ordered by chunk index)
+ * Get all chunks for a specific document (ordered by chunk index).
+ * Useful for retrieving the full chunked content of a document.
+ *
  * @param documentId - The ID of the document
- * @returns Array of chunks
+ * @returns Array of chunks with their metadata
  */
 export async function getDocumentChunks(documentId: string) {
   return await prisma.document_chunks.findMany({

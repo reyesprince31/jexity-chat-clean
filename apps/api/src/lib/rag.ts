@@ -1,64 +1,60 @@
-import { searchSimilarChunks, SearchResult } from './vectorSearch';
-
-export interface RAGContext {
-  chunks: SearchResult[];
-  formattedContext: string;
-}
+import { PrismaRetriever } from './retriever';
+import { ChatPromptTemplate } from '@langchain/core/prompts';
+import { Document } from '@langchain/core/documents';
+import type { DocumentWithScore } from './vectorSearch';
 
 export interface RAGOptions {
   limit?: number;
   similarityThreshold?: number;
+  documentId?: string;
 }
 
 /**
- * Retrieve relevant document chunks for a query using vector search
- * @param query - The user's query text
- * @param options - Optional configuration (limit, similarityThreshold)
- * @returns Array of relevant chunks with similarity scores
+ * Create a PrismaRetriever instance with the given options
+ * @param options - Configuration for the retriever
+ * @returns Configured PrismaRetriever
  */
-export async function retrieveRelevantContext(
-  query: string,
-  options: RAGOptions = {}
-): Promise<SearchResult[]> {
-  const { limit = 5, similarityThreshold = 0.7 } = options;
+export function createRetriever(options: RAGOptions = {}): PrismaRetriever {
+  const { limit = 5, similarityThreshold = 0.7, documentId } = options;
 
-  try {
-    const chunks = await searchSimilarChunks(query, limit, similarityThreshold);
-    return chunks;
-  } catch (error) {
-    console.error('Error retrieving relevant context:', error);
-    throw new Error(`Failed to retrieve context: ${error}`);
-  }
+  return PrismaRetriever.create({
+    k: limit,
+    similarityThreshold,
+    documentId,
+  });
 }
 
 /**
- * Format retrieved chunks into a structured context string for prompt injection
- * @param chunks - Array of search results with document metadata
- * @returns Formatted context string with document references
+ * Format LangChain Documents into a structured context string
+ * @param documents - Array of LangChain Documents with metadata
+ * @returns Formatted context string with source numbers
  */
-export function formatContextForPrompt(chunks: SearchResult[]): string {
-  if (chunks.length === 0) {
+export function formatDocumentsForContext(documents: Document[]): string {
+  if (documents.length === 0) {
     return 'No relevant context found in the knowledge base.';
   }
 
-  const contextParts = chunks.map((chunk, index) => {
-    const docName = chunk.document?.filename || 'Unknown Document';
-    const similarity = (chunk.similarity * 100).toFixed(1);
+  const contextParts = documents.map((doc, index) => {
+    const docName = doc.metadata?.document?.filename || 'Unknown Document';
+    const similarity = doc.metadata?.similarity
+      ? (doc.metadata.similarity * 100).toFixed(1)
+      : 'N/A';
 
     return `[Source ${index + 1}] ${docName} (Relevance: ${similarity}%)
-${chunk.content}`;
+${doc.pageContent}`;
   });
 
   return contextParts.join('\n\n---\n\n');
 }
 
 /**
- * Build a system prompt that instructs the model to use retrieved context
- * @param context - Formatted context string from retrieved chunks
- * @returns System prompt string
+ * Create a ChatPromptTemplate for RAG that works with LangChain chains.
+ * This template expects context (formatted documents) and a question.
+ *
+ * @returns ChatPromptTemplate configured for RAG
  */
-export function buildRAGSystemPrompt(context: string): string {
-  return `You are a helpful AI assistant with access to a knowledge base of documents.
+export function createRAGPromptTemplate(): ChatPromptTemplate {
+  const systemTemplate = `You are a helpful AI assistant with access to a knowledge base of documents.
 
 Your task is to answer user questions based on the provided context from the knowledge base. Follow these guidelines:
 
@@ -73,50 +69,39 @@ Your task is to answer user questions based on the provided context from the kno
 
 **Available Context:**
 
-${context}
+{context}
 
 ---
 
 Now, answer the user's question using the context above.`;
+
+  return ChatPromptTemplate.fromMessages([
+    ['system', systemTemplate],
+    ['human', '{question}'],
+  ]);
 }
 
 /**
- * Complete RAG pipeline: retrieve context, format it, and build the system prompt
- * @param query - The user's query text
- * @param options - Optional configuration for retrieval
- * @returns RAG context with chunks and formatted prompt
- */
-export async function prepareRAGContext(
-  query: string,
-  options: RAGOptions = {}
-): Promise<RAGContext> {
-  // Retrieve relevant chunks
-  const chunks = await retrieveRelevantContext(query, options);
-
-  // Format context for prompt
-  const formattedContext = formatContextForPrompt(chunks);
-
-  return {
-    chunks,
-    formattedContext,
-  };
-}
-
-/**
- * Build a complete system message for LangChain chat
+ * Retrieve documents for a query using the PrismaRetriever.
+ * Returns both the documents and extracts metadata for compatibility.
+ *
  * @param query - The user's query
- * @param options - Optional RAG configuration
- * @returns Object with system prompt and source chunks
+ * @param options - Retrieval configuration
+ * @returns Object with documents and formatted context
  */
-export async function buildRAGPrompt(
+export async function retrieveDocuments(
   query: string,
   options: RAGOptions = {}
-): Promise<{ systemPrompt: string; sourceChunks: SearchResult[] }> {
-  const { chunks, formattedContext } = await prepareRAGContext(query, options);
-  const systemPrompt = buildRAGSystemPrompt(formattedContext);
+): Promise<{ documents: Document[]; context: string }> {
+  try {
+    const retriever = createRetriever(options);
+    // Use invoke() which is the standard LangChain method for retrievers
+    const documents = await retriever.invoke(query);
+    const context = formatDocumentsForContext(documents);
 
-  return {
-    systemPrompt,
-    sourceChunks: chunks,
-  };
+    return { documents, context };
+  } catch (error) {
+    console.error('Error retrieving documents:', error);
+    throw new Error(`Failed to retrieve documents: ${error}`);
+  }
 }

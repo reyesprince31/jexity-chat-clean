@@ -190,19 +190,21 @@ Chunk 2: chars 1600-2600   (200 char overlap with chunk 1)
 
 **Implementation:** `apps/api/src/lib/vectorSearch.ts`
 
-Uses **Prisma with raw SQL** (not Supabase client) for pgvector operations.
+Uses **Prisma with raw SQL** (not Supabase client) for pgvector operations. Returns **LangChain Documents** for seamless integration with LangChain chains and retrievers.
 
 #### searchSimilarChunks(queryText, limit, similarityThreshold)
 
-- Searches across all documents
-- Returns chunks sorted by cosine similarity
+- Searches across all documents using vector similarity
+- Returns LangChain Documents with similarity scores
 - Default: top 10 results with similarity >= 0.7
+- Returns: `DocumentWithScore[]` (LangChain Documents + similarity metadata)
 
 #### searchWithinDocument(documentId, queryText, limit, similarityThreshold)
 
-- Searches within a specific document
-- Returns chunks from that document only
+- Searches within a specific document using vector similarity
+- Returns LangChain Documents from that document only
 - Default: top 5 results with similarity >= 0.7
+- Returns: `DocumentWithScore[]` (LangChain Documents + similarity metadata)
 
 **pgvector operator:** Uses `<=>` for cosine distance (lower = more similar)
 
@@ -210,6 +212,14 @@ Uses **Prisma with raw SQL** (not Supabase client) for pgvector operations.
 1 - (embedding <=> query_embedding) AS similarity
 ORDER BY embedding <=> query_embedding
 ```
+
+**Return format:** All search results are returned as LangChain `Document` objects with metadata:
+- `pageContent` - The chunk text content
+- `metadata.id` - Chunk ID
+- `metadata.documentId` - Parent document ID
+- `metadata.chunkIndex` - Position in document
+- `metadata.similarity` - Similarity score (0-1)
+- `metadata.document` - Document metadata (filename, mimetype, etc.)
 
 ### Embeddings Configuration
 
@@ -310,7 +320,8 @@ const response = await fetch("/upload", { method: "POST", body: formData });
 ```typescript
 import { searchSimilarChunks } from "./lib/vectorSearch";
 const results = await searchSimilarChunks("machine learning", 10, 0.7);
-// Returns array of SearchResult with content, similarity, documentId, etc.
+// Returns DocumentWithScore[] - LangChain Documents with similarity scores
+// Access via: results[0].document.pageContent, results[0].document.metadata, results[0].similarity
 ```
 
 **Search within specific document:**
@@ -318,6 +329,7 @@ const results = await searchSimilarChunks("machine learning", 10, 0.7);
 ```typescript
 import { searchWithinDocument } from "./lib/vectorSearch";
 const results = await searchWithinDocument(docId, "neural networks", 5, 0.7);
+// Returns DocumentWithScore[] - LangChain Documents from specified document
 ```
 
 ### File Organization
@@ -329,6 +341,9 @@ const results = await searchWithinDocument(docId, "neural networks", 5, 0.7);
   - Upload, download, delete files from Supabase Storage
   - Separate from database layer for clean architecture
 - **`src/lib/vectorSearch.ts`** - Vector search queries using Prisma + pgvector
+  - Returns LangChain Documents for seamless integration with retrieval chains
+- **`src/lib/retriever.ts`** - Custom LangChain retriever (PrismaRetriever)
+  - Wraps vector search in LangChain's BaseRetriever interface
 - **`src/lib/embeddings.ts`** - OpenAI embedding generation
 - **`src/lib/chunking.ts`** - Text splitting logic
 
@@ -393,36 +408,43 @@ Client receives Server-Sent Events stream
 
 **Cascading deletes:** Deleting a conversation deletes all messages and message_sources
 
-### RAG Service
+### RAG Service with LangChain
 
 **Implementation:** `apps/api/src/lib/rag.ts`
 
-The RAG (Retrieval Augmented Generation) service retrieves relevant document context and formats it for the AI model.
+The RAG (Retrieval Augmented Generation) service uses **LangChain abstractions** for retrieval and prompt management.
 
-#### retrieveRelevantContext(query, options)
+#### createRetriever(options)
 
-- Uses existing `searchSimilarChunks()` from vectorSearch.ts
-- Default: top 5 chunks with similarity >= 0.7
-- Returns array of SearchResult with document metadata
+- Factory function that creates a `PrismaRetriever` instance
+- Configures: `k` (limit), `similarityThreshold`, optional `documentId`
+- Returns: LangChain `BaseRetriever` for use with chains
 
-#### formatContextForPrompt(chunks)
+#### retrieveDocuments(query, options)
 
-- Formats chunks into structured context string
+- Main retrieval function using PrismaRetriever
+- Uses LangChain's `.invoke()` pattern for standardization
+- Default: top 5 documents with similarity >= 0.7
+- Returns: `{ documents: Document[], context: string }`
+  - `documents` - Array of LangChain Documents with metadata
+  - `context` - Formatted context string ready for prompt injection
+
+#### formatDocumentsForContext(documents)
+
+- Formats LangChain Documents into structured context string
 - Includes source numbers, document names, and relevance scores
 - Format: `[Source 1] filename.pdf (Relevance: 87.5%)\n<chunk content>`
 
-#### buildRAGSystemPrompt(context)
+#### createRAGPromptTemplate()
 
-- Creates system prompt instructing model to:
+- Creates a LangChain `ChatPromptTemplate` configured for RAG
+- Returns template with system instructions and placeholders
+- Ready to use with LangChain chains (e.g., `createStuffDocumentsChain`)
+- System prompt instructs model to:
   - Base answers on provided context
   - Cite sources by number (e.g., "According to Source 1...")
   - Admit when context doesn't contain relevant information
   - Not hallucinate information beyond the context
-
-#### buildRAGPrompt(query, options)
-
-- Complete pipeline: retrieve → format → build prompt
-- Returns: `{ systemPrompt: string, sourceChunks: SearchResult[] }`
 
 ### Chat Service with LangChain
 
@@ -439,17 +461,21 @@ Uses **LangChain** with **OpenAI GPT-4o** for conversational AI with streaming.
 #### streamChatWithRAG(params)
 
 Main streaming function that:
-1. Retrieves RAG context if enabled (useRAG: true)
+1. Retrieves RAG context using LangChain retriever if enabled (useRAG: true)
 2. Builds conversation history from database
 3. Constructs message array (system + history + user query)
 4. Streams response tokens using LangChain's `stream()` method
-5. Returns: `{ stream: AsyncIterable<string>, sourceChunks: SearchResult[] }`
+5. Returns: `{ stream: AsyncIterable<string>, sourceDocuments: Document[] }`
 
 **Parameters:**
 - `userQuery` - Current user message
 - `conversationHistory` - Array of prior messages: `{ role, content }[]`
 - `useRAG` - Enable/disable RAG context retrieval (default: true)
 - `ragOptions` - Configure vector search: `{ limit?, similarityThreshold? }`
+
+**Return value:**
+- `stream` - AsyncIterable of response tokens for streaming
+- `sourceDocuments` - Array of LangChain Documents used as context (includes similarity in metadata)
 
 #### generateConversationTitle(firstMessage)
 
@@ -462,7 +488,7 @@ Main streaming function that:
 
 - Non-streaming version (collects all tokens into single response)
 - Useful for testing or non-interactive use cases
-- Returns: `{ response: string, sourceChunks: SearchResult[] }`
+- Returns: `{ response: string, sourceDocuments: Document[] }`
 
 ### Chat API Endpoints
 
@@ -655,16 +681,22 @@ All chat operations follow the same patterns as document operations:
 
 ### File Organization
 
-- **`src/lib/rag.ts`** - RAG service (retrieve, format, build prompts)
+- **`src/lib/rag.ts`** - LangChain RAG service (retriever, prompts, document formatting)
+- **`src/lib/retriever.ts`** - Custom PrismaRetriever extending LangChain BaseRetriever
 - **`src/lib/chat.ts`** - LangChain chat service with streaming
 - **`src/lib/database.ts`** - Extended with conversation/message operations
 - **`src/routes/chat.ts`** - RESTful chat endpoints with SSE streaming
 
 ### Key Dependencies
 
-- `@langchain/openai` - ChatOpenAI for GPT-4o integration
-- `@langchain/core` - Message types (HumanMessage, AIMessage, SystemMessage)
-- Reuses existing: `@prisma/client`, vector search, embeddings
+- `@langchain/openai` - ChatOpenAI for GPT-4o integration, OpenAI embeddings
+- `@langchain/core` - Core abstractions:
+  - Message types (HumanMessage, AIMessage, SystemMessage)
+  - Document type for RAG
+  - BaseRetriever interface
+  - ChatPromptTemplate for prompts
+- `langchain` - Main LangChain package with retrieval chains
+- Reuses existing: `@prisma/client` for database, pgvector for search
 
 ### Environment Variables
 
@@ -677,8 +709,8 @@ Same as document processing (no additional variables required):
 // 1. Create conversation
 const conv = await createConversation();
 
-// 2. Send first message (streaming)
-const { stream, sourceChunks } = await streamChatWithRAG({
+// 2. Send first message (streaming with LangChain RAG)
+const { stream, sourceDocuments } = await streamChatWithRAG({
   userQuery: "What is machine learning?",
   conversationHistory: [],
   useRAG: true,
@@ -693,6 +725,7 @@ for await (const token of stream) {
 }
 
 // 4. Save messages with citations
+// sourceDocuments are LangChain Documents with metadata
 await createMessage({
   conversation_id: conv.id,
   role: 'user',
@@ -703,22 +736,24 @@ await createMessage({
   conversation_id: conv.id,
   role: 'assistant',
   content: fullResponse,
-  sources: sourceChunks.map(chunk => ({
-    chunk_id: chunk.id,
-    similarity_score: chunk.similarity
+  sources: sourceDocuments.map(doc => ({
+    chunk_id: doc.metadata.id,
+    similarity_score: doc.metadata.similarity
   }))
 });
 ```
 
 ### Important Notes
 
+- **Uses LangChain abstractions** - Custom PrismaRetriever wraps pgvector search in LangChain's BaseRetriever interface
+- **Returns LangChain Documents** - All search results and RAG sources use LangChain's Document type with metadata
 - **Streaming uses Server-Sent Events (SSE)** - Client must parse `data: {...}` format
 - **RAG is optional** - Set `useRAG: false` to disable context retrieval
 - **Conversation history is automatic** - Retrieved from database before streaming
-- **Citations are tracked** - message_sources links responses to document chunks
+- **Citations are tracked** - message_sources links responses to document chunks via Document metadata
 - **Title auto-generation** - Only happens on first message if no title provided
 - **All database writes use transactions** - Message creation updates conversation timestamps
-- **Use LangChain patterns** - Message types (HumanMessage, AIMessage, SystemMessage)
+- **LangChain-compatible** - Easy to extend with chains, agents, and other LangChain features
 
 ### Turborepo Configuration
 

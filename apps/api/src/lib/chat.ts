@@ -1,7 +1,7 @@
 import { ChatOpenAI } from '@langchain/openai';
 import { HumanMessage, AIMessage, SystemMessage, BaseMessage } from '@langchain/core/messages';
-import { buildRAGPrompt } from './rag';
-import type { SearchResult } from './vectorSearch';
+import { retrieveDocuments, createRAGPromptTemplate, formatDocumentsForContext } from './rag';
+import type { Document } from '@langchain/core/documents';
 
 // Chat model configuration
 export const CHAT_CONFIG = {
@@ -37,7 +37,7 @@ export interface StreamChatParams {
 
 export interface StreamChatResult {
   stream: AsyncIterable<string>;
-  sourceChunks: SearchResult[];
+  sourceDocuments: Document[];
 }
 
 /**
@@ -59,7 +59,7 @@ function convertToLangChainMessage(message: ChatMessage): BaseMessage {
 }
 
 /**
- * Stream chat completion with optional RAG context
+ * Stream chat completion with optional RAG context using LangChain retriever
  * @param params - Chat parameters including query, history, and RAG options
  * @returns Async iterator of response chunks and source documents
  */
@@ -67,18 +67,40 @@ export async function streamChatWithRAG(params: StreamChatParams): Promise<Strea
   const { userQuery, conversationHistory = [], useRAG = true, ragOptions = {} } = params;
 
   let messages: BaseMessage[] = [];
-  let sourceChunks: SearchResult[] = [];
+  let sourceDocuments: Document[] = [];
 
-  // If RAG is enabled, retrieve relevant context and build system prompt
+  // If RAG is enabled, retrieve relevant context using LangChain retriever
   if (useRAG) {
     try {
-      const { systemPrompt, sourceChunks: chunks } = await buildRAGPrompt(userQuery, ragOptions);
-      sourceChunks = chunks;
+      const { documents, context } = await retrieveDocuments(userQuery, ragOptions);
+      sourceDocuments = documents;
+
+      // Build system prompt with retrieved context
+      const systemPrompt = `You are a helpful AI assistant with access to a knowledge base of documents.
+
+Your task is to answer user questions based on the provided context from the knowledge base. Follow these guidelines:
+
+1. **Use the context**: Base your answers primarily on the information provided in the context below
+2. **Cite sources**: When referencing information, mention which source number you're using (e.g., "According to Source 1...")
+3. **Be honest**: If the context doesn't contain relevant information to answer the question, clearly state that
+4. **Don't hallucinate**: Don't make up information that isn't in the provided context
+5. **Be conversational**: While being accurate, maintain a natural and helpful tone
+6. **Synthesize information**: If multiple sources provide relevant information, combine them into a coherent answer
+
+---
+
+**Available Context:**
+
+${context}
+
+---
+
+Now, answer the user's question using the context above.`;
 
       // Add system prompt with RAG context
       messages.push(new SystemMessage(systemPrompt));
     } catch (error) {
-      console.error('Error building RAG prompt:', error);
+      console.error('Error retrieving documents:', error);
       // Continue without RAG if retrieval fails
       messages.push(
         new SystemMessage(
@@ -124,7 +146,7 @@ export async function streamChatWithRAG(params: StreamChatParams): Promise<Strea
 
   return {
     stream: tokenGenerator(),
-    sourceChunks,
+    sourceDocuments,
   };
 }
 
@@ -164,12 +186,12 @@ export async function generateConversationTitle(firstMessage: string): Promise<s
 /**
  * Non-streaming chat completion (useful for testing or simple use cases)
  * @param params - Chat parameters
- * @returns Complete response text and source chunks
+ * @returns Complete response text and source documents
  */
 export async function chatWithRAG(
   params: StreamChatParams
-): Promise<{ response: string; sourceChunks: SearchResult[] }> {
-  const { stream, sourceChunks } = await streamChatWithRAG(params);
+): Promise<{ response: string; sourceDocuments: Document[] }> {
+  const { stream, sourceDocuments } = await streamChatWithRAG(params);
 
   // Collect all chunks into a single response
   let fullResponse = '';
@@ -179,6 +201,6 @@ export async function chatWithRAG(
 
   return {
     response: fullResponse,
-    sourceChunks,
+    sourceDocuments,
   };
 }
