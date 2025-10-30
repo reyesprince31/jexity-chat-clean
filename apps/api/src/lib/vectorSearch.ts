@@ -1,6 +1,7 @@
 import { PrismaClient } from '../generated/prisma/client';
 import { createEmbedding } from './embeddings';
 import { Document } from '@langchain/core/documents';
+import { VECTOR_SEARCH_CONFIG } from '../config/rag.config';
 
 const prisma = new PrismaClient();
 
@@ -33,14 +34,14 @@ interface RawSearchResult {
  * Returns results as LangChain Documents for use with LangChain chains.
  *
  * @param queryText - The text to search for
- * @param limit - Maximum number of results to return (default: 10)
- * @param similarityThreshold - Minimum cosine similarity score (0-1, default: 0.7)
+ * @param limit - Maximum number of results to return (default from config)
+ * @param similarityThreshold - Minimum cosine similarity score (0-1, default from config)
  * @returns Array of LangChain Documents with similarity scores
  */
 export async function searchSimilarChunks(
   queryText: string,
   limit: number = 10,
-  similarityThreshold: number = 0.7
+  similarityThreshold: number = VECTOR_SEARCH_CONFIG.similarityThreshold
 ): Promise<DocumentWithScore[]> {
   // Create embedding for the query text
   const queryEmbedding = await createEmbedding(queryText);
@@ -102,15 +103,15 @@ export async function searchSimilarChunks(
  *
  * @param documentId - The ID of the document to search within
  * @param queryText - The text to search for
- * @param limit - Maximum number of results to return (default: 5)
- * @param similarityThreshold - Minimum cosine similarity score (0-1, default: 0.7)
+ * @param limit - Maximum number of results to return (default from config)
+ * @param similarityThreshold - Minimum cosine similarity score (0-1, default from config)
  * @returns Array of LangChain Documents with similarity scores
  */
 export async function searchWithinDocument(
   documentId: string,
   queryText: string,
-  limit: number = 5,
-  similarityThreshold: number = 0.7
+  limit: number = VECTOR_SEARCH_CONFIG.defaultLimit,
+  similarityThreshold: number = VECTOR_SEARCH_CONFIG.similarityThreshold
 ): Promise<DocumentWithScore[]> {
   // Create embedding for the query text
   const queryEmbedding = await createEmbedding(queryText);

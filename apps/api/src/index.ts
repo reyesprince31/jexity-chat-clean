@@ -1,5 +1,6 @@
 import Fastify from "fastify";
 import dotenv from "dotenv";
+import cors from "@fastify/cors";
 import multipart from "@fastify/multipart";
 import uploadRoutes from "./routes/upload.js";
 import chatRoutes from "./routes/chat.js";
@@ -25,6 +26,12 @@ const fastify = Fastify({
             },
           },
         },
+});
+
+// Register CORS
+await fastify.register(cors, {
+  origin: "http://localhost:3000",
+  credentials: true,
 });
 
 // Register Inngest

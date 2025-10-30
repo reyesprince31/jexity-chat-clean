@@ -2,14 +2,15 @@ import { BaseRetriever, type BaseRetrieverInput } from '@langchain/core/retrieve
 import { Document } from '@langchain/core/documents';
 import { CallbackManagerForRetrieverRun } from '@langchain/core/callbacks/manager';
 import { searchSimilarChunks, searchWithinDocument } from './vectorSearch';
+import { VECTOR_SEARCH_CONFIG, RAG_CHAT_CONFIG } from '../config/rag.config';
 
 /**
  * Configuration for PrismaRetriever
  */
 export interface PrismaRetrieverConfig extends BaseRetrieverInput {
-  /** Number of documents to retrieve (default: 5) */
+  /** Number of documents to retrieve (default from config) */
   k?: number;
-  /** Minimum similarity threshold 0-1 (default: 0.7) */
+  /** Minimum similarity threshold 0-1 (default from config) */
   similarityThreshold?: number;
   /** Optional: limit search to a specific document */
   documentId?: string;
@@ -29,8 +30,9 @@ export class PrismaRetriever extends BaseRetriever {
 
   constructor(config: PrismaRetrieverConfig = {}) {
     super(config);
-    this.k = config.k ?? 5;
-    this.similarityThreshold = config.similarityThreshold ?? 0.7;
+    this.k = config.k ?? RAG_CHAT_CONFIG.defaultContextLimit;
+    this.similarityThreshold =
+      config.similarityThreshold ?? VECTOR_SEARCH_CONFIG.similarityThreshold;
     this.documentId = config.documentId;
   }
 

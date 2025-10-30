@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chat Widget - Development</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto',
+          'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans',
+          'Helvetica Neue', sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .container {
+        max-width: 1200px;
+        width: 100%;
+      }
+
+      h1 {
+        color: white;
+        text-align: center;
+        margin-bottom: 30px;
+      }
+
+      .demo-container {
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+
+      .info-card {
+        background: white;
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        max-width: 500px;
+      }
+
+      .info-card h2 {
+        margin-top: 0;
+        color: #667eea;
+      }
+
+      .info-card code {
+        background: #f5f5f5;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 14px;
+      }
+
+      .info-card pre {
+        background: #f5f5f5;
+        padding: 12px;
+        border-radius: 8px;
+        overflow-x: auto;
+        font-size: 13px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Chat Widget Development</h1>
+
+      <div class="demo-container">
+        <!-- Widget will be mounted here via data-chat-widget attribute -->
+        <div data-chat-widget></div>
+
+        <div class="info-card">
+          <h2>Development Mode</h2>
+          <p>
+            This page demonstrates the chat widget in development mode. The
+            widget auto-initializes when the <code>data-chat-widget</code>
+            attribute is present.
+          </p>
+
+          <h3>Environment</h3>
+          <p>Make sure the API server is running on port 3001 (or the port specified in your <code>.env</code> file).</p>
+
+          <h3>Quick Start</h3>
+          <pre><code># Start the API server
+cd apps/api
+pnpm dev
+
+# In another terminal, start the widget dev server
+cd apps/chat-widget
+pnpm dev</code></pre>
+
+          <h3>Usage Examples</h3>
+          <p><strong>HTML attribute:</strong></p>
+          <pre><code>&lt;div data-chat-widget
+     data-api-url="http://localhost:3001"
+     data-conversation-id="optional-id"&gt;
+&lt;/div&gt;</code></pre>
+
+          <p><strong>JavaScript:</strong></p>
+          <pre><code>import { initChatWidget } from 'chat-widget';
+
+const cleanup = initChatWidget({
+  containerId: 'my-container',
+  apiUrl: 'http://localhost:3001',
+  onConversationCreate: (id) => {
+    console.log('Conversation created:', id);
+  }
+});
+
+// Later: cleanup();</code></pre>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

@@ -6,6 +6,7 @@ import { getDocumentById } from "../../lib/database";
 import { chunkText, estimateTokenCount } from "../../lib/chunking";
 import { PrismaClient } from "../../generated/prisma/client";
 
+// Reuse single Prisma instance to avoid connection pool issues
 const prisma = new PrismaClient();
 
 export const processFileUpload = inngest.createFunction(
@@ -17,8 +18,9 @@ export const processFileUpload = inngest.createFunction(
   async ({ event, step }) => {
     const { documentId } = event.data;
 
-    // Step 1: Fetch document from database
-    const documentResult = await step.run("fetch-document", async () => {
+    try {
+      // Step 1: Fetch document from database
+      const documentResult = await step.run("fetch-document", async () => {
       console.log(`Fetching document with ID: ${documentId}`);
 
       const document = await getDocumentById(documentId);
@@ -108,37 +110,112 @@ export const processFileUpload = inngest.createFunction(
         );
       }
 
+      const textLength = extractedText.length;
+
+      // Store extracted text in database immediately to avoid returning large text
+      await prisma.documents.update({
+        where: { id: documentId },
+        data: {
+          extracted_text: extractedText || null,
+          extracted_text_length: textLength,
+          updated_at: new Date(),
+        },
+      });
+
+      console.log(`Stored extracted text (${textLength} characters)`);
+
+      // Return only metadata, not the actual text
       return {
-        extractedText,
-        textLength: extractedText.length,
+        textLength,
         canCreateEmbedding,
       };
     });
 
-    // Step 4: Chunk text and create embeddings (only for supported files)
-    let chunkingResult = null;
+    // Step 4: Chunk, create embeddings, and store
+    let chunkCount = 0;
 
-    if (processResult.canCreateEmbedding && processResult.extractedText) {
-      chunkingResult = await step.run("chunk-and-embed", async () => {
-        const { extractedText } = processResult;
+    if (processResult.canCreateEmbedding) {
+      chunkCount = await step.run("chunk-embed-store", async () => {
+        // Fetch the extracted text from database
+        const doc = await prisma.documents.findUnique({
+          where: { id: documentId },
+          select: { extracted_text: true },
+        });
 
+        if (!doc?.extracted_text) {
+          throw new Error("No extracted text found in database");
+        }
+
+        // Chunk the text
         console.log(`Chunking text for: ${filename}`);
-        const chunks = await chunkText(extractedText);
-        console.log(`Created ${chunks.length} chunks for ${filename}`);
+        const chunks = await chunkText(doc.extracted_text);
+        console.log(`Created ${chunks.length} chunks`);
 
-        // Extract chunk content for batch embedding
         const chunkContents = chunks.map(chunk => chunk.content);
 
+        // Create embeddings in batch (THIS IS THE SLOW PART - ~60-90 seconds)
         console.log(`Creating embeddings for ${chunks.length} chunks...`);
+        const embeddingStartTime = Date.now();
         const embeddings = await createEmbeddingsBatch(chunkContents);
+        const embeddingTime = ((Date.now() - embeddingStartTime) / 1000).toFixed(2);
         console.log(
-          `Created ${embeddings.length} embeddings (${embeddings[0]?.length || 0} dimensions each)`
+          `✓ Created ${embeddings.length} embeddings in ${embeddingTime}s (${embeddings[0]?.length || 0} dimensions)`
         );
 
-        return {
-          chunks,
-          embeddings,
-        };
+        // Delete existing chunks for this document (in case of reprocessing)
+        await prisma.document_chunks.deleteMany({
+          where: { document_id: documentId },
+        });
+
+        console.log(`Storing ${chunks.length} chunks in database...`);
+        const storeStartTime = Date.now();
+
+        // Build VALUES rows for bulk insert (10x faster than individual inserts)
+        const values: string[] = [];
+        const params: any[] = [];
+        let paramIndex = 1;
+
+        for (let i = 0; i < chunks.length; i++) {
+          const chunk = chunks[i];
+          const embedding = embeddings[i];
+
+          if (!chunk) {
+            throw new Error(`Missing chunk at index ${i}`);
+          }
+
+          if (!embedding) {
+            throw new Error(`Missing embedding for chunk ${i}`);
+          }
+
+          const embeddingString = `[${embedding.join(',')}]`;
+
+          values.push(
+            `(gen_random_uuid(), $${paramIndex}::uuid, $${paramIndex + 1}, $${paramIndex + 2}, $${paramIndex + 3}, $${paramIndex + 4}::vector, $${paramIndex + 5}::jsonb, NOW())`
+          );
+
+          params.push(
+            documentId,
+            chunk.metadata.chunkIndex,
+            chunk.content,
+            estimateTokenCount(chunk.content),
+            embeddingString,
+            JSON.stringify(chunk.metadata)
+          );
+
+          paramIndex += 6;
+        }
+
+        // Execute bulk insert with all chunks in a single query
+        await prisma.$executeRawUnsafe(
+          `INSERT INTO document_chunks (id, document_id, chunk_index, content, token_count, embedding, metadata, created_at)
+           VALUES ${values.join(', ')}`,
+          ...params
+        );
+
+        const storeTime = ((Date.now() - storeStartTime) / 1000).toFixed(2);
+        console.log(`✓ Stored ${chunks.length} chunks in ${storeTime}s (bulk insert)`);
+
+        return chunks.length;
       });
     } else {
       console.log(
@@ -146,109 +223,50 @@ export const processFileUpload = inngest.createFunction(
       );
     }
 
-    // Step 5: Store chunks with embeddings in database
-    if (chunkingResult) {
-      await step.run("store-chunks", async () => {
-        console.log(`Storing ${chunkingResult.chunks.length} chunks in database...`);
+    // Step 5: Update document metadata with final status
+    await step.run("update-document-metadata", async () => {
+      console.log(`Updating document metadata for: ${filename}`);
 
-        // Prepare chunks for batch insert
-        const chunksToInsert = chunkingResult.chunks.map((chunk, index) => {
-          const embedding = chunkingResult.embeddings[index];
-          if (!embedding) {
-            throw new Error(`Missing embedding for chunk ${index}`);
-          }
-          const embeddingString = `[${embedding.join(',')}]`;
-
-          return {
-            document_id: documentId,
-            chunk_index: chunk.metadata.chunkIndex,
-            content: chunk.content,
-            token_count: estimateTokenCount(chunk.content),
-            embedding: embeddingString,
-            metadata: chunk.metadata,
-          };
-        });
-
-        // Delete existing chunks for this document (in case of reprocessing)
-        await prisma.document_chunks.deleteMany({
-          where: { document_id: documentId },
-        });
-
-        // Use raw query for batch insert with vector embeddings
-        for (const chunk of chunksToInsert) {
-          await prisma.$executeRaw`
-            INSERT INTO document_chunks (
-              id, document_id, chunk_index, content, token_count, embedding, metadata, created_at
-            ) VALUES (
-              gen_random_uuid(),
-              ${chunk.document_id}::uuid,
-              ${chunk.chunk_index},
-              ${chunk.content},
-              ${chunk.token_count},
-              ${chunk.embedding}::vector,
-              ${JSON.stringify(chunk.metadata)}::jsonb,
-              NOW()
-            )
-          `;
-        }
-
-        console.log(`Successfully stored ${chunksToInsert.length} chunks`);
-
-        return { chunkCount: chunksToInsert.length };
+      await prisma.documents.update({
+        where: { id: documentId },
+        data: {
+          has_embedding: chunkCount > 0,
+          updated_at: new Date(),
+        },
       });
-    }
 
-    // Step 6: Update document record with processing results
-    const updatedDocument = await step.run(
-      "update-document-metadata",
-      async () => {
-        console.log(`Updating document metadata for: ${filename}`);
+      console.log(`Document updated with ID: ${documentId}`);
+      console.log(`Has embedding: ${chunkCount > 0}`);
+      console.log(`Chunk count: ${chunkCount}`);
+    });
 
-        const document = await prisma.documents.update({
-          where: { id: documentId },
-          data: {
-            extracted_text: processResult.extractedText || null,
-            extracted_text_length: processResult.textLength,
-            has_embedding: !!chunkingResult,
-            updated_at: new Date(),
-          },
-        });
-
-        console.log(`Document updated with ID: ${document.id}`);
-        console.log(`Extracted text length: ${document.extracted_text_length}`);
-        console.log(`Has embedding: ${document.has_embedding}`);
-
-        return document;
-      }
-    );
-
-    // Inngest serializes data between steps, converting Dates to ISO strings
-    // Handle both Date objects and ISO string formats
-    const toISOString = (dateValue: Date | string): string => {
-      if (typeof dateValue === 'string') return dateValue;
-      return dateValue.toISOString();
-    };
-
-    const uploadedAt = toISOString(updatedDocument.created_at);
-    const updatedAt = toISOString(updatedDocument.updated_at);
-
+    // Return minimal data to avoid "request body too large" error
     return {
       success: true,
       message: "Document processed successfully",
-      document: {
-        id: updatedDocument.id,
-        filename: updatedDocument.filename,
-        mimetype: updatedDocument.mimetype,
-        size: Number(updatedDocument.size),
-        contentHash: updatedDocument.content_hash,
-        storagePath: updatedDocument.storage_path,
-        publicUrl: updatedDocument.public_url,
-        extractedTextLength: updatedDocument.extracted_text_length,
-        hasEmbedding: updatedDocument.has_embedding,
-        chunkCount: chunkingResult?.chunks.length || 0,
-        uploadedAt,
-        updatedAt,
-      },
+      documentId: documentId,
+      filename: filename,
+      extractedTextLength: processResult.textLength,
+      hasEmbedding: chunkCount > 0,
+      chunkCount: chunkCount,
     };
+    } catch (error) {
+      // If processing fails, delete the document to allow re-uploading
+      console.error(`Error processing document ${documentId}:`, error);
+
+      try {
+        console.log(`Cleaning up failed document: ${documentId}`);
+        await prisma.documents.delete({
+          where: { id: documentId },
+        });
+        console.log(`Successfully deleted failed document: ${documentId}`);
+      } catch (deleteError) {
+        console.error(`Failed to delete document ${documentId}:`, deleteError);
+        // Continue to throw the original error even if cleanup fails
+      }
+
+      // Re-throw the original error
+      throw error;
+    }
   }
 );

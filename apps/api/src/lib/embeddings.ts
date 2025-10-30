@@ -1,11 +1,8 @@
 import { OpenAIEmbeddings } from "@langchain/openai";
+import { EMBEDDING_CONFIG } from '../config/rag.config';
 
-// Embedding model configuration
-export const EMBEDDING_CONFIG = {
-  model: "text-embedding-3-large",
-  dimensions: 3072, // text-embedding-3-large has 3072 dimensions
-  // Alternative: "text-embedding-3-small" with 1536 dimensions (more cost-effective)
-} as const;
+// Re-export for backward compatibility
+export { EMBEDDING_CONFIG };
 
 // Initialize OpenAI embeddings with LangChain
 export const embeddings = new OpenAIEmbeddings({

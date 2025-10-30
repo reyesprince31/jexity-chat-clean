@@ -2,6 +2,7 @@ import { PrismaRetriever } from './retriever';
 import { ChatPromptTemplate } from '@langchain/core/prompts';
 import { Document } from '@langchain/core/documents';
 import type { DocumentWithScore } from './vectorSearch';
+import { VECTOR_SEARCH_CONFIG, RAG_CHAT_CONFIG } from '../config/rag.config';
 
 export interface RAGOptions {
   limit?: number;
@@ -15,7 +16,11 @@ export interface RAGOptions {
  * @returns Configured PrismaRetriever
  */
 export function createRetriever(options: RAGOptions = {}): PrismaRetriever {
-  const { limit = 5, similarityThreshold = 0.7, documentId } = options;
+  const {
+    limit = RAG_CHAT_CONFIG.defaultContextLimit,
+    similarityThreshold = VECTOR_SEARCH_CONFIG.similarityThreshold,
+    documentId,
+  } = options;
 
   return PrismaRetriever.create({
     k: limit,
@@ -36,12 +41,16 @@ export function formatDocumentsForContext(documents: Document[]): string {
 
   const contextParts = documents.map((doc, index) => {
     const docName = doc.metadata?.document?.filename || 'Unknown Document';
-    const similarity = doc.metadata?.similarity
-      ? (doc.metadata.similarity * 100).toFixed(1)
-      : 'N/A';
 
-    return `[Source ${index + 1}] ${docName} (Relevance: ${similarity}%)
-${doc.pageContent}`;
+    // Format with or without similarity scores based on config
+    let header = `[Source ${index + 1}] ${docName}`;
+
+    if (RAG_CHAT_CONFIG.showSimilarityScores && doc.metadata?.similarity) {
+      const similarity = (doc.metadata.similarity * 100).toFixed(1);
+      header += ` (Relevance: ${similarity}%)`;
+    }
+
+    return `${header}\n${doc.pageContent}`;
   });
 
   return contextParts.join('\n\n---\n\n');

@@ -196,14 +196,14 @@ Uses **Prisma with raw SQL** (not Supabase client) for pgvector operations. Retu
 
 - Searches across all documents using vector similarity
 - Returns LangChain Documents with similarity scores
-- Default: top 10 results with similarity >= 0.7
+- Default: top 10 results with similarity >= 0.6
 - Returns: `DocumentWithScore[]` (LangChain Documents + similarity metadata)
 
 #### searchWithinDocument(documentId, queryText, limit, similarityThreshold)
 
 - Searches within a specific document using vector similarity
 - Returns LangChain Documents from that document only
-- Default: top 5 results with similarity >= 0.7
+- Default: top 5 results with similarity >= 0.6
 - Returns: `DocumentWithScore[]` (LangChain Documents + similarity metadata)
 
 **pgvector operator:** Uses `<=>` for cosine distance (lower = more similar)
@@ -353,7 +353,7 @@ const results = await searchWithinDocument(docId, "neural networks", 5, 0.7);
 - **Use Supabase only for file storage** via `src/lib/storage.ts`
 - **Chunks are deleted** when parent document is deleted (CASCADE)
 - **Overlapping chunks** ensure important context isn't split
-- **Similarity threshold** 0.7 is recommended (0-1 scale, 1 = identical)
+- **Similarity threshold** defaults to 0.6 (0-1 scale, 1 = identical). This is a balanced threshold that captures semantically relevant content. For stricter matching, use 0.7+; for broader results, use 0.5-0.6. Adjust based on your use case.
 - **Legacy embedding field** in documents table is no longer used
 
 ## Chat System with RAG (Retrieval Augmented Generation)
@@ -424,7 +424,7 @@ The RAG (Retrieval Augmented Generation) service uses **LangChain abstractions**
 
 - Main retrieval function using PrismaRetriever
 - Uses LangChain's `.invoke()` pattern for standardization
-- Default: top 5 documents with similarity >= 0.7
+- Default: top 5 documents with similarity >= 0.6
 - Returns: `{ documents: Document[], context: string }`
   - `documents` - Array of LangChain Documents with metadata
   - `context` - Formatted context string ready for prompt injection
@@ -529,7 +529,7 @@ Send a message and receive streaming AI response with RAG context.
   "useRAG": true,
   "ragOptions": {
     "limit": 5,
-    "similarityThreshold": 0.7
+    "similarityThreshold": 0.6
   }
 }
 ```
@@ -714,7 +714,7 @@ const { stream, sourceDocuments } = await streamChatWithRAG({
   userQuery: "What is machine learning?",
   conversationHistory: [],
   useRAG: true,
-  ragOptions: { limit: 5, similarityThreshold: 0.7 }
+  ragOptions: { limit: 5, similarityThreshold: 0.6 }
 });
 
 // 3. Collect response

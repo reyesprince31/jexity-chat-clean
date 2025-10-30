@@ -1,4 +1,5 @@
 import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
+import { CHUNKING_CONFIG } from '../config/rag.config';
 
 interface ChunkMetadata {
   chunkIndex: number;
@@ -12,14 +13,11 @@ export interface DocumentChunk {
   metadata: ChunkMetadata;
 }
 
-const CHUNK_SIZE = 1000;
-const CHUNK_OVERLAP = 200;
-
 export async function chunkText(text: string): Promise<DocumentChunk[]> {
   const splitter = new RecursiveCharacterTextSplitter({
-    chunkSize: CHUNK_SIZE,
-    chunkOverlap: CHUNK_OVERLAP,
-    separators: ['\n\n', '\n', '. ', '! ', '? ', ', ', ' ', ''],
+    chunkSize: CHUNKING_CONFIG.chunkSize,
+    chunkOverlap: CHUNKING_CONFIG.chunkOverlap,
+    separators: [...CHUNKING_CONFIG.separators],
     keepSeparator: false,
   });
 
@@ -46,7 +44,7 @@ export async function chunkText(text: string): Promise<DocumentChunk[]> {
     });
 
     // Move position forward, accounting for overlap
-    currentPosition = endPosition - CHUNK_OVERLAP;
+    currentPosition = endPosition - CHUNKING_CONFIG.chunkOverlap;
   }
 
   return documentChunks;

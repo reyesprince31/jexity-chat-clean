@@ -2,14 +2,14 @@ import { ChatOpenAI } from '@langchain/openai';
 import { HumanMessage, AIMessage, SystemMessage, BaseMessage } from '@langchain/core/messages';
 import { retrieveDocuments, createRAGPromptTemplate, formatDocumentsForContext } from './rag';
 import type { Document } from '@langchain/core/documents';
+import {
+  CHAT_MODEL_CONFIG,
+  TITLE_GENERATION_CONFIG,
+  RAG_CHAT_CONFIG,
+} from '../config/rag.config';
 
-// Chat model configuration
-export const CHAT_CONFIG = {
-  model: 'gpt-4o',
-  temperature: 0.7,
-  maxTokens: 2000,
-  streaming: true,
-} as const;
+// Re-export for backward compatibility
+export const CHAT_CONFIG = CHAT_MODEL_CONFIG;
 
 // Initialize ChatOpenAI with streaming enabled
 export const chatModel = new ChatOpenAI({
@@ -64,7 +64,12 @@ function convertToLangChainMessage(message: ChatMessage): BaseMessage {
  * @returns Async iterator of response chunks and source documents
  */
 export async function streamChatWithRAG(params: StreamChatParams): Promise<StreamChatResult> {
-  const { userQuery, conversationHistory = [], useRAG = true, ragOptions = {} } = params;
+  const {
+    userQuery,
+    conversationHistory = [],
+    useRAG = RAG_CHAT_CONFIG.useRAGByDefault,
+    ragOptions = {},
+  } = params;
 
   let messages: BaseMessage[] = [];
   let sourceDocuments: Document[] = [];
@@ -153,20 +158,20 @@ Now, answer the user's question using the context above.`;
 /**
  * Generate a conversation title from the first user message
  * @param firstMessage - The first user message in the conversation
- * @returns A short, descriptive title (max 50 characters)
+ * @returns A short, descriptive title (max characters from config)
  */
 export async function generateConversationTitle(firstMessage: string): Promise<string> {
   try {
     const titleModel = new ChatOpenAI({
-      model: 'gpt-4o-mini', // Use smaller model for title generation
-      temperature: 0.5,
-      maxTokens: 50,
+      model: TITLE_GENERATION_CONFIG.model,
+      temperature: TITLE_GENERATION_CONFIG.temperature,
+      maxTokens: TITLE_GENERATION_CONFIG.maxTokens,
       openAIApiKey: process.env.OPENAI_API_KEY,
     });
 
     const messages = [
       new SystemMessage(
-        'Generate a short, descriptive title (max 6 words) for a conversation that starts with the following user message. Only respond with the title, nothing else.'
+        `Generate a short, descriptive title (max ${TITLE_GENERATION_CONFIG.maxWords} words) for a conversation that starts with the following user message. Only respond with the title, nothing else.`
       ),
       new HumanMessage(firstMessage),
     ];
@@ -175,11 +180,15 @@ export async function generateConversationTitle(firstMessage: string): Promise<s
     const title = response.content.toString().trim();
 
     // Ensure title is not too long
-    return title.length > 50 ? title.substring(0, 47) + '...' : title;
+    const maxLength = TITLE_GENERATION_CONFIG.maxLength;
+    return title.length > maxLength ? title.substring(0, maxLength - 3) + '...' : title;
   } catch (error) {
     console.error('Error generating conversation title:', error);
-    // Fallback: use first 50 characters of the message
-    return firstMessage.length > 50 ? firstMessage.substring(0, 47) + '...' : firstMessage;
+    // Fallback: use first N characters of the message
+    const maxLength = TITLE_GENERATION_CONFIG.maxLength;
+    return firstMessage.length > maxLength
+      ? firstMessage.substring(0, maxLength - 3) + '...'
+      : firstMessage;
   }
 }
 
