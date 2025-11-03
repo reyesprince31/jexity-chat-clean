@@ -1,0 +1,53 @@
+@import "tailwindcss" prefix(tw);
+
+/* Custom animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes typing {
+  0%,
+  60%,
+  100% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
+  30% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+
+/* Scrollbar styles for messages container */
+.tw\:overflow-y-auto::-webkit-scrollbar {
+  width: 8px;
+}
+
+.tw\:overflow-y-auto::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.tw\:overflow-y-auto::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+.tw\:overflow-y-auto::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Custom animation utilities */
+.tw\:animate-fadeIn {
+  animation: fadeIn 0.3s ease-in;
+}
+
+.tw\:animate-typing {
+  animation: typing 1.4s infinite;
+}
