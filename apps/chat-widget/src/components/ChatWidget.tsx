@@ -180,8 +180,9 @@ export function ChatWidget({
             </div>
             {sources.map((source, idx) => (
               <div key={source.id} className="tw:py-1 tw:text-amber-800">
-                <strong>Source {idx + 1}:</strong> {source.document.filename}{" "}
-                (Relevance: {(source.similarityScore * 100).toFixed(1)}%)
+                <strong>Source {idx + 1}:</strong>{" "}
+                {source.filename} (Relevance:{" "}
+                {(source.similarity * 100).toFixed(1)}%)
               </div>
             ))}
           </div>

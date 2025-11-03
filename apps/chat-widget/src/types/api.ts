@@ -16,13 +16,10 @@ export interface Message {
 
 export interface Source {
   id: string;
-  chunkId: string;
-  similarityScore: number;
+  documentId: string;
+  similarity: number;
   content: string;
-  document: {
-    filename: string;
-    mimetype: string;
-  };
+  filename: string;
 }
 
 export interface MessageWithSources extends Message {
