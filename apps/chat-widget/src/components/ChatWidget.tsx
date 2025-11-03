@@ -70,7 +70,7 @@ export function ChatWidget({
     // Add user message optimistically
     const userMsg: Message = {
       id: `temp-${Date.now()}`,
-      conversation_id: conversationId,
+      conversationId: conversationId,
       role: "user",
       content: userMessage,
       createdAt: new Date().toISOString(),
@@ -91,7 +91,7 @@ export function ChatWidget({
           // Add assistant message
           const assistantMsg: Message = {
             id: `temp-${Date.now()}`,
-            conversation_id: conversationId,
+            conversationId: conversationId,
             role: "assistant",
             content: fullResponse,
             createdAt: new Date().toISOString(),

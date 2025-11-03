@@ -33,6 +33,11 @@ interface RawSearchResult {
  * Search for similar chunks across all documents using vector similarity.
  * Returns results as LangChain Documents for use with LangChain chains.
  *
+ * Uses adaptive threshold strategy:
+ * 1. First tries to find results above the similarity threshold
+ * 2. If no results found, falls back to top-K results without threshold
+ * This ensures the RAG system always has context when documents exist
+ *
  * @param queryText - The text to search for
  * @param limit - Maximum number of results to return (default from config)
  * @param similarityThreshold - Minimum cosine similarity score (0-1, default from config)
@@ -49,8 +54,8 @@ export async function searchSimilarChunks(
   // Convert embedding array to pgvector format string
   const embeddingString = `[${queryEmbedding.join(',')}]`;
 
-  // Use Prisma raw query with pgvector's cosine similarity operator (<=>)
-  const results = await prisma.$queryRaw<RawSearchResult[]>`
+  // First attempt: Search with similarity threshold
+  let results = await prisma.$queryRaw<RawSearchResult[]>`
     SELECT
       c.id,
       c.document_id as "documentId",
@@ -69,6 +74,30 @@ export async function searchSimilarChunks(
     ORDER BY c.embedding <=> ${embeddingString}::vector
     LIMIT ${limit}
   `;
+
+  // Adaptive fallback: If no results above threshold, get top-K anyway
+  if (results.length === 0) {
+    console.log(`No results above threshold ${similarityThreshold}, falling back to top-${limit} results`);
+
+    results = await prisma.$queryRaw<RawSearchResult[]>`
+      SELECT
+        c.id,
+        c.document_id as "documentId",
+        c.chunk_index as "chunkIndex",
+        c.content,
+        c.metadata,
+        1 - (c.embedding <=> ${embeddingString}::vector) as similarity,
+        d.id as "document.id",
+        d.filename as "document.filename",
+        d.mimetype as "document.mimetype",
+        d.created_at as "document.createdAt"
+      FROM document_chunks c
+      INNER JOIN documents d ON c.document_id = d.id
+      WHERE c.embedding IS NOT NULL
+      ORDER BY c.embedding <=> ${embeddingString}::vector
+      LIMIT ${limit}
+    `;
+  }
 
   // Transform to LangChain Documents
   return results.map((row: RawSearchResult) => {
@@ -101,6 +130,11 @@ export async function searchSimilarChunks(
  * Search for similar chunks within a specific document using vector similarity.
  * Returns results as LangChain Documents for use with LangChain chains.
  *
+ * Uses adaptive threshold strategy:
+ * 1. First tries to find results above the similarity threshold
+ * 2. If no results found, falls back to top-K results without threshold
+ * This ensures the RAG system always has context when documents exist
+ *
  * @param documentId - The ID of the document to search within
  * @param queryText - The text to search for
  * @param limit - Maximum number of results to return (default from config)
@@ -119,8 +153,8 @@ export async function searchWithinDocument(
   // Convert embedding array to pgvector format string
   const embeddingString = `[${queryEmbedding.join(',')}]`;
 
-  // Use Prisma raw query with pgvector's cosine similarity operator (<=>)
-  const results = await prisma.$queryRaw<RawSearchResult[]>`
+  // First attempt: Search with similarity threshold
+  let results = await prisma.$queryRaw<RawSearchResult[]>`
     SELECT
       c.id,
       c.document_id as "documentId",
@@ -140,6 +174,31 @@ export async function searchWithinDocument(
     ORDER BY c.embedding <=> ${embeddingString}::vector
     LIMIT ${limit}
   `;
+
+  // Adaptive fallback: If no results above threshold, get top-K anyway
+  if (results.length === 0) {
+    console.log(`No results above threshold ${similarityThreshold} for document ${documentId}, falling back to top-${limit} results`);
+
+    results = await prisma.$queryRaw<RawSearchResult[]>`
+      SELECT
+        c.id,
+        c.document_id as "documentId",
+        c.chunk_index as "chunkIndex",
+        c.content,
+        c.metadata,
+        1 - (c.embedding <=> ${embeddingString}::vector) as similarity,
+        d.id as "document.id",
+        d.filename as "document.filename",
+        d.mimetype as "document.mimetype",
+        d.created_at as "document.createdAt"
+      FROM document_chunks c
+      INNER JOIN documents d ON c.document_id = d.id
+      WHERE c.document_id = ${documentId}::uuid
+        AND c.embedding IS NOT NULL
+      ORDER BY c.embedding <=> ${embeddingString}::vector
+      LIMIT ${limit}
+    `;
+  }
 
   // Transform to LangChain Documents
   return results.map((row: RawSearchResult) => {

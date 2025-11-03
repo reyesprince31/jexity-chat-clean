@@ -17,7 +17,11 @@
  * @module routes/chat
  */
 
-import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import {
+  CreateConversationRequestSchema,
+  SendMessageRequestSchema,
+} from "@repo/dto";
 import {
   createConversation,
   getConversation,
@@ -28,10 +32,14 @@ import {
   createMessage,
   getMessages,
   getMessageWithSources,
-} from '../lib/database.js';
-import { streamChatWithRAG, generateConversationTitle, type ChatMessage } from '../lib/chat.js';
+} from "../lib/database.js";
+import {
+  streamChatWithRAG,
+  generateConversationTitle,
+  type ChatMessage,
+} from "../lib/chat.js";
 
-// Request/Response Types
+// Request/Response Types (Fastify-specific structure)
 interface CreateConversationRequest {
   Body: {
     title?: string;
@@ -85,7 +93,9 @@ interface ListConversationsRequest {
  *
  * @param fastify - Fastify instance
  */
-export default async function chatRoutes(fastify: FastifyInstance): Promise<void> {
+export default async function chatRoutes(
+  fastify: FastifyInstance
+): Promise<void> {
   /**
    * POST /conversations
    * Create a new conversation
@@ -97,10 +107,25 @@ export default async function chatRoutes(fastify: FastifyInstance): Promise<void
    *   { success: true, conversation: { id, title, createdAt, updatedAt } }
    */
   fastify.post<CreateConversationRequest>(
-    '/conversations',
-    async (request: FastifyRequest<CreateConversationRequest>, reply: FastifyReply) => {
+    "/conversations",
+    async (
+      request: FastifyRequest<CreateConversationRequest>,
+      reply: FastifyReply
+    ) => {
       try {
-        const { title } = request.body;
+        // Validate request body
+        const validation = CreateConversationRequestSchema.safeParse(
+          request.body
+        );
+        if (!validation.success) {
+          return reply.code(400).send({
+            success: false,
+            message: "Invalid request body",
+            error: validation.error.message,
+          });
+        }
+
+        const { title } = validation.data;
 
         const conversation = await createConversation(title);
 
@@ -119,7 +144,7 @@ export default async function chatRoutes(fastify: FastifyInstance): Promise<void
         fastify.log.error(error);
         return reply.code(500).send({
           success: false,
-          message: 'Failed to create conversation',
+          message: "Failed to create conversation",
         });
       }
     }
@@ -152,36 +177,56 @@ export default async function chatRoutes(fastify: FastifyInstance): Promise<void
    *   - { type: 'error', message: string } - error during streaming
    */
   fastify.post<SendMessageRequest>(
-    '/conversations/:id/messages',
-    async (request: FastifyRequest<SendMessageRequest>, reply: FastifyReply) => {
+    "/conversations/:id/messages",
+    async (
+      request: FastifyRequest<SendMessageRequest>,
+      reply: FastifyReply
+    ) => {
       try {
         const { id: conversationId } = request.params;
-        const { message: userMessage, useRAG = true, ragOptions } = request.body;
+
+        // Validate request body
+        const validation = SendMessageRequestSchema.safeParse(request.body);
+        if (!validation.success) {
+          return reply.code(400).send({
+            success: false,
+            message: "Invalid request body",
+            error: validation.error.message,
+          });
+        }
+
+        const {
+          message: userMessage,
+          useRAG = true,
+          ragOptions,
+        } = validation.data;
 
         // Validate conversation exists
         const conversation = await getConversation(conversationId);
         if (!conversation) {
           return reply.code(404).send({
             success: false,
-            message: 'Conversation not found',
+            message: "Conversation not found",
           });
         }
 
         // Save user message to database
         await createMessage({
           conversation_id: conversationId,
-          role: 'user',
+          role: "user",
           content: userMessage,
         });
 
-        fastify.log.info(`User message saved to conversation: ${conversationId}`);
+        fastify.log.info(
+          `User message saved to conversation: ${conversationId}`
+        );
 
         // Get conversation history (excluding the just-added user message for now)
         const messages = await getMessages(conversationId);
         const conversationHistory: ChatMessage[] = messages
           .slice(0, -1) // Exclude the last message (just added)
           .map((msg) => ({
-            role: msg.role as 'user' | 'assistant' | 'system',
+            role: msg.role as "user" | "assistant" | "system",
             content: msg.content,
           }));
 
@@ -194,19 +239,21 @@ export default async function chatRoutes(fastify: FastifyInstance): Promise<void
         });
 
         // Set headers for Server-Sent Events (SSE)
-        reply.raw.setHeader('Content-Type', 'text/event-stream');
-        reply.raw.setHeader('Cache-Control', 'no-cache');
-        reply.raw.setHeader('Connection', 'keep-alive');
-        reply.raw.setHeader('Access-Control-Allow-Origin', '*');
+        reply.raw.setHeader("Content-Type", "text/event-stream");
+        reply.raw.setHeader("Cache-Control", "no-cache");
+        reply.raw.setHeader("Connection", "keep-alive");
+        reply.raw.setHeader("Access-Control-Allow-Origin", "*");
 
         // Stream tokens to client
-        let fullResponse = '';
+        let fullResponse = "";
 
         try {
           for await (const token of stream) {
             fullResponse += token;
             // Send token as SSE event
-            reply.raw.write(`data: ${JSON.stringify({ type: 'token', content: token })}\n\n`);
+            reply.raw.write(
+              `data: ${JSON.stringify({ type: "token", content: token })}\n\n`
+            );
           }
 
           // Save complete assistant message with sources to database
@@ -218,17 +265,19 @@ export default async function chatRoutes(fastify: FastifyInstance): Promise<void
 
           await createMessage({
             conversation_id: conversationId,
-            role: 'assistant',
+            role: "assistant",
             content: fullResponse,
             sources: sources.length > 0 ? sources : undefined,
           });
 
-          fastify.log.info(`Assistant message saved to conversation: ${conversationId}`);
+          fastify.log.info(
+            `Assistant message saved to conversation: ${conversationId}`
+          );
 
           // Send completion event with metadata
           reply.raw.write(
             `data: ${JSON.stringify({
-              type: 'done',
+              type: "done",
               sources: sourceDocuments.map((doc) => ({
                 id: doc.metadata.id,
                 documentId: doc.metadata.documentId,
@@ -243,12 +292,14 @@ export default async function chatRoutes(fastify: FastifyInstance): Promise<void
           if (messages.length === 1 && !conversation.title) {
             const title = await generateConversationTitle(userMessage);
             await updateConversationTitle(conversationId, title);
-            fastify.log.info(`Generated title for conversation ${conversationId}: ${title}`);
+            fastify.log.info(
+              `Generated title for conversation ${conversationId}: ${title}`
+            );
 
             // Send title update event
             reply.raw.write(
               `data: ${JSON.stringify({
-                type: 'title',
+                type: "title",
                 title,
               })}\n\n`
             );
@@ -256,11 +307,11 @@ export default async function chatRoutes(fastify: FastifyInstance): Promise<void
 
           reply.raw.end();
         } catch (streamError) {
-          fastify.log.error({ err: streamError }, 'Streaming error');
+          fastify.log.error({ err: streamError }, "Streaming error");
           reply.raw.write(
             `data: ${JSON.stringify({
-              type: 'error',
-              message: 'Streaming failed',
+              type: "error",
+              message: "Streaming failed",
             })}\n\n`
           );
           reply.raw.end();
@@ -269,7 +320,7 @@ export default async function chatRoutes(fastify: FastifyInstance): Promise<void
         fastify.log.error(error);
         return reply.code(500).send({
           success: false,
-          message: 'Failed to send message',
+          message: "Failed to send message",
         });
       }
     }
@@ -283,8 +334,11 @@ export default async function chatRoutes(fastify: FastifyInstance): Promise<void
    *   { success: true, conversation: { id, title, messages: [...] } }
    */
   fastify.get<GetConversationRequest>(
-    '/conversations/:id',
-    async (request: FastifyRequest<GetConversationRequest>, reply: FastifyReply) => {
+    "/conversations/:id",
+    async (
+      request: FastifyRequest<GetConversationRequest>,
+      reply: FastifyReply
+    ) => {
       try {
         const { id } = request.params;
 
@@ -293,7 +347,7 @@ export default async function chatRoutes(fastify: FastifyInstance): Promise<void
         if (!conversation) {
           return reply.code(404).send({
             success: false,
-            message: 'Conversation not found',
+            message: "Conversation not found",
           });
         }
 
@@ -316,7 +370,7 @@ export default async function chatRoutes(fastify: FastifyInstance): Promise<void
         fastify.log.error(error);
         return reply.code(500).send({
           success: false,
-          message: 'Failed to get conversation',
+          message: "Failed to get conversation",
         });
       }
     }
@@ -334,11 +388,14 @@ export default async function chatRoutes(fastify: FastifyInstance): Promise<void
    *   { success: true, conversations: [...], pagination: { limit, offset, count } }
    */
   fastify.get<ListConversationsRequest>(
-    '/conversations',
-    async (request: FastifyRequest<ListConversationsRequest>, reply: FastifyReply) => {
+    "/conversations",
+    async (
+      request: FastifyRequest<ListConversationsRequest>,
+      reply: FastifyReply
+    ) => {
       try {
-        const limit = parseInt(request.query.limit || '20', 10);
-        const offset = parseInt(request.query.offset || '0', 10);
+        const limit = parseInt(request.query.limit || "20", 10);
+        const offset = parseInt(request.query.offset || "0", 10);
 
         const conversations = await listConversations(limit, offset);
 
@@ -360,7 +417,7 @@ export default async function chatRoutes(fastify: FastifyInstance): Promise<void
         fastify.log.error(error);
         return reply.code(500).send({
           success: false,
-          message: 'Failed to list conversations',
+          message: "Failed to list conversations",
         });
       }
     }
@@ -371,8 +428,11 @@ export default async function chatRoutes(fastify: FastifyInstance): Promise<void
    * Get all messages for a conversation (lightweight endpoint, no full conversation data)
    */
   fastify.get<GetConversationRequest>(
-    '/conversations/:id/messages',
-    async (request: FastifyRequest<GetConversationRequest>, reply: FastifyReply) => {
+    "/conversations/:id/messages",
+    async (
+      request: FastifyRequest<GetConversationRequest>,
+      reply: FastifyReply
+    ) => {
       try {
         const { id } = request.params;
 
@@ -391,7 +451,7 @@ export default async function chatRoutes(fastify: FastifyInstance): Promise<void
         fastify.log.error(error);
         return reply.code(500).send({
           success: false,
-          message: 'Failed to get messages',
+          message: "Failed to get messages",
         });
       }
     }
@@ -402,8 +462,11 @@ export default async function chatRoutes(fastify: FastifyInstance): Promise<void
    * Delete a conversation and all its messages (cascading delete)
    */
   fastify.delete<DeleteConversationRequest>(
-    '/conversations/:id',
-    async (request: FastifyRequest<DeleteConversationRequest>, reply: FastifyReply) => {
+    "/conversations/:id",
+    async (
+      request: FastifyRequest<DeleteConversationRequest>,
+      reply: FastifyReply
+    ) => {
       try {
         const { id } = request.params;
 
@@ -412,7 +475,7 @@ export default async function chatRoutes(fastify: FastifyInstance): Promise<void
         if (!conversation) {
           return reply.code(404).send({
             success: false,
-            message: 'Conversation not found',
+            message: "Conversation not found",
           });
         }
 
@@ -422,13 +485,13 @@ export default async function chatRoutes(fastify: FastifyInstance): Promise<void
 
         return reply.code(200).send({
           success: true,
-          message: 'Conversation deleted successfully',
+          message: "Conversation deleted successfully",
         });
       } catch (error) {
         fastify.log.error(error);
         return reply.code(500).send({
           success: false,
-          message: 'Failed to delete conversation',
+          message: "Failed to delete conversation",
         });
       }
     }
@@ -445,7 +508,7 @@ export default async function chatRoutes(fastify: FastifyInstance): Promise<void
    * - Document metadata (filename, mimetype)
    */
   fastify.get<{ Params: { messageId: string } }>(
-    '/messages/:messageId/sources',
+    "/messages/:messageId/sources",
     async (
       request: FastifyRequest<{ Params: { messageId: string } }>,
       reply: FastifyReply
@@ -458,7 +521,7 @@ export default async function chatRoutes(fastify: FastifyInstance): Promise<void
         if (!message) {
           return reply.code(404).send({
             success: false,
-            message: 'Message not found',
+            message: "Message not found",
           });
         }
 
@@ -485,7 +548,7 @@ export default async function chatRoutes(fastify: FastifyInstance): Promise<void
         fastify.log.error(error);
         return reply.code(500).send({
           success: false,
-          message: 'Failed to get message sources',
+          message: "Failed to get message sources",
         });
       }
     }

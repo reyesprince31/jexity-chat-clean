@@ -1,70 +1,71 @@
-// API Response Types
-export interface Conversation {
-  id: string;
-  title: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
+/**
+ * Re-export all API types from @repo/dto
+ * This provides a single source of truth for API types across the monorepo
+ */
 
-export interface Message {
-  id: string;
-  conversation_id: string;
-  role: 'user' | 'assistant' | 'system';
-  content: string;
-  createdAt: string;
-}
+export type {
+  // Common types
+  Pagination,
+  RAGOptions,
+  ErrorResponse,
 
-export interface Source {
-  id: string;
-  documentId: string;
-  similarity: number;
-  content: string;
-  filename: string;
-}
+  // Conversation types
+  Conversation,
+  CreateConversationRequest,
+  CreateConversationResponse,
+  GetConversationResponse,
+  ListConversationsResponse,
+  DeleteConversationResponse,
 
-export interface MessageWithSources extends Message {
-  sources?: Source[];
-}
+  // Message types
+  Message,
+  MessageRole,
+  MessageWithSources,
+  SendMessageRequest,
+  GetMessagesResponse,
 
-export interface CreateConversationRequest {
-  title?: string;
-}
+  // Source types
+  Source,
+  MessageSourceDetail,
+  GetMessageSourcesResponse,
 
-export interface CreateConversationResponse {
-  success: boolean;
-  conversation: Conversation;
-}
+  // Stream event types
+  StreamEvent,
+  TokenEvent,
+  DoneEvent,
+  TitleEvent,
+  ErrorEvent,
 
-export interface SendMessageRequest {
-  message: string;
-  useRAG?: boolean;
-  ragOptions?: {
-    limit?: number;
-    similarityThreshold?: number;
-  };
-}
+  // Upload types
+  Document,
+  UploadResponse,
+  UploadInfoResponse,
+} from '@repo/dto';
 
-export interface StreamEvent {
-  type: 'token' | 'done' | 'title' | 'error';
-  content?: string;
-  sources?: Source[];
-  title?: string;
-  message?: string;
-}
+// Re-export schemas for runtime validation if needed
+export {
+  // Common schemas
+  PaginationSchema,
+  RAGOptionsSchema,
+  ErrorResponseSchema,
 
-export interface GetConversationResponse {
-  success: boolean;
-  conversation: Conversation & {
-    messages: Message[];
-  };
-}
+  // Conversation schemas
+  ConversationSchema,
+  CreateConversationRequestSchema,
+  CreateConversationResponseSchema,
 
-export interface ListConversationsResponse {
-  success: boolean;
-  conversations: Conversation[];
-  pagination: {
-    limit: number;
-    offset: number;
-    count: number;
-  };
-}
+  // Message schemas
+  MessageSchema,
+  MessageWithSourcesSchema,
+  SendMessageRequestSchema,
+
+  // Source schemas
+  SourceSchema,
+
+  // Stream event schemas
+  StreamEventSchema,
+  TokenEventSchema,
+  DoneEventSchema,
+  TitleEventSchema,
+  ErrorEventSchema,
+} from '@repo/dto';
