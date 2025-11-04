@@ -25,6 +25,16 @@
   }
 }
 
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
 /* Scrollbar styles for messages container */
 .tw\:overflow-y-auto::-webkit-scrollbar {
   width: 8px;
@@ -50,4 +60,8 @@
 
 .tw\:animate-typing {
   animation: typing 1.4s infinite;
+}
+
+.tw\:animate-blink {
+  animation: blink 1s ease-in-out infinite;
 }

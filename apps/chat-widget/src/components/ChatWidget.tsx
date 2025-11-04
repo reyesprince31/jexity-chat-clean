@@ -98,6 +98,7 @@ export function ChatWidget({
           };
           setMessages((prev) => [...prev, assistantMsg]);
           setStreamingContent("");
+          setIsStreaming(false);
 
           // Store sources
           if (event.sources) {
@@ -105,6 +106,7 @@ export function ChatWidget({
           }
         } else if (event.type === "error") {
           setError(event.message || "An error occurred");
+          setIsStreaming(false);
         }
       }
     } catch (err) {
@@ -115,7 +117,7 @@ export function ChatWidget({
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
@@ -160,6 +162,16 @@ export function ChatWidget({
           </div>
         ))}
 
+        {/* Loading indicator - shows when waiting for first token */}
+        {isStreaming && !streamingContent && (
+          <div className="tw:flex tw:flex-col tw:max-w-[80%] tw:self-start tw:animate-fadeIn">
+            <div className="tw:px-4 tw:py-3 tw:rounded-xl tw:bg-white tw:text-gray-800 tw:border tw:border-gray-300 tw:rounded-bl-sm">
+              <span className="tw:inline-block tw:w-0.5 tw:h-5 tw:bg-indigo-600 tw:animate-blink"></span>
+            </div>
+          </div>
+        )}
+
+        {/* Streaming content - shows when receiving tokens */}
         {isStreaming && streamingContent && (
           <div className="tw:flex tw:flex-col tw:max-w-[80%] tw:self-start tw:animate-fadeIn">
             <div className="tw:px-4 tw:py-3 tw:rounded-xl tw:wrap-break-word tw:leading-relaxed tw:bg-white tw:text-gray-800 tw:border tw:border-gray-300 tw:rounded-bl-sm">
@@ -202,7 +214,7 @@ export function ChatWidget({
           className="tw:flex-1 tw:p-3 tw:border tw:border-gray-300 tw:rounded-lg tw:text-sm tw:resize-none tw:outline-none tw:transition-colors focus:tw:border-indigo-500 disabled:tw:bg-gray-100 disabled:tw:cursor-not-allowed"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          onKeyPress={handleKeyPress}
+          onKeyDown={handleKeyDown}
           placeholder="Type your message..."
           disabled={isStreaming}
           rows={2}
