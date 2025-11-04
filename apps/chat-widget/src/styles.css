@@ -35,6 +35,17 @@
   }
 }
 
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 /* Scrollbar styles for messages container */
 .tw\:overflow-y-auto::-webkit-scrollbar {
   width: 8px;
@@ -64,4 +75,8 @@
 
 .tw\:animate-blink {
   animation: blink 1s ease-in-out infinite;
+}
+
+.tw\:animate-slideUp {
+  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
