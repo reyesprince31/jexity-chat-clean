@@ -21,7 +21,7 @@ interface RawSearchResult {
   documentId: string;
   chunkIndex: number;
   content: string;
-  metadata: any;
+  metadata: Record<string, unknown>;
   similarity: number | string;
   'document.id': string;
   'document.filename': string;

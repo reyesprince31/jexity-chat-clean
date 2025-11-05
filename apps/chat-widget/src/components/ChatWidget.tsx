@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Icon } from "@iconify/react";
 import { ApiClient, apiClient } from "../lib/api-client";
 import type { Message, Source } from "../types/api";
+import type { ChatWidgetTheme } from "../types/theme";
 import { cn } from "../lib/utils";
 
 /**
@@ -21,13 +22,13 @@ function ChatBoxTrigger({
     <button
       onClick={onClick}
       className={cn(
-        "tw:fixed tw:bottom-5 tw:right-5 tw:z-50",
-        "tw:w-14 tw:h-14 tw:rounded-full",
-        "tw:bg-indigo-600 hover:tw:bg-indigo-700",
-        "tw:text-white tw:border-0 tw:cursor-pointer",
-        "tw:shadow-lg hover:tw:shadow-xl",
-        "tw:transition-all tw:duration-200",
-        "tw:flex tw:items-center tw:justify-center",
+        "fixed bottom-5 right-5 z-50",
+        "w-14 h-14 rounded-full",
+        "bg-indigo-600 hover:bg-indigo-700",
+        "text-white border-0 cursor-pointer",
+        "shadow-lg hover:shadow-xl",
+        "transition-all duration-200",
+        "flex items-center justify-center",
         className
       )}
       aria-label="Open chat"
@@ -53,23 +54,23 @@ function ChatBoxHeader({
   return (
     <div
       className={cn(
-        "tw:bg-white tw:text-black tw:px-5 tw:py-4",
-        "tw:border-b tw:border-gray-300",
-        "tw:flex tw:items-center tw:justify-between",
+        "bg-white text-black px-5 py-4",
+        "border-b border-gray-300",
+        "flex items-center justify-between",
         className
       )}
     >
-      <p className="tw:m-0 tw:text-md tw:font-normal">{title}</p>
-      <div className="tw:flex tw:items-center tw:gap-2">
+      <p className="m-0 text-md font-normal">{title}</p>
+      <div className="flex items-center gap-2">
         <button
-          className="tw:p-1 tw:bg-transparent tw:border-0 tw:cursor-pointer tw:text-gray-600 hover:tw:text-gray-900 tw:transition-colors"
+          className="p-1 bg-transparent border-0 cursor-pointer text-gray-600 hover:text-gray-900 transition-colors"
           aria-label="Options"
         >
           <Icon icon="mi:options-vertical" width={20} height={20} />
         </button>
         <button
           onClick={onExpandClick}
-          className="tw:p-1 tw:bg-transparent tw:border-0 tw:cursor-pointer tw:text-gray-600 hover:tw:text-gray-900 tw:transition-colors"
+          className="p-1 bg-transparent border-0 cursor-pointer text-gray-600 hover:text-gray-900 transition-colors"
           aria-label={isExpanded ? "Collapse" : "Expand"}
         >
           <Icon
@@ -84,7 +85,7 @@ function ChatBoxHeader({
         </button>
         <button
           onClick={onCloseClick}
-          className="tw:p-1 tw:bg-transparent tw:border-0 tw:cursor-pointer tw:text-gray-600 hover:tw:text-gray-900 tw:transition-colors"
+          className="p-1 bg-transparent border-0 cursor-pointer text-gray-600 hover:text-gray-900 transition-colors"
           aria-label="Close"
         >
           <Icon icon="mingcute:close-line" width={20} height={20} />
@@ -106,17 +107,17 @@ function ChatBoxMessage({
   return (
     <div
       className={cn(
-        "tw:flex tw:flex-col tw:max-w-[80%]",
-        isUser ? "tw:self-end" : "tw:self-start",
+        "flex flex-col max-w-[80%]",
+        isUser ? "self-end" : "self-start",
         className
       )}
     >
       <div
         className={cn(
-          "tw:px-4 tw:py-3 tw:rounded-xl tw:wrap-break-word tw:leading-relaxed",
+          "px-4 py-3 rounded-xl wrap-break-word leading-relaxed",
           isUser
-            ? "tw:bg-linear-to-br tw:from-indigo-500 tw:to-purple-600 tw:text-white tw:rounded-br-sm"
-            : "tw:bg-white tw:text-gray-800 tw:border tw:border-gray-300 tw:rounded-bl-sm"
+            ? "bg-linear-to-br from-indigo-500 to-purple-600 text-white rounded-br-sm"
+            : "bg-white text-gray-800 border border-gray-300 rounded-bl-sm"
         )}
       >
         {message.content}
@@ -135,22 +136,22 @@ function ChatBoxMessageLoading({
   return (
     <div
       className={cn(
-        "tw:flex tw:flex-col tw:max-w-[80%] tw:self-start",
+        "flex flex-col max-w-[80%] self-start",
         className
       )}
     >
-      <div className="tw:px-4 tw:py-3 tw:rounded-xl tw:wrap-break-word tw:leading-relaxed tw:bg-white tw:text-gray-800 tw:border tw:border-gray-300 tw:rounded-bl-sm">
+      <div className="px-4 py-3 rounded-xl wrap-break-word leading-relaxed bg-white text-gray-800 border border-gray-300 rounded-bl-sm">
         {content ? (
           content
         ) : (
-          <span className="tw:inline-block tw:w-0.5 tw:h-5 tw:bg-indigo-600 tw:animate-blink"></span>
+          <span className="inline-block w-0.5 h-5 bg-indigo-600 animate-blink"></span>
         )}
       </div>
       {content && (
-        <div className="tw:flex tw:gap-1 tw:pt-2 tw:pl-4">
-          <span className="tw:w-2 tw:h-2 tw:rounded-full tw:bg-gray-400 tw:animate-typing"></span>
-          <span className="tw:w-2 tw:h-2 tw:rounded-full tw:bg-gray-400 tw:animate-typing [animation-delay:0.2s]"></span>
-          <span className="tw:w-2 tw:h-2 tw:rounded-full tw:bg-gray-400 tw:animate-typing [animation-delay:0.4s]"></span>
+        <div className="flex gap-1 pt-2 pl-4">
+          <span className="w-2 h-2 rounded-full bg-gray-400 animate-typing"></span>
+          <span className="w-2 h-2 rounded-full bg-gray-400 animate-typing [animation-delay:0.2s]"></span>
+          <span className="w-2 h-2 rounded-full bg-gray-400 animate-typing [animation-delay:0.4s]"></span>
         </div>
       )}
     </div>
@@ -169,13 +170,13 @@ function ChatBoxSources({
   return (
     <div
       className={cn(
-        "tw:p-3 tw:bg-amber-50 tw:border tw:border-amber-400 tw:rounded-lg tw:text-sm tw:mt-2",
+        "p-3 bg-amber-50 border border-amber-400 rounded-lg text-sm mt-2",
         className
       )}
     >
-      <div className="tw:font-semibold tw:mb-2 tw:text-amber-800">Sources:</div>
+      <div className="font-semibold mb-2 text-amber-800">Sources:</div>
       {sources.map((source, idx) => (
-        <div key={source.id} className="tw:py-1 tw:text-amber-800">
+        <div key={source.id} className="py-1 text-amber-800">
           <strong>Source {idx + 1}:</strong> {source.filename} (Relevance:{" "}
           {(source.similarity * 100).toFixed(1)}%)
         </div>
@@ -196,7 +197,7 @@ function ChatBoxError({
   return (
     <div
       className={cn(
-        "tw:p-3 tw:bg-red-50 tw:border tw:border-red-300 tw:rounded-lg tw:text-red-800 tw:text-sm",
+        "p-3 bg-red-50 border border-red-300 rounded-lg text-red-800 text-sm",
         className
       )}
     >
@@ -223,12 +224,12 @@ function ChatBoxInput({
   return (
     <div
       className={cn(
-        "tw:flex tw:gap-3 tw:p-4 tw:bg-white tw:border-t tw:border-gray-300",
+        "flex gap-3 p-4 bg-white border-t border-gray-300",
         className
       )}
     >
       <textarea
-        className="tw:flex-1 tw:p-3 tw:border tw:border-gray-300 tw:rounded-lg tw:text-sm tw:resize-none tw:outline-none tw:transition-colors focus:tw:border-indigo-500 disabled:tw:bg-gray-100 disabled:tw:cursor-not-allowed"
+        className="flex-1 p-3 border border-gray-300 rounded-lg text-sm resize-none outline-none transition-colors focus:border-indigo-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
         value={value}
         onChange={onChange}
         onKeyDown={onKeyDown}
@@ -237,7 +238,7 @@ function ChatBoxInput({
         rows={2}
       />
       <button
-        className="tw:px-6 tw:py-3 tw:bg-linear-to-br tw:from-indigo-500 tw:to-purple-600 tw:text-white tw:border-0 tw:rounded-lg tw:font-semibold tw:cursor-pointer tw:transition-opacity tw:whitespace-nowrap hover:tw:opacity-90 disabled:tw:opacity-50 disabled:tw:cursor-not-allowed"
+        className="px-6 py-3 bg-linear-to-br from-indigo-500 to-purple-600 text-white border-0 rounded-lg font-semibold cursor-pointer transition-opacity whitespace-nowrap hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
         onClick={onSend}
         disabled={!value.trim() || disabled}
       >
@@ -257,7 +258,7 @@ function ChatBoxMessages({
   return (
     <div
       className={cn(
-        "tw:flex-1 tw:overflow-y-auto tw:px-5 tw:py-5 tw:flex tw:flex-col tw:gap-4 tw:bg-gray-50",
+        "flex-1 overflow-y-auto px-5 py-5 flex flex-col gap-4 bg-gray-50",
         className
       )}
     >
@@ -278,12 +279,12 @@ function ChatBoxContainer({
   return (
     <div
       className={cn(
-        "tw:flex tw:flex-col tw:w-full tw:border tw:border-gray-300 tw:rounded-xl tw:bg-white tw:shadow-lg tw:overflow-hidden tw:transition-all tw:duration-300",
-        "tw:fixed tw:bottom-5 tw:right-5 tw:z-50",
-        "tw:animate-slideUp",
+        "flex flex-col w-full border border-gray-300 rounded-xl bg-white shadow-lg overflow-hidden transition-all duration-300",
+        "fixed bottom-5 right-5 z-50",
+        "animate-slideUp",
         isExpanded
-          ? "tw:h-[95vh] tw:max-w-[45vw] tw:min-w-[300px]"
-          : "tw:h-[550px] tw:max-w-[400px]",
+          ? "h-[95vh] max-w-[45vw] min-w-[300px]"
+          : "h-[550px] max-w-[400px]",
         className
       )}
     >
@@ -296,12 +297,14 @@ export interface ChatWidgetProps {
   apiUrl?: string;
   conversationId?: string;
   onConversationCreate?: (conversationId: string) => void;
+  theme?: ChatWidgetTheme;
 }
 
 export function ChatWidget({
   apiUrl,
   conversationId: initialConversationId,
   onConversationCreate,
+  // Note: theme prop exists in ChatWidgetProps but is applied at the Shadow DOM level in main.tsx
 }: ChatWidgetProps) {
   const [conversationId, setConversationId] = useState<string | null>(
     initialConversationId || null
@@ -436,7 +439,7 @@ export function ChatWidget({
   if (isLoading) {
     return (
       <ChatBoxContainer isExpanded={isExpanded}>
-        <div className="tw:flex tw:items-center tw:justify-center tw:h-full tw:text-gray-600 tw:text-base">
+        <div className="flex items-center justify-center h-full text-gray-600 text-base">
           Initializing chat...
         </div>
       </ChatBoxContainer>

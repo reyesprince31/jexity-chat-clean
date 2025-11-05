@@ -1,6 +1,6 @@
 import { ChatOpenAI } from '@langchain/openai';
 import { HumanMessage, AIMessage, SystemMessage, BaseMessage } from '@langchain/core/messages';
-import { retrieveDocuments, createRAGPromptTemplate, formatDocumentsForContext } from './rag';
+import { retrieveDocuments } from './rag';
 import type { Document } from '@langchain/core/documents';
 import {
   CHAT_MODEL_CONFIG,
@@ -71,7 +71,7 @@ export async function streamChatWithRAG(params: StreamChatParams): Promise<Strea
     ragOptions = {},
   } = params;
 
-  let messages: BaseMessage[] = [];
+  const messages: BaseMessage[] = [];
   let sourceDocuments: Document[] = [];
 
   // If RAG is enabled, retrieve relevant context using LangChain retriever

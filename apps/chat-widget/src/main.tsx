@@ -1,7 +1,68 @@
 import './styles.css';
-import React from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import ReactDOM from 'react-dom/client';
+import root from 'react-shadow';
 import { ChatWidget, type ChatWidgetProps } from './components/ChatWidget';
+import { themeToCSSVars } from './types/theme';
+
+// Create a typed Shadow DOM wrapper component
+const ShadowRoot = root.div as React.ComponentType<
+  React.HTMLProps<HTMLDivElement> & { mode?: 'open' | 'closed' }
+>;
+
+// Shadow DOM wrapper that loads CSS
+function ShadowWidgetWrapper(props: ChatWidgetProps & { themeStyles: React.CSSProperties }) {
+  const { themeStyles, ...widgetProps } = props;
+  const [cssContent, setCssContent] = useState<string>('');
+  const shadowRootRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    // Extract CSS from document stylesheets
+    const extractCSS = () => {
+      let css = '';
+
+      // Look for style tags and link tags that might contain our CSS
+      Array.from(document.styleSheets).forEach((stylesheet) => {
+        try {
+          // Try to read the CSS rules
+          if (stylesheet.cssRules) {
+            Array.from(stylesheet.cssRules).forEach((rule) => {
+              css += rule.cssText + '\n';
+            });
+          }
+        } catch {
+          // CORS or other error - check if it's a link tag with our styles
+          if (stylesheet.href && stylesheet.href.includes('styles')) {
+            // Fetch the stylesheet
+            fetch(stylesheet.href)
+              .then(res => res.text())
+              .then(text => setCssContent(prev => prev + text))
+              .catch(err => console.warn('Could not fetch stylesheet:', err));
+          }
+        }
+      });
+
+      return css;
+    };
+
+    // Wait a bit for Tailwind to inject styles in dev mode
+    const timeout = setTimeout(() => {
+      const css = extractCSS();
+      if (css) {
+        setCssContent(css);
+      }
+    }, 100);
+
+    return () => clearTimeout(timeout);
+  }, []);
+
+  return (
+    <ShadowRoot ref={shadowRootRef as never} style={themeStyles}>
+      <style>{cssContent}</style>
+      <ChatWidget {...widgetProps} />
+    </ShadowRoot>
+  );
+}
 
 export interface InitChatWidgetOptions extends ChatWidgetProps {
   containerId?: string;
@@ -33,23 +94,29 @@ export function initChatWidget(options: InitChatWidgetOptions = {}): () => void 
     document.body.appendChild(container);
   }
 
-  // Mount the React component
-  const root = ReactDOM.createRoot(container);
-  root.render(
+  // Apply theme CSS variables if provided
+  const themeStyles = options.theme ? themeToCSSVars(options.theme) : {};
+
+  // Mount the React component with Shadow DOM
+  const reactRoot = ReactDOM.createRoot(container);
+  reactRoot.render(
     <React.StrictMode>
-      <ChatWidget {...widgetProps} />
+      <ShadowWidgetWrapper {...widgetProps} themeStyles={themeStyles} />
     </React.StrictMode>
   );
 
   // Return cleanup function
   return () => {
-    root.unmount();
+    reactRoot.unmount();
   };
 }
 
 // Export the component for direct use
 export { ChatWidget } from './components/ChatWidget';
 export type { ChatWidgetProps } from './components/ChatWidget';
+
+// Export theme types
+export type { ChatWidgetTheme } from './types/theme';
 
 // Export API client for advanced usage
 export { ApiClient, apiClient } from './lib/api-client';

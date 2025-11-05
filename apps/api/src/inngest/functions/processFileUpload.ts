@@ -172,7 +172,7 @@ export const processFileUpload = inngest.createFunction(
 
         // Build VALUES rows for bulk insert (10x faster than individual inserts)
         const values: string[] = [];
-        const params: any[] = [];
+        const params: (string | number)[] = [];
         let paramIndex = 1;
 
         for (let i = 0; i < chunks.length; i++) {

@@ -1,4 +1,49 @@
-@import "tailwindcss" prefix(tw);
+@import "tailwindcss";
+
+/* CSS Custom Properties for Theming */
+:host {
+  /* Primary colors */
+  --chatwidget-primary: #4f46e5;
+  --chatwidget-primary-hover: #4338ca;
+
+  /* Text colors */
+  --chatwidget-text: #1f2937;
+  --chatwidget-text-secondary: #6b7280;
+
+  /* Background colors */
+  --chatwidget-bg: #ffffff;
+  --chatwidget-bg-secondary: #f9fafb;
+  --chatwidget-message-user-bg: linear-gradient(to bottom right, #6366f1, #a855f7);
+  --chatwidget-message-assistant-bg: #ffffff;
+
+  /* Border colors */
+  --chatwidget-border: #d1d5db;
+
+  /* Input colors */
+  --chatwidget-input-bg: #ffffff;
+  --chatwidget-input-border: #d1d5db;
+  --chatwidget-input-focus-border: #6366f1;
+
+  /* Button colors */
+  --chatwidget-button-bg: linear-gradient(to bottom right, #6366f1, #a855f7);
+  --chatwidget-button-hover-bg: linear-gradient(to bottom right, #4f46e5, #9333ea);
+  --chatwidget-button-text: #ffffff;
+
+  /* Sources colors */
+  --chatwidget-sources-bg: #fffbeb;
+  --chatwidget-sources-border: #fbbf24;
+  --chatwidget-sources-text: #92400e;
+
+  /* Error colors */
+  --chatwidget-error-bg: #fef2f2;
+  --chatwidget-error-border: #fca5a5;
+  --chatwidget-error-text: #991b1b;
+
+  /* Other */
+  --chatwidget-border-radius: 0.75rem;
+  --chatwidget-font-family: system-ui, -apple-system, sans-serif;
+  --chatwidget-font-size: 14px;
+}
 
 /* Custom animations */
 @keyframes fadeIn {
@@ -47,36 +92,36 @@
 }
 
 /* Scrollbar styles for messages container */
-.tw\:overflow-y-auto::-webkit-scrollbar {
+.overflow-y-auto::-webkit-scrollbar {
   width: 8px;
 }
 
-.tw\:overflow-y-auto::-webkit-scrollbar-track {
+.overflow-y-auto::-webkit-scrollbar-track {
   background: #f1f1f1;
 }
 
-.tw\:overflow-y-auto::-webkit-scrollbar-thumb {
+.overflow-y-auto::-webkit-scrollbar-thumb {
   background: #888;
   border-radius: 4px;
 }
 
-.tw\:overflow-y-auto::-webkit-scrollbar-thumb:hover {
+.overflow-y-auto::-webkit-scrollbar-thumb:hover {
   background: #555;
 }
 
 /* Custom animation utilities */
-.tw\:animate-fadeIn {
+.animate-fadeIn {
   animation: fadeIn 0.3s ease-in;
 }
 
-.tw\:animate-typing {
+.animate-typing {
   animation: typing 1.4s infinite;
 }
 
-.tw\:animate-blink {
+.animate-blink {
   animation: blink 1s ease-in-out infinite;
 }
 
-.tw\:animate-slideUp {
+.animate-slideUp {
   animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }

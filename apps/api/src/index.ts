@@ -56,12 +56,12 @@ await fastify.register(uploadRoutes);
 await fastify.register(chatRoutes);
 
 // Hello world endpoint
-fastify.get("/", async (request, reply) => {
+fastify.get("/", async () => {
   return { message: "Hello World" };
 });
 
 // Health check endpoint
-fastify.get("/health", async (request, reply) => {
+fastify.get("/health", async () => {
   return { status: "ok" };
 });
 

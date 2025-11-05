@@ -1,6 +1,5 @@
 import { BaseRetriever, type BaseRetrieverInput } from '@langchain/core/retrievers';
 import { Document } from '@langchain/core/documents';
-import { CallbackManagerForRetrieverRun } from '@langchain/core/callbacks/manager';
 import { searchSimilarChunks, searchWithinDocument } from './vectorSearch';
 import { VECTOR_SEARCH_CONFIG, RAG_CHAT_CONFIG } from '../config/rag.config';
 
@@ -41,40 +40,34 @@ export class PrismaRetriever extends BaseRetriever {
    * Retrieves relevant documents based on a query string.
    *
    * @param query - The search query
-   * @param runManager - Callback manager for tracing (optional)
    * @returns Array of relevant Documents
    */
   async _getRelevantDocuments(
-    query: string,
-    runManager?: CallbackManagerForRetrieverRun
+    query: string
   ): Promise<Document[]> {
-    try {
-      let results;
+    let results;
 
-      if (this.documentId) {
-        // Search within specific document
-        results = await searchWithinDocument(
-          this.documentId,
-          query,
-          this.k,
-          this.similarityThreshold
-        );
-      } else {
-        // Search across all documents
-        results = await searchSimilarChunks(
-          query,
-          this.k,
-          this.similarityThreshold
-        );
-      }
-
-      // Extract just the documents (similarity scores are in metadata)
-      const documents = results.map((r) => r.document);
-
-      return documents;
-    } catch (error) {
-      throw error;
+    if (this.documentId) {
+      // Search within specific document
+      results = await searchWithinDocument(
+        this.documentId,
+        query,
+        this.k,
+        this.similarityThreshold
+      );
+    } else {
+      // Search across all documents
+      results = await searchSimilarChunks(
+        query,
+        this.k,
+        this.similarityThreshold
+      );
     }
+
+    // Extract just the documents (similarity scores are in metadata)
+    const documents = results.map((r) => r.document);
+
+    return documents;
   }
 
   /**

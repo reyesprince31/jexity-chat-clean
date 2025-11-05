@@ -1,7 +1,6 @@
 import { PrismaRetriever } from './retriever';
 import { ChatPromptTemplate } from '@langchain/core/prompts';
 import { Document } from '@langchain/core/documents';
-import type { DocumentWithScore } from './vectorSearch';
 import { VECTOR_SEARCH_CONFIG, RAG_CHAT_CONFIG } from '../config/rag.config';
 
 export interface RAGOptions {

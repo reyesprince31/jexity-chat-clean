@@ -532,16 +532,30 @@ export default async function chatRoutes(
             role: message.role,
             content: message.content,
             createdAt: message.created_at.toISOString(),
-            sources: message.sources.map((source: any) => ({
-              id: source.id,
-              chunkId: source.chunk_id,
-              similarityScore: source.similarity_score,
-              content: source.chunk.content,
-              document: {
-                filename: source.chunk.document.filename,
-                mimetype: source.chunk.document.mimetype,
-              },
-            })),
+            sources: message.sources.map((source) => {
+              const sourceWithChunk = source as unknown as {
+                id: string;
+                chunk_id: string;
+                similarity_score: number;
+                chunk: {
+                  content: string;
+                  document: {
+                    filename: string;
+                    mimetype: string;
+                  };
+                };
+              };
+              return {
+                id: sourceWithChunk.id,
+                chunkId: sourceWithChunk.chunk_id,
+                similarityScore: sourceWithChunk.similarity_score,
+                content: sourceWithChunk.chunk.content,
+                document: {
+                  filename: sourceWithChunk.chunk.document.filename,
+                  mimetype: sourceWithChunk.chunk.document.mimetype,
+                },
+              };
+            }),
           },
         });
       } catch (error) {
