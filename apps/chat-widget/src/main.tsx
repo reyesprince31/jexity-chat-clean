@@ -14,6 +14,7 @@ const ShadowRoot = root.div as React.ComponentType<
 function ShadowWidgetWrapper(props: ChatWidgetProps & { themeStyles: React.CSSProperties }) {
   const { themeStyles, ...widgetProps } = props;
   const [cssContent, setCssContent] = useState<string>('');
+  const [stylesLoaded, setStylesLoaded] = useState(false);
   const shadowRootRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -36,8 +37,14 @@ function ShadowWidgetWrapper(props: ChatWidgetProps & { themeStyles: React.CSSPr
             // Fetch the stylesheet
             fetch(stylesheet.href)
               .then(res => res.text())
-              .then(text => setCssContent(prev => prev + text))
-              .catch(err => console.warn('Could not fetch stylesheet:', err));
+              .then(text => {
+                setCssContent(prev => prev + text);
+                setStylesLoaded(true);
+              })
+              .catch(err => {
+                console.warn('Could not fetch stylesheet:', err);
+                setStylesLoaded(true); // Continue anyway
+              });
           }
         }
       });
@@ -45,22 +52,32 @@ function ShadowWidgetWrapper(props: ChatWidgetProps & { themeStyles: React.CSSPr
       return css;
     };
 
-    // Wait a bit for Tailwind to inject styles in dev mode
-    const timeout = setTimeout(() => {
+    // Wait for stylesheets to actually load
+    const handleLoad = () => {
       const css = extractCSS();
       if (css) {
         setCssContent(css);
       }
-    }, 100);
+      setStylesLoaded(true);
+    };
 
-    return () => clearTimeout(timeout);
+    if (document.readyState === 'complete') {
+      // DOM is already ready
+      handleLoad();
+    } else {
+      // Wait for window load event
+      window.addEventListener('load', handleLoad);
+      return () => window.removeEventListener('load', handleLoad);
+    }
   }, []);
 
   return (
-    <ShadowRoot ref={shadowRootRef as never} style={themeStyles}>
-      <style>{cssContent}</style>
-      <ChatWidget {...widgetProps} />
-    </ShadowRoot>
+    <div style={{ visibility: stylesLoaded ? 'visible' : 'hidden' }}>
+      <ShadowRoot ref={shadowRootRef as never} style={themeStyles}>
+        <style>{cssContent}</style>
+        <ChatWidget {...widgetProps} />
+      </ShadowRoot>
+    </div>
   );
 }
 
