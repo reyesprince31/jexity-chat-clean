@@ -1,15 +1,10 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Icon } from "@iconify/react";
+import * as PopoverPrimitive from "@radix-ui/react-popover";
 import { ApiClient, apiClient } from "../lib/api-client";
 import type { Message, Source } from "../types/api";
 import type { ChatWidgetTheme } from "../types/theme";
 import { cn } from "../lib/utils";
-
-/**
- * TODO:
- *
- * - Set title config
- */
 
 function ChatBoxTrigger({
   onClick,
@@ -24,10 +19,9 @@ function ChatBoxTrigger({
       className={cn(
         "fixed bottom-5 right-5 z-50",
         "w-14 h-14 rounded-full",
-        "bg-indigo-600 hover:bg-indigo-700",
+        "bg-black hover:bg-slate-900",
         "text-white border-0 cursor-pointer",
         "shadow-lg hover:shadow-xl",
-        "transition-all duration-200",
         "flex items-center justify-center",
         className
       )}
@@ -35,6 +29,57 @@ function ChatBoxTrigger({
     >
       <Icon icon="tabler:message-chatbot" width={28} height={28} />
     </button>
+  );
+}
+
+interface HeaderMenuOption {
+  id: string;
+  label: string;
+  icon: string;
+  onClick: () => void;
+}
+
+function ChatBoxHeaderMenu({ options }: { options: HeaderMenuOption[] }) {
+  const [open, setOpen] = useState(false);
+
+  const handleOptionClick = (onClickHandler: () => void) => {
+    onClickHandler();
+    setOpen(false);
+  };
+
+  return (
+    <PopoverPrimitive.Root open={open} onOpenChange={setOpen}>
+      <PopoverPrimitive.Trigger asChild>
+        <button
+          className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gray-300 disabled:pointer-events-none disabled:opacity-50 h-9 w-9 p-0 text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+          aria-label="Options"
+        >
+          <Icon icon="mi:options-vertical" width={20} height={20} />
+        </button>
+      </PopoverPrimitive.Trigger>
+      <PopoverPrimitive.Content
+        align="end"
+        className="z-50 w-48 rounded-md border border-gray-200 bg-white p-1 text-gray-950 shadow-md outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2"
+      >
+        <div className="flex flex-col">
+          {options.map((option) => (
+            <button
+              key={option.id}
+              onClick={() => handleOptionClick(option.onClick)}
+              className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-gray-100 hover:text-gray-900 transition-colors justify-start"
+            >
+              <Icon
+                icon={option.icon}
+                width={16}
+                height={16}
+                className="mr-2"
+              />
+              <span>{option.label}</span>
+            </button>
+          ))}
+        </div>
+      </PopoverPrimitive.Content>
+    </PopoverPrimitive.Root>
   );
 }
 
@@ -51,41 +96,33 @@ function ChatBoxHeader({
   onCloseClick?: () => void;
   className?: string;
 }) {
+  const menuOptions: HeaderMenuOption[] = [
+    {
+      id: "expand",
+      label: isExpanded ? "Collapse" : "Expand",
+      icon: isExpanded
+        ? "mingcute:fullscreen-exit-line"
+        : "mingcute:fullscreen-2-line",
+      onClick: onExpandClick || (() => {}),
+    },
+  ];
+
   return (
     <div
       className={cn(
         "bg-white text-black px-5 py-4",
-        "border-b border-gray-300",
+        "border-b border-gray-200",
         "flex items-center justify-between",
         className
       )}
     >
       <p className="m-0 text-md font-normal">{title}</p>
-      <div className="flex items-center gap-2">
-        <button
-          className="p-1 bg-transparent border-0 cursor-pointer text-gray-600 hover:text-gray-900 transition-colors"
-          aria-label="Options"
-        >
-          <Icon icon="mi:options-vertical" width={20} height={20} />
-        </button>
-        <button
-          onClick={onExpandClick}
-          className="p-1 bg-transparent border-0 cursor-pointer text-gray-600 hover:text-gray-900 transition-colors"
-          aria-label={isExpanded ? "Collapse" : "Expand"}
-        >
-          <Icon
-            icon={
-              isExpanded
-                ? "mingcute:fullscreen-exit-line"
-                : "mingcute:fullscreen-2-line"
-            }
-            width={20}
-            height={20}
-          />
-        </button>
+      <div className="flex items-center gap-1">
+        <ChatBoxHeaderMenu options={menuOptions} />
+
         <button
           onClick={onCloseClick}
-          className="p-1 bg-transparent border-0 cursor-pointer text-gray-600 hover:text-gray-900 transition-colors"
+          className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gray-300 disabled:pointer-events-none disabled:opacity-50 h-9 w-9 p-0 text-gray-600 hover:bg-gray-100 hover:text-gray-900"
           aria-label="Close"
         >
           <Icon icon="mingcute:close-line" width={20} height={20} />
@@ -114,10 +151,10 @@ function ChatBoxMessage({
     >
       <div
         className={cn(
-          "px-4 py-3 rounded-xl wrap-break-word leading-relaxed",
+          "px-4 py-3 rounded-[20px] wrap-break-word leading-relaxed",
           isUser
-            ? "bg-linear-to-br from-indigo-500 to-purple-600 text-white rounded-br-sm"
-            : "bg-white text-gray-800 border border-gray-300 rounded-bl-sm"
+            ? "bg-black hover:bg-gray-900 text-white rounded-br-md"
+            : "bg-gray-100 text-gray-900 border border-gray-200 rounded-bl-md"
         )}
       >
         {message.content}
@@ -134,17 +171,12 @@ function ChatBoxMessageLoading({
   className?: string;
 }) {
   return (
-    <div
-      className={cn(
-        "flex flex-col max-w-[80%] self-start",
-        className
-      )}
-    >
-      <div className="px-4 py-3 rounded-xl wrap-break-word leading-relaxed bg-white text-gray-800 border border-gray-300 rounded-bl-sm">
+    <div className={cn("flex flex-col max-w-[80%] self-start", className)}>
+      <div className="px-4 py-3 rounded-[20px] wrap-break-word leading-relaxed bg-gray-100 text-gray-900 border border-gray-200 rounded-bl-md">
         {content ? (
           content
         ) : (
-          <span className="inline-block w-0.5 h-5 bg-indigo-600 animate-blink"></span>
+          <span className="inline-block w-0.5 h-5 bg-black animate-blink"></span>
         )}
       </div>
       {content && (
@@ -170,13 +202,13 @@ function ChatBoxSources({
   return (
     <div
       className={cn(
-        "p-3 bg-amber-50 border border-amber-400 rounded-lg text-sm mt-2",
+        "p-3 bg-gray-50 border border-gray-300 rounded-lg text-sm mt-2",
         className
       )}
     >
-      <div className="font-semibold mb-2 text-amber-800">Sources:</div>
+      <div className="font-semibold mb-2 text-gray-900">Sources:</div>
       {sources.map((source, idx) => (
-        <div key={source.id} className="py-1 text-amber-800">
+        <div key={source.id} className="py-1 text-gray-700">
           <strong>Source {idx + 1}:</strong> {source.filename} (Relevance:{" "}
           {(source.similarity * 100).toFixed(1)}%)
         </div>
@@ -197,7 +229,7 @@ function ChatBoxError({
   return (
     <div
       className={cn(
-        "p-3 bg-red-50 border border-red-300 rounded-lg text-red-800 text-sm",
+        "p-3 bg-gray-100 border border-gray-300 rounded-lg text-gray-900 text-sm",
         className
       )}
     >
@@ -222,28 +254,29 @@ function ChatBoxInput({
   className?: string;
 }) {
   return (
-    <div
-      className={cn(
-        "flex gap-3 p-4 bg-white border-t border-gray-300",
-        className
-      )}
-    >
-      <textarea
-        className="flex-1 p-3 border border-gray-300 rounded-lg text-sm resize-none outline-none transition-colors focus:border-indigo-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
-        value={value}
-        onChange={onChange}
-        onKeyDown={onKeyDown}
-        placeholder="Type your message..."
-        disabled={disabled}
-        rows={2}
-      />
-      <button
-        className="px-6 py-3 bg-linear-to-br from-indigo-500 to-purple-600 text-white border-0 rounded-lg font-semibold cursor-pointer transition-opacity whitespace-nowrap hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-        onClick={onSend}
-        disabled={!value.trim() || disabled}
-      >
-        {disabled ? "Sending..." : "Send"}
-      </button>
+    <div className={cn("px-4 py-3 bg-white", className)}>
+      <div className="flex items-center gap-2 bg-white border border-gray-300 rounded-full pl-5 pr-2 py-2">
+        <textarea
+          className="flex-1 bg-transparent text-[15px] resize-none outline-none placeholder:text-gray-400 disabled:bg-transparent disabled:cursor-not-allowed max-h-24 leading-5 py-1.5"
+          value={value}
+          onChange={onChange}
+          onKeyDown={onKeyDown}
+          placeholder="Message..."
+          disabled={disabled}
+          rows={1}
+          style={{
+            scrollbarWidth: "none",
+          }}
+        />
+        <button
+          onClick={onSend}
+          disabled={!value.trim() || disabled}
+          className="shrink-0 inline-flex items-center justify-center rounded-full w-[30px] h-[30px] transition-all disabled:bg-gray-300 disabled:text-white bg-black text-white hover:bg-gray-800 disabled:cursor-not-allowed"
+          aria-label="Send message"
+        >
+          <Icon icon="mingcute:arrow-up-fill" width={16} height={16} />
+        </button>
+      </div>
     </div>
   );
 }
@@ -258,7 +291,7 @@ function ChatBoxMessages({
   return (
     <div
       className={cn(
-        "flex-1 overflow-y-auto px-5 py-5 flex flex-col gap-4 bg-gray-50",
+        "flex-1 overflow-y-auto px-5 py-5 flex flex-col gap-4 bg-white",
         className
       )}
     >
@@ -279,12 +312,12 @@ function ChatBoxContainer({
   return (
     <div
       className={cn(
-        "flex flex-col w-full border border-gray-300 rounded-xl bg-white shadow-lg overflow-hidden transition-all duration-300",
+        "flex flex-col w-full border border-gray-200 rounded-2xl bg-white shadow-lg overflow-hidden transition-all duration-300",
         "fixed bottom-5 right-5 z-50",
         "animate-slideUp",
         isExpanded
           ? "h-[95vh] max-w-[45vw] min-w-[300px]"
-          : "h-[550px] max-w-[400px]",
+          : "h-[75vh] max-w-[400px]",
         className
       )}
     >

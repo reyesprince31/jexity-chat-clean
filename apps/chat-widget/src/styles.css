@@ -3,8 +3,8 @@
 /* CSS Custom Properties for Theming */
 :host {
   /* Primary colors */
-  --chatwidget-primary: #4f46e5;
-  --chatwidget-primary-hover: #4338ca;
+  --chatwidget-primary: #000000;
+  --chatwidget-primary-hover: #1f2937;
 
   /* Text colors */
   --chatwidget-text: #1f2937;
@@ -13,8 +13,8 @@
   /* Background colors */
   --chatwidget-bg: #ffffff;
   --chatwidget-bg-secondary: #f9fafb;
-  --chatwidget-message-user-bg: linear-gradient(to bottom right, #6366f1, #a855f7);
-  --chatwidget-message-assistant-bg: #ffffff;
+  --chatwidget-message-user-bg: #000000;
+  --chatwidget-message-assistant-bg: #f3f4f6;
 
   /* Border colors */
   --chatwidget-border: #d1d5db;
@@ -22,22 +22,22 @@
   /* Input colors */
   --chatwidget-input-bg: #ffffff;
   --chatwidget-input-border: #d1d5db;
-  --chatwidget-input-focus-border: #6366f1;
+  --chatwidget-input-focus-border: #000000;
 
   /* Button colors */
-  --chatwidget-button-bg: linear-gradient(to bottom right, #6366f1, #a855f7);
-  --chatwidget-button-hover-bg: linear-gradient(to bottom right, #4f46e5, #9333ea);
+  --chatwidget-button-bg: #000000;
+  --chatwidget-button-hover-bg: #1f2937;
   --chatwidget-button-text: #ffffff;
 
   /* Sources colors */
-  --chatwidget-sources-bg: #fffbeb;
-  --chatwidget-sources-border: #fbbf24;
-  --chatwidget-sources-text: #92400e;
+  --chatwidget-sources-bg: #f3f4f6;
+  --chatwidget-sources-border: #d1d5db;
+  --chatwidget-sources-text: #1f2937;
 
   /* Error colors */
-  --chatwidget-error-bg: #fef2f2;
-  --chatwidget-error-border: #fca5a5;
-  --chatwidget-error-text: #991b1b;
+  --chatwidget-error-bg: #f3f4f6;
+  --chatwidget-error-border: #d1d5db;
+  --chatwidget-error-text: #1f2937;
 
   /* Other */
   --chatwidget-border-radius: 0.75rem;
@@ -125,3 +125,4 @@
 .animate-slideUp {
   animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
+
