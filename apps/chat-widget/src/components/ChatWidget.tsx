@@ -132,32 +132,33 @@ function ChatBoxHeader({
   );
 }
 
-function ChatBoxMessage({
-  message,
+function ChatBoxMessageUser({
+  content,
   className,
 }: {
-  message: Message;
+  content: string;
   className?: string;
 }) {
-  const isUser = message.role === "user";
-
   return (
-    <div
-      className={cn(
-        "flex flex-col max-w-[80%]",
-        isUser ? "self-end" : "self-start",
-        className
-      )}
-    >
-      <div
-        className={cn(
-          "px-4 py-3 rounded-[20px] wrap-break-word leading-relaxed",
-          isUser
-            ? "bg-black hover:bg-gray-900 text-white rounded-br-md"
-            : "bg-gray-100 text-gray-900 border border-gray-200 rounded-bl-md"
-        )}
-      >
-        {message.content}
+    <div className={cn("flex flex-col max-w-[80%] self-end", className)}>
+      <div className="px-4 py-3 rounded-[20px] wrap-break-word leading-relaxed bg-black hover:bg-gray-900 text-white rounded-br-md">
+        {content}
+      </div>
+    </div>
+  );
+}
+
+function ChatBoxMessageAgent({
+  content,
+  className,
+}: {
+  content: string;
+  className?: string;
+}) {
+  return (
+    <div className={cn("flex flex-col max-w-[80%] self-start", className)}>
+      <div className="px-4 py-3 rounded-[20px] wrap-break-word leading-relaxed bg-gray-100 text-gray-900 border border-gray-200 rounded-bl-md">
+        {content}
       </div>
     </div>
   );
@@ -489,9 +490,13 @@ export function ChatWidget({
       />
 
       <ChatBoxMessages>
-        {messages.map((message) => (
-          <ChatBoxMessage key={message.id} message={message} />
-        ))}
+        {messages.map((message) =>
+          message.role === "user" ? (
+            <ChatBoxMessageUser key={message.id} content={message.content} />
+          ) : (
+            <ChatBoxMessageAgent key={message.id} content={message.content} />
+          )
+        )}
 
         {isStreaming && (
           <ChatBoxMessageLoading content={streamingContent || undefined} />
