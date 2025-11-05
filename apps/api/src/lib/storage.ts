@@ -46,6 +46,7 @@ export async function uploadFileToStorage(
   filename: string,
   mimetype: string
 ) {
+  // TODO: research about S3 implementation
   const client = getSupabaseClient();
   const storageBucket = getStorageBucket();
 
@@ -85,9 +86,7 @@ export async function deleteFileFromStorage(filePath: string) {
   const client = getSupabaseClient();
   const storageBucket = getStorageBucket();
 
-  const { error } = await client.storage
-    .from(storageBucket)
-    .remove([filePath]);
+  const { error } = await client.storage.from(storageBucket).remove([filePath]);
 
   if (error) {
     throw new Error(`Failed to delete file from Supabase: ${error.message}`);

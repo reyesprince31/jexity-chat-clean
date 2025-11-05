@@ -6,10 +6,13 @@ import {
   CHAT_MODEL_CONFIG,
   TITLE_GENERATION_CONFIG,
   RAG_CHAT_CONFIG,
+  type CitationStyle,
 } from '../config/rag.config';
+import { generateRAGPrompt, generateTitlePrompt } from '../config/prompts';
 
 // Re-export for backward compatibility
 export const CHAT_CONFIG = CHAT_MODEL_CONFIG;
+export type { CitationStyle };
 
 // Initialize ChatOpenAI with streaming enabled
 export const chatModel = new ChatOpenAI({
@@ -32,6 +35,7 @@ export interface StreamChatParams {
   ragOptions?: {
     limit?: number;
     similarityThreshold?: number;
+    citationStyle?: CitationStyle;
   };
 }
 
@@ -58,6 +62,7 @@ function convertToLangChainMessage(message: ChatMessage): BaseMessage {
   }
 }
 
+
 /**
  * Stream chat completion with optional RAG context using LangChain retriever
  * @param params - Chat parameters including query, history, and RAG options
@@ -71,6 +76,7 @@ export async function streamChatWithRAG(params: StreamChatParams): Promise<Strea
     ragOptions = {},
   } = params;
 
+  const citationStyle = ragOptions.citationStyle || RAG_CHAT_CONFIG.defaultCitationStyle;
   const messages: BaseMessage[] = [];
   let sourceDocuments: Document[] = [];
 
@@ -80,27 +86,8 @@ export async function streamChatWithRAG(params: StreamChatParams): Promise<Strea
       const { documents, context } = await retrieveDocuments(userQuery, ragOptions);
       sourceDocuments = documents;
 
-      // Build system prompt with retrieved context
-      const systemPrompt = `You are a helpful AI assistant with access to a knowledge base of documents.
-
-Your task is to answer user questions based on the provided context from the knowledge base. Follow these guidelines:
-
-1. **Use the context**: Base your answers primarily on the information provided in the context below
-2. **Cite sources**: When referencing information, mention which source number you're using (e.g., "According to Source 1...")
-3. **Be honest**: If the context doesn't contain relevant information to answer the question, clearly state that
-4. **Don't hallucinate**: Don't make up information that isn't in the provided context
-5. **Be conversational**: While being accurate, maintain a natural and helpful tone
-6. **Synthesize information**: If multiple sources provide relevant information, combine them into a coherent answer
-
----
-
-**Available Context:**
-
-${context}
-
----
-
-Now, answer the user's question using the context above.`;
+      // Build system prompt with retrieved context based on citation style
+      const systemPrompt = generateRAGPrompt(context, citationStyle);
 
       // Add system prompt with RAG context
       messages.push(new SystemMessage(systemPrompt));
@@ -170,10 +157,7 @@ export async function generateConversationTitle(firstMessage: string): Promise<s
     });
 
     const messages = [
-      new SystemMessage(
-        `Generate a short, descriptive title (max ${TITLE_GENERATION_CONFIG.maxWords} words) for a conversation that starts with the following user message. Only respond with the title, nothing else.`
-      ),
-      new HumanMessage(firstMessage),
+      new SystemMessage(generateTitlePrompt(firstMessage)),
     ];
 
     const response = await titleModel.invoke(messages);

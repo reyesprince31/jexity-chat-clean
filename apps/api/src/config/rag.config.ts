@@ -82,6 +82,13 @@ export const CHUNKING_CONFIG = {
 } as const;
 
 /**
+ * Citation style for referencing sources
+ * - 'inline': Use numbered citations like [0], [1], [2]
+ * - 'natural': Use natural language like "According to Source 1..."
+ */
+export type CitationStyle = 'inline' | 'natural';
+
+/**
  * Chat/RAG Integration Configuration
  * Settings for how RAG context is used in chat
  */
@@ -106,6 +113,13 @@ export const RAG_CHAT_CONFIG = {
    * Include similarity scores in context formatting
    */
   showSimilarityScores: true,
+
+  /**
+   * Default citation style for source references
+   * - 'inline': Use numbered citations [0], [1], [2] (0-indexed, matches array indices)
+   * - 'natural': Use natural language "According to Source 1..." (1-indexed, more conversational)
+   */
+  defaultCitationStyle: 'natural' as CitationStyle,
 } as const;
 
 /**

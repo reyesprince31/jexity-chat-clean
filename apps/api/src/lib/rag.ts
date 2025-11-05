@@ -1,12 +1,16 @@
-import { PrismaRetriever } from './retriever';
-import { ChatPromptTemplate } from '@langchain/core/prompts';
-import { Document } from '@langchain/core/documents';
-import { VECTOR_SEARCH_CONFIG, RAG_CHAT_CONFIG } from '../config/rag.config';
+import { PrismaRetriever } from "./retriever";
+import { Document } from "@langchain/core/documents";
+import {
+  VECTOR_SEARCH_CONFIG,
+  RAG_CHAT_CONFIG,
+  type CitationStyle,
+} from "../config/rag.config";
 
 export interface RAGOptions {
   limit?: number;
   similarityThreshold?: number;
   documentId?: string;
+  citationStyle?: CitationStyle;
 }
 
 /**
@@ -31,18 +35,23 @@ export function createRetriever(options: RAGOptions = {}): PrismaRetriever {
 /**
  * Format LangChain Documents into a structured context string
  * @param documents - Array of LangChain Documents with metadata
+ * @param citationStyle - Citation numbering style: 'inline' (0-indexed) or 'natural' (1-indexed)
  * @returns Formatted context string with source numbers
  */
-export function formatDocumentsForContext(documents: Document[]): string {
+export function formatDocumentsForContext(
+  documents: Document[],
+  citationStyle: CitationStyle = RAG_CHAT_CONFIG.defaultCitationStyle
+): string {
   if (documents.length === 0) {
-    return 'No relevant context found in the knowledge base.';
+    return "No relevant context found in the knowledge base.";
   }
 
   const contextParts = documents.map((doc, index) => {
-    const docName = doc.metadata?.document?.filename || 'Unknown Document';
+    const docName = doc.metadata?.document?.filename || "Unknown Document";
 
-    // Format with or without similarity scores based on config
-    let header = `[Source ${index + 1}] ${docName}`;
+    // Use 0-indexed for inline citations, 1-indexed for natural language citations
+    const sourceNumber = citationStyle === "inline" ? index : index + 1;
+    let header = `[Source ${sourceNumber}] ${docName}`;
 
     if (RAG_CHAT_CONFIG.showSimilarityScores && doc.metadata?.similarity) {
       const similarity = (doc.metadata.similarity * 100).toFixed(1);
@@ -52,41 +61,7 @@ export function formatDocumentsForContext(documents: Document[]): string {
     return `${header}\n${doc.pageContent}`;
   });
 
-  return contextParts.join('\n\n---\n\n');
-}
-
-/**
- * Create a ChatPromptTemplate for RAG that works with LangChain chains.
- * This template expects context (formatted documents) and a question.
- *
- * @returns ChatPromptTemplate configured for RAG
- */
-export function createRAGPromptTemplate(): ChatPromptTemplate {
-  const systemTemplate = `You are a helpful AI assistant with access to a knowledge base of documents.
-
-Your task is to answer user questions based on the provided context from the knowledge base. Follow these guidelines:
-
-1. **Use the context**: Base your answers primarily on the information provided in the context below
-2. **Cite sources**: When referencing information, mention which source number you're using (e.g., "According to Source 1...")
-3. **Be honest**: If the context doesn't contain relevant information to answer the question, clearly state that
-4. **Don't hallucinate**: Don't make up information that isn't in the provided context
-5. **Be conversational**: While being accurate, maintain a natural and helpful tone
-6. **Synthesize information**: If multiple sources provide relevant information, combine them into a coherent answer
-
----
-
-**Available Context:**
-
-{context}
-
----
-
-Now, answer the user's question using the context above.`;
-
-  return ChatPromptTemplate.fromMessages([
-    ['system', systemTemplate],
-    ['human', '{question}'],
-  ]);
+  return contextParts.join("\n\n---\n\n");
 }
 
 /**
@@ -102,14 +77,19 @@ export async function retrieveDocuments(
   options: RAGOptions = {}
 ): Promise<{ documents: Document[]; context: string }> {
   try {
-    const retriever = createRetriever(options);
+    const {
+      citationStyle = RAG_CHAT_CONFIG.defaultCitationStyle,
+      ...retrieverOptions
+    } = options;
+
+    const retriever = createRetriever(retrieverOptions);
     // Use invoke() which is the standard LangChain method for retrievers
     const documents = await retriever.invoke(query);
-    const context = formatDocumentsForContext(documents);
+    const context = formatDocumentsForContext(documents, citationStyle);
 
     return { documents, context };
   } catch (error) {
-    console.error('Error retrieving documents:', error);
+    console.error("Error retrieving documents:", error);
     throw new Error(`Failed to retrieve documents: ${error}`);
   }
 }

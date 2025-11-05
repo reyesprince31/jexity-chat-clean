@@ -429,11 +429,14 @@ The RAG (Retrieval Augmented Generation) service uses **LangChain abstractions**
   - `documents` - Array of LangChain Documents with metadata
   - `context` - Formatted context string ready for prompt injection
 
-#### formatDocumentsForContext(documents)
+#### formatDocumentsForContext(documents, citationStyle?)
 
 - Formats LangChain Documents into structured context string
 - Includes source numbers, document names, and relevance scores
-- Format: `[Source 1] filename.pdf (Relevance: 87.5%)\n<chunk content>`
+- Supports two citation styles:
+  - **'inline'**: 0-indexed format `[Source 0], [Source 1], ...` for use with inline citations like `[0]`, `[1]`
+  - **'natural'** (default): 1-indexed format `[Source 1], [Source 2], ...` for natural language citations like "According to Source 1..."
+- Format: `[Source N] filename.pdf (Relevance: 87.5%)\n<chunk content>`
 
 #### createRAGPromptTemplate()
 
@@ -471,7 +474,10 @@ Main streaming function that:
 - `userQuery` - Current user message
 - `conversationHistory` - Array of prior messages: `{ role, content }[]`
 - `useRAG` - Enable/disable RAG context retrieval (default: true)
-- `ragOptions` - Configure vector search: `{ limit?, similarityThreshold? }`
+- `ragOptions` - Configure vector search and citations:
+  - `limit?` - Number of document chunks to retrieve (default: 5)
+  - `similarityThreshold?` - Minimum similarity score (default: 0.6)
+  - `citationStyle?` - Citation format: `'inline'` or `'natural'` (default: 'natural')
 
 **Return value:**
 - `stream` - AsyncIterable of response tokens for streaming
@@ -529,16 +535,32 @@ Send a message and receive streaming AI response with RAG context.
   "useRAG": true,
   "ragOptions": {
     "limit": 5,
-    "similarityThreshold": 0.6
+    "similarityThreshold": 0.6,
+    "citationStyle": "inline"
   }
 }
 ```
 
+**Citation Styles:**
+
+1. **Inline citations** (`citationStyle: "inline"`):
+   - Uses 0-indexed numeric citations: `[0]`, `[1]`, `[2]`
+   - Citations appear immediately after claims: "Machine learning is a subset of AI[0]."
+   - Multiple sources use consecutive brackets: "This is widely accepted[0][1][2]."
+   - Source numbers match array indices in `sourceDocuments` (0 = first source)
+   - Example response: "Deep learning uses neural networks[0] to process data[1][2]."
+
+2. **Natural language citations** (`citationStyle: "natural"`, default):
+   - Uses natural language references: "According to Source 1...", "Source 2 explains..."
+   - More conversational and readable
+   - Source numbers are 1-indexed (first source = Source 1)
+   - Example response: "According to Source 1, deep learning uses neural networks."
+
 **Response:** Server-Sent Events (SSE) stream
 
 Event types:
-- `{ type: "token", content: "..." }` - Individual response tokens
-- `{ type: "done", sources: [...] }` - Completion with citations
+- `{ type: "token", content: "..." }` - Individual response tokens (includes citations inline)
+- `{ type: "done", sources: [...] }` - Completion with source metadata
 - `{ type: "title", title: "..." }` - Auto-generated title (first message only)
 - `{ type: "error", message: "..." }` - Error during streaming
 
@@ -754,6 +776,102 @@ await createMessage({
 - **Title auto-generation** - Only happens on first message if no title provided
 - **All database writes use transactions** - Message creation updates conversation timestamps
 - **LangChain-compatible** - Easy to extend with chains, agents, and other LangChain features
+- **Citation styles** - Choose between inline citations `[0]` or natural language "According to Source 1..."
+
+### Client-Side: Parsing Inline Citations
+
+When using `citationStyle: "inline"`, the AI response includes numeric citations like `[0]`, `[1]`, `[2]` that reference the `sourceDocuments` array by index.
+
+**Example flow:**
+
+```typescript
+// 1. Send message with inline citations enabled
+const response = await fetch(`/conversations/${conversationId}/messages`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    message: 'What is machine learning?',
+    ragOptions: { citationStyle: 'inline' }
+  })
+});
+
+// 2. Collect response and sources
+let fullResponse = '';
+let sources = [];
+
+const reader = response.body.getReader();
+const decoder = new TextDecoder();
+
+while (true) {
+  const { done, value } = await reader.read();
+  if (done) break;
+
+  const text = decoder.decode(value);
+  const lines = text.split('\n\n');
+
+  for (const line of lines) {
+    if (line.startsWith('data: ')) {
+      const event = JSON.parse(line.slice(6));
+
+      if (event.type === 'token') {
+        fullResponse += event.content;
+      } else if (event.type === 'done') {
+        sources = event.sources; // Array of source metadata
+      }
+    }
+  }
+}
+
+// 3. Parse and render citations
+// The response might be: "Machine learning is a subset of AI[0] that uses neural networks[1]."
+// Parse [N] patterns and link to sources array
+
+function renderWithCitations(text: string, sources: Source[]) {
+  // Replace [N] with clickable links or tooltips
+  return text.replace(/\[(\d+)\]/g, (match, index) => {
+    const sourceIndex = parseInt(index, 10);
+    if (sourceIndex >= 0 && sourceIndex < sources.length) {
+      const source = sources[sourceIndex];
+      return `<sup><a href="#source-${sourceIndex}" title="${source.filename}">[${index}]</a></sup>`;
+    }
+    return match;
+  });
+}
+
+// 4. Display sources separately
+function renderSources(sources: Source[]) {
+  return sources.map((source, index) => `
+    <div id="source-${index}">
+      <strong>[${index}] ${source.filename}</strong>
+      <p>${source.content}</p>
+      <small>Relevance: ${(source.similarity * 100).toFixed(1)}%</small>
+    </div>
+  `).join('');
+}
+```
+
+**Key points:**
+- Citation numbers are **0-indexed** to match JavaScript array indexing
+- `[0]` references `sources[0]`, `[1]` references `sources[1]`, etc.
+- Sources array is provided in the `{ type: 'done', sources: [...] }` event
+- Client-side rendering can make citations interactive (links, tooltips, popovers)
+- Each source includes: `id`, `documentId`, `filename`, `content` (preview), `similarity` score
+
+**Example rendered output:**
+
+```
+Machine learning is a subset of AI[0] that uses neural networks[1][2].
+
+Sources:
+[0] ml-guide.pdf (Relevance: 87.5%)
+"Machine learning is a field of artificial intelligence..."
+
+[1] neural-networks.pdf (Relevance: 82.3%)
+"Neural networks are computing systems inspired by biological..."
+
+[2] deep-learning.pdf (Relevance: 78.9%)
+"Deep learning architectures use multiple layers..."
+```
 
 ### Turborepo Configuration
 

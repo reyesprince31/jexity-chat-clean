@@ -2,9 +2,11 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Icon } from "@iconify/react";
 import * as PopoverPrimitive from "@radix-ui/react-popover";
 import { ApiClient, apiClient } from "../lib/api-client";
-import type { Message, Source } from "../types/api";
+import type { Message, MessageWithSources, Source } from "../types/api";
 import type { ChatWidgetTheme } from "../types/theme";
 import { cn } from "../lib/utils";
+import { parseCitationsInText } from "../lib/citationParser";
+import { InlineCitation } from "./InlineCitation";
 
 function ChatBoxTrigger({
   onClick,
@@ -150,15 +152,32 @@ function ChatBoxMessageUser({
 
 function ChatBoxMessageAgent({
   content,
+  sources = [],
+  citationStyle = "natural",
   className,
 }: {
   content: string;
+  sources?: Source[];
+  citationStyle?: "inline" | "natural";
   className?: string;
 }) {
+  const segments = useMemo(() => parseCitationsInText(content), [content]);
+
   return (
     <div className={cn("flex flex-col max-w-[80%] self-start", className)}>
       <div className="px-4 py-3 rounded-[20px] wrap-break-word leading-relaxed bg-gray-100 text-gray-900 border border-gray-200 rounded-bl-md">
-        {content}
+        {segments.map((segment, idx) =>
+          segment.type === "text" ? (
+            <span key={idx}>{segment.content}</span>
+          ) : (
+            <InlineCitation
+              key={idx}
+              index={segment.index}
+              source={sources[segment.index]}
+              citationStyle={citationStyle}
+            />
+          )
+        )}
       </div>
     </div>
   );
@@ -166,16 +185,34 @@ function ChatBoxMessageAgent({
 
 function ChatBoxMessageLoading({
   content,
+  citationStyle = "natural",
   className,
 }: {
   content?: string;
+  citationStyle?: "inline" | "natural";
   className?: string;
 }) {
+  const segments = useMemo(
+    () => (content ? parseCitationsInText(content) : []),
+    [content]
+  );
+
   return (
     <div className={cn("flex flex-col max-w-[80%] self-start", className)}>
       <div className="px-4 py-3 rounded-[20px] wrap-break-word leading-relaxed bg-gray-100 text-gray-900 border border-gray-200 rounded-bl-md">
         {content ? (
-          content
+          segments.map((segment, idx) =>
+            segment.type === "text" ? (
+              <span key={idx}>{segment.content}</span>
+            ) : (
+              <InlineCitation
+                key={idx}
+                index={segment.index}
+                source={undefined} // Sources not available yet during streaming
+                citationStyle={citationStyle}
+              />
+            )
+          )
         ) : (
           <span className="inline-block w-0.5 h-5 bg-black animate-blink"></span>
         )}
@@ -193,9 +230,11 @@ function ChatBoxMessageLoading({
 
 function ChatBoxSources({
   sources,
+  citationStyle = "natural",
   className,
 }: {
   sources: Source[];
+  citationStyle?: "inline" | "natural";
   className?: string;
 }) {
   if (sources.length === 0) return null;
@@ -208,12 +247,16 @@ function ChatBoxSources({
       )}
     >
       <div className="font-semibold mb-2 text-gray-900">Sources:</div>
-      {sources.map((source, idx) => (
-        <div key={source.id} className="py-1 text-gray-700">
-          <strong>Source {idx + 1}:</strong> {source.filename} (Relevance:{" "}
-          {(source.similarity * 100).toFixed(1)}%)
-        </div>
-      ))}
+      {sources.map((source, idx) => {
+        // Use 0-indexed for inline citations, 1-indexed for natural language
+        const sourceNumber = citationStyle === "inline" ? idx : idx + 1;
+        return (
+          <div key={source.id} className="py-1 text-gray-700">
+            <strong>Source {sourceNumber}:</strong> {source.filename}{" "}
+            (Relevance: {(source.similarity * 100).toFixed(1)}%)
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -332,18 +375,20 @@ export interface ChatWidgetProps {
   conversationId?: string;
   onConversationCreate?: (conversationId: string) => void;
   theme?: ChatWidgetTheme;
+  citationStyle?: "inline" | "natural";
 }
 
 export function ChatWidget({
   apiUrl,
   conversationId: initialConversationId,
   onConversationCreate,
+  citationStyle = "inline",
   // Note: theme prop exists in ChatWidgetProps but is applied at the Shadow DOM level in main.tsx
 }: ChatWidgetProps) {
   const [conversationId, setConversationId] = useState<string | null>(
     initialConversationId || null
   );
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<MessageWithSources[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
@@ -421,18 +466,22 @@ export function ChatWidget({
       for await (const event of client.streamMessage(conversationId, {
         message: userMessage,
         useRAG: true,
+        ragOptions: {
+          citationStyle,
+        },
       })) {
         if (event.type === "token" && event.content) {
           fullResponse += event.content;
           setStreamingContent(fullResponse);
         } else if (event.type === "done") {
-          // Add assistant message
-          const assistantMsg: Message = {
+          // Add assistant message with sources
+          const assistantMsg: MessageWithSources = {
             id: `temp-${Date.now()}`,
             conversationId: conversationId,
             role: "assistant",
             content: fullResponse,
             createdAt: new Date().toISOString(),
+            sources: event.sources || [],
           };
 
           // Update all states together - React will batch these
@@ -440,7 +489,7 @@ export function ChatWidget({
           setStreamingContent("");
           setMessages((prev) => [...prev, assistantMsg]);
 
-          // Store sources
+          // Store sources for the sources display section
           if (event.sources) {
             setSources(event.sources);
           }
@@ -494,15 +543,23 @@ export function ChatWidget({
           message.role === "user" ? (
             <ChatBoxMessageUser key={message.id} content={message.content} />
           ) : (
-            <ChatBoxMessageAgent key={message.id} content={message.content} />
+            <ChatBoxMessageAgent
+              key={message.id}
+              content={message.content}
+              sources={message.sources}
+              citationStyle={citationStyle}
+            />
           )
         )}
 
         {isStreaming && (
-          <ChatBoxMessageLoading content={streamingContent || undefined} />
+          <ChatBoxMessageLoading
+            content={streamingContent || undefined}
+            citationStyle={citationStyle}
+          />
         )}
 
-        <ChatBoxSources sources={sources} />
+        <ChatBoxSources sources={sources} citationStyle={citationStyle} />
 
         <ChatBoxError error={error} />
 
