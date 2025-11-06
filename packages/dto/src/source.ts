@@ -10,6 +10,8 @@ export const SourceSchema = z.object({
   similarity: z.number().min(0).max(1),
   content: z.string(),
   filename: z.string(),
+  pageNumber: z.number().int().positive().optional(),
+  pageEnd: z.number().int().positive().optional(),
 });
 
 export type Source = z.infer<typeof SourceSchema>;
@@ -23,6 +25,8 @@ export const MessageSourceDetailSchema = z.object({
   chunkId: z.string().uuid(),
   similarityScore: z.number().min(0).max(1),
   content: z.string(),
+  pageNumber: z.number().int().positive().optional(),
+  pageEnd: z.number().int().positive().optional(),
   document: z.object({
     filename: z.string(),
     mimetype: z.string(),

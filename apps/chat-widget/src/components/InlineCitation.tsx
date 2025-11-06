@@ -78,8 +78,17 @@ export function InlineCitation({
               <div className="font-semibold text-gray-900 text-sm mb-1">
                 {source.filename}
               </div>
-              <div className="text-xs text-gray-500">
-                Relevance: {(source.similarity * 100).toFixed(1)}%
+              <div className="text-xs text-gray-500 space-y-0.5">
+                {source.pageNumber && (
+                  <div>
+                    {source.pageEnd && source.pageEnd !== source.pageNumber
+                      ? `Pages ${source.pageNumber}-${source.pageEnd}`
+                      : `Page ${source.pageNumber}`}
+                  </div>
+                )}
+                <div>
+                  Relevance: {(source.similarity * 100).toFixed(1)}%
+                </div>
               </div>
             </div>
           </div>

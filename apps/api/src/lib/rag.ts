@@ -5,6 +5,7 @@ import {
   RAG_CHAT_CONFIG,
   type CitationStyle,
 } from "../config/rag.config";
+import { formatPageReference } from "./chunking";
 
 export interface RAGOptions {
   limit?: number;
@@ -52,6 +53,15 @@ export function formatDocumentsForContext(
     // Use 0-indexed for inline citations, 1-indexed for natural language citations
     const sourceNumber = citationStyle === "inline" ? index : index + 1;
     let header = `[Source ${sourceNumber}] ${docName}`;
+
+    // Add page information if available
+    const pageRef = formatPageReference(
+      doc.metadata?.pageNumber,
+      doc.metadata?.pageEnd
+    );
+    if (pageRef) {
+      header += ` (${pageRef})`;
+    }
 
     if (RAG_CHAT_CONFIG.showSimilarityScores && doc.metadata?.similarity) {
       const similarity = (doc.metadata.similarity * 100).toFixed(1);

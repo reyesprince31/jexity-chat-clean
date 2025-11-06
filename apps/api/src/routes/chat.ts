@@ -292,6 +292,8 @@ export default async function chatRoutes(
                 filename: doc.metadata.document?.filename,
                 content: doc.pageContent.substring(0, 200), // Preview
                 similarity: doc.metadata.similarity,
+                pageNumber: doc.metadata.pageNumber,
+                pageEnd: doc.metadata.pageEnd,
               })),
             })}\n\n`
           );
@@ -547,6 +549,10 @@ export default async function chatRoutes(
                 similarity_score: number;
                 chunk: {
                   content: string;
+                  metadata: {
+                    pageNumber?: number;
+                    pageEnd?: number;
+                  };
                   document: {
                     filename: string;
                     mimetype: string;
@@ -558,6 +564,8 @@ export default async function chatRoutes(
                 chunkId: sourceWithChunk.chunk_id,
                 similarityScore: sourceWithChunk.similarity_score,
                 content: sourceWithChunk.chunk.content,
+                pageNumber: sourceWithChunk.chunk.metadata?.pageNumber,
+                pageEnd: sourceWithChunk.chunk.metadata?.pageEnd,
                 document: {
                   filename: sourceWithChunk.chunk.document.filename,
                   mimetype: sourceWithChunk.chunk.document.mimetype,

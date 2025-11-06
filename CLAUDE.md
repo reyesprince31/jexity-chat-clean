@@ -160,7 +160,7 @@ Inngest Function (async):
 - `content` (TEXT) - Chunk text content (1000 chars)
 - `embedding` (vector(3072)) - OpenAI embedding for similarity search
 - `token_count` (INT) - Estimated tokens for cost tracking
-- `metadata` (JSONB) - Position info: chunkIndex, startPosition, endPosition, length
+- `metadata` (JSONB) - Position info: chunkIndex, startPosition, endPosition, length, pageNumber, pageEnd, locationType
 
 **Why chunking?** Large documents are split into overlapping chunks to:
 
@@ -185,6 +185,65 @@ Chunk 1: chars 800-1800    (200 char overlap with chunk 0)
 Chunk 2: chars 1600-2600   (200 char overlap with chunk 1)
 ...
 ```
+
+### Page Number Tracking (PDFs)
+
+**NEW FEATURE:** Chunks from PDF documents now include page number metadata to help users locate information in the source document.
+
+**How it works:**
+
+1. **PDF Extraction** (`processFileUpload.ts`):
+   - Uses `pdf-parse` library's `result.pages` array to extract text per-page
+   - Each page object contains: `{ num: number, text: string }`
+   - Concatenates all page texts to create full document text
+
+2. **Character-to-Page Mapping** (`chunking.ts`):
+   - `buildPageMapping()` creates a map of character positions to page numbers
+   - Example for a 3-page PDF:
+     ```
+     Page 1: chars 0-5000
+     Page 2: chars 5000-12000
+     Page 3: chars 12000-15000
+     ```
+
+3. **Chunk Page Calculation**:
+   - When chunking text, `calculatePageForPosition()` determines which page each character belongs to
+   - Chunks store both `pageNumber` (start page) and `pageEnd` (end page if multi-page)
+   - Single-page chunk: `{ pageNumber: 5 }`
+   - Multi-page chunk: `{ pageNumber: 5, pageEnd: 6 }`
+
+4. **RAG Display**:
+   - Citations show page references: `[Source 1] document.pdf (page 5) (Relevance: 87.5%)`
+   - Multi-page chunks: `[Source 1] document.pdf (pages 5-6) (Relevance: 87.5%)`
+
+**Key Functions:**
+
+- `buildPageMapping(pages: string[])` - Creates character-to-page mapping from per-page text array
+- `calculatePageForPosition(position: number, pageMapping: PageMapping)` - Maps character position to page number
+- `formatPageReference(pageNumber?: number, pageEnd?: number)` - Formats page reference string
+- `chunkText(text: string, pageMapping?: PageMapping)` - Enhanced to accept optional page mapping
+
+**Metadata Structure:**
+
+```typescript
+{
+  chunkIndex: 0,
+  startPosition: 0,
+  endPosition: 1000,
+  length: 1000,
+  pageNumber: 5,        // Optional: starting page
+  pageEnd: 6,           // Optional: ending page (if spans multiple)
+  locationType: 'page'  // Optional: extensible for other formats
+}
+```
+
+**Important Notes:**
+
+- Only applies to **new PDF uploads** (existing documents won't have page numbers)
+- Text files don't have page tracking (no natural page boundaries)
+- Backward compatible: chunks without page data still work
+- Page numbers are 1-indexed (matches PDF viewer conventions)
+- Extensible design supports future formats (sections, line numbers)
 
 ### Vector Search Functions
 
@@ -667,6 +726,8 @@ Get a message with its source document chunks (for displaying citations).
         "chunkId": "uuid",
         "similarityScore": 0.87,
         "content": "Machine learning is...",
+        "pageNumber": 5,
+        "pageEnd": 6,
         "document": {
           "filename": "ml-guide.pdf",
           "mimetype": "application/pdf"
@@ -773,6 +834,7 @@ await createMessage({
 - **RAG is optional** - Set `useRAG: false` to disable context retrieval
 - **Conversation history is automatic** - Retrieved from database before streaming
 - **Citations are tracked** - message_sources links responses to document chunks via Document metadata
+- **Page numbers included** - PDF citations include page numbers (e.g., "page 5" or "pages 5-6") for easy reference
 - **Title auto-generation** - Only happens on first message if no title provided
 - **All database writes use transactions** - Message creation updates conversation timestamps
 - **LangChain-compatible** - Easy to extend with chains, agents, and other LangChain features
@@ -840,13 +902,21 @@ function renderWithCitations(text: string, sources: Source[]) {
 
 // 4. Display sources separately
 function renderSources(sources: Source[]) {
-  return sources.map((source, index) => `
-    <div id="source-${index}">
-      <strong>[${index}] ${source.filename}</strong>
-      <p>${source.content}</p>
-      <small>Relevance: ${(source.similarity * 100).toFixed(1)}%</small>
-    </div>
-  `).join('');
+  return sources.map((source, index) => {
+    const pageRef = source.pageNumber
+      ? (source.pageEnd && source.pageEnd !== source.pageNumber
+          ? ` (pages ${source.pageNumber}-${source.pageEnd})`
+          : ` (page ${source.pageNumber})`)
+      : '';
+
+    return `
+      <div id="source-${index}">
+        <strong>[${index}] ${source.filename}${pageRef}</strong>
+        <p>${source.content}</p>
+        <small>Relevance: ${(source.similarity * 100).toFixed(1)}%</small>
+      </div>
+    `;
+  }).join('');
 }
 ```
 
@@ -855,7 +925,7 @@ function renderSources(sources: Source[]) {
 - `[0]` references `sources[0]`, `[1]` references `sources[1]`, etc.
 - Sources array is provided in the `{ type: 'done', sources: [...] }` event
 - Client-side rendering can make citations interactive (links, tooltips, popovers)
-- Each source includes: `id`, `documentId`, `filename`, `content` (preview), `similarity` score
+- Each source includes: `id`, `documentId`, `filename`, `content` (preview), `similarity` score, `pageNumber` (optional), `pageEnd` (optional)
 
 **Example rendered output:**
 
@@ -863,13 +933,13 @@ function renderSources(sources: Source[]) {
 Machine learning is a subset of AI[0] that uses neural networks[1][2].
 
 Sources:
-[0] ml-guide.pdf (Relevance: 87.5%)
+[0] ml-guide.pdf (page 5) (Relevance: 87.5%)
 "Machine learning is a field of artificial intelligence..."
 
-[1] neural-networks.pdf (Relevance: 82.3%)
+[1] neural-networks.pdf (pages 5-6) (Relevance: 82.3%)
 "Neural networks are computing systems inspired by biological..."
 
-[2] deep-learning.pdf (Relevance: 78.9%)
+[2] deep-learning.pdf (page 12) (Relevance: 78.9%)
 "Deep learning architectures use multiple layers..."
 ```
 

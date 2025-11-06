@@ -3,7 +3,7 @@ import { createEmbeddingsBatch } from "../../lib/embeddings";
 import { PDFParse } from "pdf-parse";
 import { downloadFileFromStorage } from "../../lib/storage";
 import { getDocumentById } from "../../lib/database";
-import { chunkText, estimateTokenCount } from "../../lib/chunking";
+import { chunkText, estimateTokenCount, buildPageMapping } from "../../lib/chunking";
 import { PrismaClient } from "../../generated/prisma/client";
 
 // Reuse single Prisma instance to avoid connection pool issues
@@ -75,6 +75,7 @@ export const processFileUpload = inngest.createFunction(
 
       let extractedText = "";
       let canCreateEmbedding = false;
+      let pageTexts: string[] | undefined;
 
       if (isTextFile) {
         extractedText = fileBuffer.toString("utf-8");
@@ -90,6 +91,13 @@ export const processFileUpload = inngest.createFunction(
           // PDFParse v2 expects options object with data property
           const parser = new PDFParse({ data: fileBuffer });
           const result = await parser.getText();
+
+          // Extract per-page text for page tracking
+          if (result.pages && Array.isArray(result.pages)) {
+            pageTexts = result.pages.map(page => page.text || '');
+            console.log(`Extracted ${result.pages.length} pages from PDF`);
+          }
+
           extractedText = result.text;
           canCreateEmbedding = true;
 
@@ -124,10 +132,11 @@ export const processFileUpload = inngest.createFunction(
 
       console.log(`Stored extracted text (${textLength} characters)`);
 
-      // Return only metadata, not the actual text
+      // Return metadata and page texts (for page mapping)
       return {
         textLength,
         canCreateEmbedding,
+        pageTexts, // Array of per-page text (PDFs only)
       };
     });
 
@@ -146,10 +155,32 @@ export const processFileUpload = inngest.createFunction(
           throw new Error("No extracted text found in database");
         }
 
-        // Chunk the text
+        // Build page mapping if page texts are available (PDFs)
+        let pageMapping;
+        if (processResult.pageTexts && processResult.pageTexts.length > 0) {
+          pageMapping = buildPageMapping(processResult.pageTexts);
+          console.log(`Built page mapping with ${pageMapping.totalPages} pages`);
+        }
+
+        // Chunk the text with optional page mapping
         console.log(`Chunking text for: ${filename}`);
-        const chunks = await chunkText(doc.extracted_text);
+        const chunks = await chunkText(doc.extracted_text, pageMapping);
         console.log(`Created ${chunks.length} chunks`);
+
+        // Log page number info for first few chunks
+        if (pageMapping && chunks.length > 0) {
+          const sampleSize = Math.min(3, chunks.length);
+          console.log(`Sample chunks with page numbers:`);
+          for (let i = 0; i < sampleSize; i++) {
+            const chunk = chunks[i];
+            if (chunk?.metadata.pageNumber) {
+              const pageInfo = chunk.metadata.pageEnd
+                ? `pages ${chunk.metadata.pageNumber}-${chunk.metadata.pageEnd}`
+                : `page ${chunk.metadata.pageNumber}`;
+              console.log(`  Chunk ${i}: ${pageInfo}`);
+            }
+          }
+        }
 
         const chunkContents = chunks.map(chunk => chunk.content);
 

@@ -250,10 +250,22 @@ function ChatBoxSources({
       {sources.map((source, idx) => {
         // Use 0-indexed for inline citations, 1-indexed for natural language
         const sourceNumber = citationStyle === "inline" ? idx : idx + 1;
+
+        // Format page reference
+        let pageRef = "";
+        if (source.pageNumber) {
+          if (source.pageEnd && source.pageEnd !== source.pageNumber) {
+            pageRef = ` (pages ${source.pageNumber}-${source.pageEnd})`;
+          } else {
+            pageRef = ` (page ${source.pageNumber})`;
+          }
+        }
+
         return (
           <div key={source.id} className="py-1 text-gray-700">
-            <strong>Source {sourceNumber}:</strong> {source.filename}{" "}
-            (Relevance: {(source.similarity * 100).toFixed(1)}%)
+            <strong>Source {sourceNumber}:</strong> {source.filename}
+            {pageRef && <span className="text-gray-600">{pageRef}</span>}
+            {" "}(Relevance: {(source.similarity * 100).toFixed(1)}%)
           </div>
         );
       })}
