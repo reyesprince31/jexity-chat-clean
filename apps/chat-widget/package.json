@@ -24,7 +24,6 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
-    "@iconify/react": "^6.0.2",
     "@radix-ui/react-popover": "^1.1.15",
     "@repo/dto": "workspace:*",
     "clsx": "^2.1.1",
