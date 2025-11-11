@@ -37,7 +37,6 @@ import {
   streamChatWithRAG,
   generateConversationTitle,
   type ChatMessage,
-  type CitationStyle,
 } from "../lib/chat.js";
 
 // Request/Response Types (Fastify-specific structure)
@@ -57,7 +56,6 @@ interface SendMessageRequest {
     ragOptions?: {
       limit?: number;
       similarityThreshold?: number;
-      citationStyle?: CitationStyle;
     };
   };
 }
@@ -172,10 +170,7 @@ export default async function chatRoutes(
    *   - useRAG?: boolean (default: true) - enable RAG context retrieval
    *   - ragOptions?: {
    *       limit?: number,
-   *       similarityThreshold?: number,
-   *       citationStyle?: 'inline' | 'natural' (default: 'natural')
-   *         - 'inline': Use 0-indexed citations like [0], [1], [2]
-   *         - 'natural': Use natural language like "According to Source 1..."
+   *       similarityThreshold?: number
    *     }
    *
    * Response: Server-Sent Events stream with JSON data:

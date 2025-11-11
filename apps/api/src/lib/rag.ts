@@ -1,17 +1,12 @@
 import { PrismaRetriever } from "./retriever";
 import { Document } from "@langchain/core/documents";
-import {
-  VECTOR_SEARCH_CONFIG,
-  RAG_CHAT_CONFIG,
-  type CitationStyle,
-} from "../config/rag.config";
+import { VECTOR_SEARCH_CONFIG, RAG_CHAT_CONFIG } from "../config/rag.config";
 import { formatPageReference } from "./chunking";
 
 export interface RAGOptions {
   limit?: number;
   similarityThreshold?: number;
   documentId?: string;
-  citationStyle?: CitationStyle;
 }
 
 /**
@@ -36,12 +31,10 @@ export function createRetriever(options: RAGOptions = {}): PrismaRetriever {
 /**
  * Format LangChain Documents into a structured context string
  * @param documents - Array of LangChain Documents with metadata
- * @param citationStyle - Citation numbering style: 'inline' (0-indexed) or 'natural' (1-indexed)
  * @returns Formatted context string with source numbers
  */
 export function formatDocumentsForContext(
-  documents: Document[],
-  citationStyle: CitationStyle = RAG_CHAT_CONFIG.defaultCitationStyle
+  documents: Document[]
 ): string {
   if (documents.length === 0) {
     return "No relevant context found in the knowledge base.";
@@ -50,9 +43,7 @@ export function formatDocumentsForContext(
   const contextParts = documents.map((doc, index) => {
     const docName = doc.metadata?.document?.filename || "Unknown Document";
 
-    // Use 0-indexed for inline citations, 1-indexed for natural language citations
-    const sourceNumber = citationStyle === "inline" ? index : index + 1;
-    let header = `[Source ${sourceNumber}] ${docName}`;
+    let header = `[Source ${index}] ${docName}`;
 
     // Add page information if available
     const pageRef = formatPageReference(
@@ -87,15 +78,12 @@ export async function retrieveDocuments(
   options: RAGOptions = {}
 ): Promise<{ documents: Document[]; context: string }> {
   try {
-    const {
-      citationStyle = RAG_CHAT_CONFIG.defaultCitationStyle,
-      ...retrieverOptions
-    } = options;
+    const { ...retrieverOptions } = options;
 
     const retriever = createRetriever(retrieverOptions);
     // Use invoke() which is the standard LangChain method for retrievers
     const documents = await retriever.invoke(query);
-    const context = formatDocumentsForContext(documents, citationStyle);
+    const context = formatDocumentsForContext(documents);
 
     return { documents, context };
   } catch (error) {

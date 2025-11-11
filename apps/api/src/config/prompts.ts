@@ -5,10 +5,8 @@
  * Prompts are organized by feature and can be easily maintained and updated.
  */
 
-import type { CitationStyle } from "./rag.config";
-
 /**
- * Base guidelines shared across all citation styles
+ * Base guidelines shared across all prompts
  */
 const BASE_GUIDELINES = `1. **Use the context**: Base your answers primarily on the information provided in the context below
 3. **Be honest**: If the context doesn't contain relevant information to answer the question, clearly state that
@@ -19,49 +17,35 @@ const BASE_GUIDELINES = `1. **Use the context**: Base your answers primarily on 
 /**
  * Inline citation instructions (0-indexed)
  */
-const INLINE_CITATION_INSTRUCTIONS = `2. **Cite sources with inline numbers**: When referencing information, use inline numeric citations in square brackets immediately after the claim
-   - Citations are 0-indexed (first source is [0], second is [1], etc.)
-   - Place citations right after the relevant statement: "Machine learning is a subset of AI [0]."
-   - For multiple sources supporting the same claim, use consecutive brackets: "This is widely accepted [0][1][2]."
+const INLINE_CITATION_INSTRUCTIONS = `2. **Cite sources with inline numbers and rewritten chunk text**: When referencing information, use inline numeric citations immediately after the claim.
+   - Citations are 0-indexed (first source is {{cite:0}}, second is {{cite:1}}, etc.)
+   - Place citations right after the relevant statement and after the punctuation: "Machine learning is a subset of AI. {{cite:0, text:"[rewritten chunk content]"}}"
+   - The \`text\` field should contain a **concise, rewritten version of the source chunk**, capturing the main point clearly. Do not use the raw chunk text verbatim.
+   - Multiple sources supporting the same claim can be grouped: 
+     "This is widely accepted. {{cite:0, text:"[rewritten chunk 0]"}, {cite:1, text:"[rewritten chunk 1]"}, {cite:2}}"
+   - If no text is provided, only use the index.
    - Always cite specific sources when using information from the context
 
 **Examples of proper inline citations:**
-- "The transformer architecture was introduced in 2017 [0]."
-- "Deep learning has revolutionized computer vision [1][2]."
-- "According to the research [0], accuracy improved by 15%."`;
+- "The transformer architecture was introduced in 2017. {{cite:0, text:"Introduced the Transformer model for sequence processing"}}"
+- "Deep learning has revolutionized computer vision. {{cite:1, text:"AlexNet improved image recognition accuracy"}, {cite:2, text:"ResNet enabled deeper networks"}}"
+- "According to the research {{cite:0, text:"Experiment showed 15% improvement"}}, accuracy improved significantly."`;
 
 /**
- * Natural language citation instructions (1-indexed)
- */
-const NATURAL_CITATION_INSTRUCTIONS = `2. **Cite sources**: When referencing information, mention which source number you're using (e.g., "According to Source 1...")`;
-
-/**
- * Generate RAG system prompt based on citation style
+ * Generate RAG system prompt with inline citation instructions
  *
  * @param context - Formatted context string with sources
- * @param citationStyle - Citation style: 'inline' for [0], [1] or 'natural' for "According to Source 1..."
  * @returns Complete system prompt for the LLM
  */
 export function generateRAGPrompt(
-  context: string,
-  citationStyle: CitationStyle
+  context: string
 ): string {
-  const citationInstructions =
-    citationStyle === "inline"
-      ? INLINE_CITATION_INSTRUCTIONS
-      : NATURAL_CITATION_INSTRUCTIONS;
-
-  const closingInstruction =
-    citationStyle === "inline"
-      ? "Now, answer the user's question using the context above with inline citations."
-      : "Now, answer the user's question using the context above.";
-
   return `You are a helpful AI assistant with access to a knowledge base of documents.
 
 Your task is to answer user questions based on the provided context from the knowledge base. Follow these guidelines:
 
 ${BASE_GUIDELINES}
-${citationInstructions}
+${INLINE_CITATION_INSTRUCTIONS}
 
 ---
 
@@ -71,7 +55,7 @@ ${context}
 
 ---
 
-${closingInstruction}`;
+Now, answer the user's question using the context above with inline citations.`;
 }
 
 /**

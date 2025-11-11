@@ -11,10 +11,78 @@ import { ApiClient, apiClient } from "../lib/api-client";
 import type { Message, MessageWithSources, Source } from "../types/api";
 import type { ChatWidgetTheme } from "../types/theme";
 import { cn } from "../lib/utils";
-import { parseCitationsInText } from "../lib/citationParser";
+import {
+  parseCitationsInText,
+  type MessageSegment,
+} from "../lib/citationParser";
 import { InlineCitation } from "./InlineCitation";
 
 type IconProps = ComponentPropsWithoutRef<"svg"> & { size?: number };
+
+function normalizeSegmentsForDisplay(
+  segments: MessageSegment[]
+): MessageSegment[] {
+  const workingSegments = segments.map((segment) =>
+    segment.type === "text" ? { ...segment } : segment
+  );
+
+  const result: MessageSegment[] = [];
+
+  for (let i = 0; i < workingSegments.length; i += 1) {
+    const segment = workingSegments[i];
+    if (!segment) {
+      continue;
+    }
+
+    if (segment.type === "citation") {
+      const next = workingSegments[i + 1];
+
+      if (next?.type === "text" && next.content.length > 0) {
+        const punctuationMatch = next.content.match(/^([.,!?;:]+)/);
+        if (punctuationMatch && punctuationMatch[1]) {
+          const punctuation = punctuationMatch[1];
+          const punctuationWithSpace = /\s$/.test(punctuation)
+            ? punctuation
+            : `${punctuation} `;
+
+          let insertAt = result.length - 1;
+          while (insertAt >= 0 && result[insertAt]?.type !== "text") {
+            insertAt -= 1;
+          }
+
+          if (insertAt >= 0) {
+            const target = result[insertAt];
+            if (target?.type === "text") {
+              const updatedContent = target.content.replace(
+                /[ \t]+$/,
+                ""
+              );
+              result[insertAt] = {
+                type: "text",
+                content: `${updatedContent}${punctuationWithSpace}`,
+              };
+            }
+          }
+
+          next.content = next.content
+            .slice(punctuation.length)
+            .replace(/^[ \t]+/, "");
+        }
+      }
+
+      result.push(segment);
+      continue;
+    }
+
+    if (segment.content.length > 0) {
+      result.push(segment);
+    }
+  }
+
+  return result.filter(
+    (segment) => segment.type !== "text" || segment.content.length > 0
+  );
+}
 
 function ChatbotIcon({ size = 24, className, ...props }: IconProps) {
   return (
@@ -308,15 +376,16 @@ function ChatBoxMessageUser({
 function ChatBoxMessageAgent({
   content,
   sources = [],
-  citationStyle = "natural",
   className,
 }: {
   content: string;
   sources?: Source[];
-  citationStyle?: "inline" | "natural";
   className?: string;
 }) {
-  const segments = useMemo(() => parseCitationsInText(content), [content]);
+  const segments = useMemo(
+    () => normalizeSegmentsForDisplay(parseCitationsInText(content)),
+    [content]
+  );
 
   return (
     <div className={cn("flex flex-col max-w-[80%] self-start", className)}>
@@ -327,9 +396,10 @@ function ChatBoxMessageAgent({
           ) : (
             <InlineCitation
               key={idx}
-              index={segment.index}
-              source={sources[segment.index]}
-              citationStyle={citationStyle}
+              content={segment.content}
+              indices={segment.indices}
+              sources={segment.indices.map((citationIndex) => sources[citationIndex])}
+              supportingTexts={segment.supportingTexts}
             />
           )
         )}
@@ -340,15 +410,16 @@ function ChatBoxMessageAgent({
 
 function ChatBoxMessageLoading({
   content,
-  citationStyle = "natural",
   className,
 }: {
   content?: string;
-  citationStyle?: "inline" | "natural";
   className?: string;
 }) {
   const segments = useMemo(
-    () => (content ? parseCitationsInText(content) : []),
+    () =>
+      content
+        ? normalizeSegmentsForDisplay(parseCitationsInText(content))
+        : [],
     [content]
   );
 
@@ -362,9 +433,9 @@ function ChatBoxMessageLoading({
             ) : (
               <InlineCitation
                 key={idx}
-                index={segment.index}
-                source={undefined} // Sources not available yet during streaming
-                citationStyle={citationStyle}
+                content={segment.content}
+                indices={segment.indices}
+                supportingTexts={segment.supportingTexts}
               />
             )
           )
@@ -385,11 +456,9 @@ function ChatBoxMessageLoading({
 
 function ChatBoxSources({
   sources,
-  citationStyle = "natural",
   className,
 }: {
   sources: Source[];
-  citationStyle?: "inline" | "natural";
   className?: string;
 }) {
   if (sources.length === 0) return null;
@@ -403,9 +472,6 @@ function ChatBoxSources({
     >
       <div className="font-semibold mb-2 text-gray-900">Sources:</div>
       {sources.map((source, idx) => {
-        // Use 0-indexed for inline citations, 1-indexed for natural language
-        const sourceNumber = citationStyle === "inline" ? idx : idx + 1;
-
         // Format page reference
         let pageRef = "";
         if (source.pageNumber) {
@@ -418,7 +484,7 @@ function ChatBoxSources({
 
         return (
           <div key={source.id} className="py-1 text-gray-700">
-            <strong>Source {sourceNumber}:</strong> {source.filename}
+            <strong>Source {idx}:</strong> {source.filename}
             {pageRef && <span className="text-gray-600">{pageRef}</span>}{" "}
             (Relevance: {(source.similarity * 100).toFixed(1)}%)
           </div>
@@ -542,14 +608,12 @@ export interface ChatWidgetProps {
   conversationId?: string;
   onConversationCreate?: (conversationId: string) => void;
   theme?: ChatWidgetTheme;
-  citationStyle?: "inline" | "natural";
 }
 
 export function ChatWidget({
   apiUrl,
   conversationId: initialConversationId,
   onConversationCreate,
-  citationStyle = "inline",
   // Note: theme prop exists in ChatWidgetProps but is applied at the Shadow DOM level in main.tsx
 }: ChatWidgetProps) {
   const [conversationId, setConversationId] = useState<string | null>(
@@ -633,9 +697,6 @@ export function ChatWidget({
       for await (const event of client.streamMessage(conversationId, {
         message: userMessage,
         useRAG: true,
-        ragOptions: {
-          citationStyle,
-        },
       })) {
         if (event.type === "token" && event.content) {
           fullResponse += event.content;
@@ -714,7 +775,6 @@ export function ChatWidget({
               key={message.id}
               content={message.content}
               sources={message.sources}
-              citationStyle={citationStyle}
             />
           )
         )}
@@ -722,11 +782,10 @@ export function ChatWidget({
         {isStreaming && (
           <ChatBoxMessageLoading
             content={streamingContent || undefined}
-            citationStyle={citationStyle}
           />
         )}
 
-        <ChatBoxSources sources={sources} citationStyle={citationStyle} />
+        <ChatBoxSources sources={sources} />
 
         <ChatBoxError error={error} />
 

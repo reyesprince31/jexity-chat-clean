@@ -6,13 +6,11 @@ import {
   CHAT_MODEL_CONFIG,
   TITLE_GENERATION_CONFIG,
   RAG_CHAT_CONFIG,
-  type CitationStyle,
 } from '../config/rag.config';
 import { generateRAGPrompt, generateTitlePrompt } from '../config/prompts';
 
 // Re-export for backward compatibility
 export const CHAT_CONFIG = CHAT_MODEL_CONFIG;
-export type { CitationStyle };
 
 // Initialize ChatOpenAI with streaming enabled
 export const chatModel = new ChatOpenAI({
@@ -35,7 +33,6 @@ export interface StreamChatParams {
   ragOptions?: {
     limit?: number;
     similarityThreshold?: number;
-    citationStyle?: CitationStyle;
   };
 }
 
@@ -76,7 +73,6 @@ export async function streamChatWithRAG(params: StreamChatParams): Promise<Strea
     ragOptions = {},
   } = params;
 
-  const citationStyle = ragOptions.citationStyle || RAG_CHAT_CONFIG.defaultCitationStyle;
   const messages: BaseMessage[] = [];
   let sourceDocuments: Document[] = [];
 
@@ -86,8 +82,8 @@ export async function streamChatWithRAG(params: StreamChatParams): Promise<Strea
       const { documents, context } = await retrieveDocuments(userQuery, ragOptions);
       sourceDocuments = documents;
 
-      // Build system prompt with retrieved context based on citation style
-      const systemPrompt = generateRAGPrompt(context, citationStyle);
+      // Build system prompt with retrieved context using inline citation instructions
+      const systemPrompt = generateRAGPrompt(context);
 
       // Add system prompt with RAG context
       messages.push(new SystemMessage(systemPrompt));

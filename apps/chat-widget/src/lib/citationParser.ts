@@ -2,7 +2,7 @@
  * Citation Parser
  *
  * Utility for parsing inline citations in message text.
- * Supports IEEE-style numeric citations like [0], [1], [2]
+ * Supports handlebar-style citations like {{cite:0}}, {{cite:1,2}}
  */
 
 export type TextSegment = {
@@ -12,8 +12,9 @@ export type TextSegment = {
 
 export type CitationSegment = {
   type: 'citation';
-  content: string;  // Original text like "[0]"
-  index: number;    // Citation number (0, 1, 2, etc.)
+  content: string;            // Original text containing citation markup
+  indices: number[];          // Citation numbers included in the group
+  supportingTexts?: (string | undefined)[]; // Optional supporting text per citation
 };
 
 export type MessageSegment = TextSegment | CitationSegment;
@@ -21,31 +22,74 @@ export type MessageSegment = TextSegment | CitationSegment;
 /**
  * Parse message content to extract inline citations
  *
- * @param text - Message text potentially containing citations like [0], [1]
+ * @param text - Message text potentially containing citations like {{cite:0}}
  * @returns Array of text and citation segments in order
  *
  * @example
- * parseCitationsInText("Text[0] more[1]") returns:
+ * parseCitationsInText('Text{{cite:0, text:"Citation A"}} more{{cite:1}}') returns:
  * [
  *   { type: 'text', content: 'Text' },
- *   { type: 'citation', content: '[0]', index: 0 },
+ *   {
+ *     type: 'citation',
+ *     content: '{{cite:0, text:"Citation A"}}',
+ *     indices: [0],
+ *     supportingTexts: ['Citation A']
+ *   },
  *   { type: 'text', content: ' more' },
- *   { type: 'citation', content: '[1]', index: 1 }
+ *   { type: 'citation', content: '{{cite:1}}', indices: [1], supportingTexts: [undefined] }
+ * ]
+ *
+ * parseCitationsInText('{{cite:0, text:"First"}, {cite:1, text:"Second"}}') returns:
+ * [
+ *   {
+ *     type: 'citation',
+ *     content: '{{cite:0, text:"First"}, {cite:1, text:"Second"}}',
+ *     indices: [0, 1],
+ *     supportingTexts: ['First', 'Second']
+ *   }
  * ]
  */
 export function parseCitationsInText(text: string): MessageSegment[] {
   if (!text) return [];
 
   const segments: MessageSegment[] = [];
-  const citationRegex = /\[(\d+)\]/g;
+  const citationRegex = /\{\{([\s\S]*?)\}\}/g;
   let lastIndex = 0;
   let match;
 
   while ((match = citationRegex.exec(text)) !== null) {
     const matchStart = match.index;
-    const citationNumberStr = match[1];
-    if (!citationNumberStr) continue; // Skip if capture group is undefined
-    const citationNumber = parseInt(citationNumberStr, 10);
+    const citationBody = match[1];
+    if (!citationBody) continue;
+
+    const entryRegex =
+      /cite:\s*([0-9]+(?:\s*,\s*[0-9]+)*)(?:,\s*text:"([^"]*)")?/g;
+    const citationNumbers: number[] = [];
+    const supportingTexts: (string | undefined)[] = [];
+    let entryMatch;
+
+    while ((entryMatch = entryRegex.exec(citationBody)) !== null) {
+      const indicesString = entryMatch[1];
+      if (!indicesString) {
+        continue;
+      }
+      const supportingTextRaw = entryMatch[2];
+      const parsedIndices = indicesString
+        .split(',')
+        .map((value) => value.trim())
+        .filter((value) => value.length > 0)
+        .map((value) => parseInt(value, 10))
+        .filter((value) => !Number.isNaN(value));
+
+      if (parsedIndices.length === 0) continue;
+
+      parsedIndices.forEach((idx) => {
+        citationNumbers.push(idx);
+        supportingTexts.push(supportingTextRaw?.trim() || undefined);
+      });
+    }
+
+    if (citationNumbers.length === 0) continue;
 
     // Add text before citation (if any)
     if (matchStart > lastIndex) {
@@ -58,8 +102,9 @@ export function parseCitationsInText(text: string): MessageSegment[] {
     // Add citation
     segments.push({
       type: 'citation',
-      content: match[0], // e.g., "[0]"
-      index: citationNumber,
+      content: match[0], // e.g., "{{cite:0}}"
+      indices: citationNumbers,
+      supportingTexts,
     });
 
     lastIndex = citationRegex.lastIndex;
@@ -80,10 +125,10 @@ export function parseCitationsInText(text: string): MessageSegment[] {
  * Check if a string contains any citations
  *
  * @param text - Text to check
- * @returns true if text contains at least one citation like [0], [1]
+ * @returns true if text contains at least one citation like {{cite:0}}
  */
 export function hasCitations(text: string): boolean {
-  return /\[\d+\]/.test(text);
+  return /\{\{[\s\S]*?cite:[\s\S]*?\}\}/.test(text);
 }
 
 /**
@@ -93,9 +138,36 @@ export function hasCitations(text: string): boolean {
  * @returns Array of citation numbers found (e.g., [0, 1, 2])
  */
 export function extractCitationIndices(text: string): number[] {
-  const matches = text.matchAll(/\[(\d+)\]/g);
-  return Array.from(matches, (match) => {
-    const num = match[1];
-    return num ? parseInt(num, 10) : 0;
-  });
+  if (!text) return [];
+
+  const matches = text.matchAll(/\{\{([\s\S]*?)\}\}/g);
+  const indices: number[] = [];
+
+  for (const match of matches) {
+    const body = match[1];
+    if (!body) continue;
+
+    const entryRegex =
+      /cite:\s*([0-9]+(?:\s*,\s*[0-9]+)*)(?:,\s*text:"[^"]*")?/g;
+    let entryMatch;
+
+    while ((entryMatch = entryRegex.exec(body)) !== null) {
+      const indicesString = entryMatch[1];
+      if (!indicesString) {
+        continue;
+      }
+      indicesString
+        .split(',')
+        .map((value) => value.trim())
+        .filter((value) => value.length > 0)
+        .forEach((value) => {
+          const parsed = parseInt(value, 10);
+          if (!Number.isNaN(parsed)) {
+            indices.push(parsed);
+          }
+        });
+    }
+  }
+
+  return indices;
 }

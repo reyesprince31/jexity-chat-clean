@@ -488,13 +488,11 @@ The RAG (Retrieval Augmented Generation) service uses **LangChain abstractions**
   - `documents` - Array of LangChain Documents with metadata
   - `context` - Formatted context string ready for prompt injection
 
-#### formatDocumentsForContext(documents, citationStyle?)
+#### formatDocumentsForContext(documents)
 
 - Formats LangChain Documents into structured context string
 - Includes source numbers, document names, and relevance scores
-- Supports two citation styles:
-  - **'inline'**: 0-indexed format `[Source 0], [Source 1], ...` for use with inline citations like `[0]`, `[1]`
-  - **'natural'** (default): 1-indexed format `[Source 1], [Source 2], ...` for natural language citations like "According to Source 1..."
+- Uses 0-indexed format `[Source 0], [Source 1], ...` aligned with inline citations like `{{cite:0}}`, `{{cite:1}}`
 - Format: `[Source N] filename.pdf (Relevance: 87.5%)\n<chunk content>`
 
 #### createRAGPromptTemplate()
@@ -504,7 +502,7 @@ The RAG (Retrieval Augmented Generation) service uses **LangChain abstractions**
 - Ready to use with LangChain chains (e.g., `createStuffDocumentsChain`)
 - System prompt instructs model to:
   - Base answers on provided context
-  - Cite sources by number (e.g., "According to Source 1...")
+  - Cite sources with inline markers (e.g., `{{cite:0, text:"[rewritten chunk content]"}}`)
   - Admit when context doesn't contain relevant information
   - Not hallucinate information beyond the context
 
@@ -533,10 +531,9 @@ Main streaming function that:
 - `userQuery` - Current user message
 - `conversationHistory` - Array of prior messages: `{ role, content }[]`
 - `useRAG` - Enable/disable RAG context retrieval (default: true)
-- `ragOptions` - Configure vector search and citations:
+- `ragOptions` - Configure vector search:
   - `limit?` - Number of document chunks to retrieve (default: 5)
   - `similarityThreshold?` - Minimum similarity score (default: 0.6)
-  - `citationStyle?` - Citation format: `'inline'` or `'natural'` (default: 'natural')
 
 **Return value:**
 - `stream` - AsyncIterable of response tokens for streaming
@@ -594,26 +591,17 @@ Send a message and receive streaming AI response with RAG context.
   "useRAG": true,
   "ragOptions": {
     "limit": 5,
-    "similarityThreshold": 0.6,
-    "citationStyle": "inline"
+    "similarityThreshold": 0.6
   }
 }
 ```
 
-**Citation Styles:**
+**Citation Style:**
 
-1. **Inline citations** (`citationStyle: "inline"`):
-   - Uses 0-indexed numeric citations: `[0]`, `[1]`, `[2]`
-   - Citations appear immediately after claims: "Machine learning is a subset of AI[0]."
-   - Multiple sources use consecutive brackets: "This is widely accepted[0][1][2]."
-   - Source numbers match array indices in `sourceDocuments` (0 = first source)
-   - Example response: "Deep learning uses neural networks[0] to process data[1][2]."
-
-2. **Natural language citations** (`citationStyle: "natural"`, default):
-   - Uses natural language references: "According to Source 1...", "Source 2 explains..."
-   - More conversational and readable
-   - Source numbers are 1-indexed (first source = Source 1)
-   - Example response: "According to Source 1, deep learning uses neural networks."
+- Uses inline numeric citations: `{{cite:0, text:"[rewritten chunk content]"}}`
+- Citations appear immediately after claims: `Machine learning is a subset of AI. {{cite:0, text:"Summarizes ML definition"}}`
+- Multiple sources compress into a single block: `This is widely accepted. {{cite:0, text:"Chunk 0 summary"}, {cite:1}}`
+- Source numbers match array indices in `sourceDocuments` (0 = first source)
 
 **Response:** Server-Sent Events (SSE) stream
 
@@ -719,7 +707,7 @@ Get a message with its source document chunks (for displaying citations).
   "message": {
     "id": "uuid",
     "role": "assistant",
-    "content": "According to Source 1...",
+    "content": "Machine learning is widely used. {{cite:0, text:\"Highlights ML adoption\"}}",
     "sources": [
       {
         "id": "uuid",
@@ -838,11 +826,11 @@ await createMessage({
 - **Title auto-generation** - Only happens on first message if no title provided
 - **All database writes use transactions** - Message creation updates conversation timestamps
 - **LangChain-compatible** - Easy to extend with chains, agents, and other LangChain features
-- **Citation styles** - Choose between inline citations `[0]` or natural language "According to Source 1..."
+- **Citation formatting** - Responses use inline `{{cite:n}}` markers aligned with source indices
 
 ### Client-Side: Parsing Inline Citations
 
-When using `citationStyle: "inline"`, the AI response includes numeric citations like `[0]`, `[1]`, `[2]` that reference the `sourceDocuments` array by index.
+Responses include inline citation blocks like `{{cite:0, text:"[rewritten chunk]"}}` that reference the `sourceDocuments` array by index.
 
 **Example flow:**
 
@@ -853,7 +841,6 @@ const response = await fetch(`/conversations/${conversationId}/messages`, {
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
     message: 'What is machine learning?',
-    ragOptions: { citationStyle: 'inline' }
   })
 });
 
@@ -885,19 +872,22 @@ while (true) {
 }
 
 // 3. Parse and render citations
-// The response might be: "Machine learning is a subset of AI[0] that uses neural networks[1]."
-// Parse [N] patterns and link to sources array
+// The response might be:
+// "Machine learning is a subset of AI. {{cite:0, text:\"Summarized ML definition\"}}"
+// Use parseCitationsInText() utility to convert citation blocks into UI fragments.
 
 function renderWithCitations(text: string, sources: Source[]) {
-  // Replace [N] with clickable links or tooltips
-  return text.replace(/\[(\d+)\]/g, (match, index) => {
-    const sourceIndex = parseInt(index, 10);
-    if (sourceIndex >= 0 && sourceIndex < sources.length) {
-      const source = sources[sourceIndex];
-      return `<sup><a href="#source-${sourceIndex}" title="${source.filename}">[${index}]</a></sup>`;
-    }
-    return match;
-  });
+  const segments = parseCitationsInText(text);
+  return segments
+    .map((segment) => {
+      if (segment.type === 'text') {
+        return segment.content;
+      }
+      const citation = segment.indices[0];
+      const source = sources[citation];
+      return `<sup><a href="#source-${citation}" title="${source?.filename ?? 'Source unavailable'}">[${citation}]</a></sup>`;
+    })
+    .join('');
 }
 
 // 4. Display sources separately
@@ -930,7 +920,7 @@ function renderSources(sources: Source[]) {
 **Example rendered output:**
 
 ```
-Machine learning is a subset of AI[0] that uses neural networks[1][2].
+Machine learning is a subset of AI. [0] It relies on neural networks. [1][2]
 
 Sources:
 [0] ml-guide.pdf (page 5) (Relevance: 87.5%)
