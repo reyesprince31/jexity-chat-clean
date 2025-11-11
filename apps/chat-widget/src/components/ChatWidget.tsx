@@ -11,101 +11,9 @@ import { ApiClient, apiClient } from "../lib/api-client";
 import type { Message, MessageWithSources, Source } from "../types/api";
 import type { ChatWidgetTheme } from "../types/theme";
 import { cn } from "../lib/utils";
-import {
-  parseCitationsInText,
-  type MessageSegment,
-} from "../lib/citationParser";
-import { InlineCitation } from "./InlineCitation";
+import { Content } from "./Content";
 
 type IconProps = ComponentPropsWithoutRef<"svg"> & { size?: number };
-
-// Hide in-progress citation markup so streaming text never exposes raw {{cite... braces
-function stripIncompleteCitationContent(text: string): string {
-  if (!text) {
-    return text;
-  }
-
-  const citationStartRegex = /\{\{\s*cite\b/gi;
-  let match: RegExpExecArray | null;
-
-  while ((match = citationStartRegex.exec(text)) !== null) {
-    const citationStart = match.index;
-    const closingIndex = text.indexOf("}}", citationStartRegex.lastIndex);
-
-    if (closingIndex === -1) {
-      return text.slice(0, citationStart);
-    }
-
-    citationStartRegex.lastIndex = closingIndex + 2;
-  }
-
-  return text;
-}
-
-function normalizeSegmentsForDisplay(
-  segments: MessageSegment[]
-): MessageSegment[] {
-  const workingSegments = segments.map((segment) =>
-    segment.type === "text" ? { ...segment } : segment
-  );
-
-  const result: MessageSegment[] = [];
-
-  for (let i = 0; i < workingSegments.length; i += 1) {
-    const segment = workingSegments[i];
-    if (!segment) {
-      continue;
-    }
-
-    if (segment.type === "citation") {
-      const next = workingSegments[i + 1];
-
-      if (next?.type === "text" && next.content.length > 0) {
-        const punctuationMatch = next.content.match(/^([.,!?;:]+)/);
-        if (punctuationMatch && punctuationMatch[1]) {
-          const punctuation = punctuationMatch[1];
-          const punctuationWithSpace = /\s$/.test(punctuation)
-            ? punctuation
-            : `${punctuation} `;
-
-          let insertAt = result.length - 1;
-          while (insertAt >= 0 && result[insertAt]?.type !== "text") {
-            insertAt -= 1;
-          }
-
-          if (insertAt >= 0) {
-            const target = result[insertAt];
-            if (target?.type === "text") {
-              const updatedContent = target.content.replace(
-                /[ \t]+$/,
-                ""
-              );
-              result[insertAt] = {
-                type: "text",
-                content: `${updatedContent}${punctuationWithSpace}`,
-              };
-            }
-          }
-
-          next.content = next.content
-            .slice(punctuation.length)
-            .replace(/^[ \t]+/, "");
-        }
-      }
-
-      result.push(segment);
-      continue;
-    }
-
-    if (segment.content.length > 0) {
-      result.push(segment);
-    }
-  }
-
-  return result.filter(
-    (segment) => segment.type !== "text" || segment.content.length > 0
-  );
-}
 
 function ChatbotIcon({ size = 24, className, ...props }: IconProps) {
   return (
@@ -405,27 +313,10 @@ function ChatBoxMessageAgent({
   sources?: Source[];
   className?: string;
 }) {
-  const segments = useMemo(
-    () => normalizeSegmentsForDisplay(parseCitationsInText(content)),
-    [content]
-  );
-
   return (
     <div className={cn("flex flex-col max-w-[80%] self-start", className)}>
       <div className="px-4 py-3 rounded-[20px] wrap-break-word leading-relaxed bg-gray-100 text-gray-900 border border-gray-200 rounded-bl-md">
-        {segments.map((segment, idx) =>
-          segment.type === "text" ? (
-            <span key={idx}>{segment.content}</span>
-          ) : (
-            <InlineCitation
-              key={idx}
-              content={segment.content}
-              indices={segment.indices}
-              sources={segment.indices.map((citationIndex) => sources[citationIndex])}
-              supportingTexts={segment.supportingTexts}
-            />
-          )
-        )}
+        <Content value={content} sources={sources} />
       </div>
     </div>
   );
@@ -438,36 +329,13 @@ function ChatBoxMessageLoading({
   content?: string;
   className?: string;
 }) {
-  // Only render content once every citation token is fully closed with "}}"
-  const displayContent = useMemo(
-    () => (content ? stripIncompleteCitationContent(content) : ""),
-    [content]
-  );
-
-  const segments = useMemo(
-    () =>
-      displayContent
-        ? normalizeSegmentsForDisplay(parseCitationsInText(displayContent))
-        : [],
-    [displayContent]
-  );
+  const hasContent = Boolean(content && content.trim().length > 0);
 
   return (
     <div className={cn("flex flex-col max-w-[80%] self-start", className)}>
       <div className="px-4 py-3 rounded-[20px] wrap-break-word leading-relaxed bg-gray-100 text-gray-900 border border-gray-200 rounded-bl-md">
-        {displayContent ? (
-          segments.map((segment, idx) =>
-            segment.type === "text" ? (
-              <span key={idx}>{segment.content}</span>
-            ) : (
-              <InlineCitation
-                key={idx}
-                content={segment.content}
-                indices={segment.indices}
-                supportingTexts={segment.supportingTexts}
-              />
-            )
-          )
+        {hasContent ? (
+          <Content value={content} hideIncompleteCitations />
         ) : (
           <span className="inline-block w-0.5 h-5 bg-black animate-blink"></span>
         )}
