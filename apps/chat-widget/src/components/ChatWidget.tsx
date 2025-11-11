@@ -483,46 +483,6 @@ function ChatBoxMessageLoading({
   );
 }
 
-function ChatBoxSources({
-  sources,
-  className,
-}: {
-  sources: Source[];
-  className?: string;
-}) {
-  if (sources.length === 0) return null;
-
-  return (
-    <div
-      className={cn(
-        "p-3 bg-gray-50 border border-gray-300 rounded-lg text-sm mt-2",
-        className
-      )}
-    >
-      <div className="font-semibold mb-2 text-gray-900">Sources:</div>
-      {sources.map((source, idx) => {
-        // Format page reference
-        let pageRef = "";
-        if (source.pageNumber) {
-          if (source.pageEnd && source.pageEnd !== source.pageNumber) {
-            pageRef = ` (pages ${source.pageNumber}-${source.pageEnd})`;
-          } else {
-            pageRef = ` (page ${source.pageNumber})`;
-          }
-        }
-
-        return (
-          <div key={source.id} className="py-1 text-gray-700">
-            <strong>Source {idx}:</strong> {source.filename}
-            {pageRef && <span className="text-gray-600">{pageRef}</span>}{" "}
-            (Relevance: {(source.similarity * 100).toFixed(1)}%)
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
 function ChatBoxError({
   error,
   className,
@@ -654,7 +614,6 @@ export function ChatWidget({
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingContent, setStreamingContent] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [sources, setSources] = useState<Source[]>([]);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -708,7 +667,6 @@ export function ChatWidget({
     setError(null);
     setIsStreaming(true);
     setStreamingContent("");
-    setSources([]);
 
     // Add user message optimistically
     const userMsg: Message = {
@@ -732,6 +690,10 @@ export function ChatWidget({
           setStreamingContent(fullResponse);
         } else if (event.type === "done") {
           // Add assistant message with sources
+          console.log(
+            "[ChatWidget] Streaming complete. Assistant message:",
+            fullResponse
+          );
           const assistantMsg: MessageWithSources = {
             id: `temp-${Date.now()}`,
             conversationId: conversationId,
@@ -746,10 +708,6 @@ export function ChatWidget({
           setStreamingContent("");
           setMessages((prev) => [...prev, assistantMsg]);
 
-          // Store sources for the sources display section
-          if (event.sources) {
-            setSources(event.sources);
-          }
         } else if (event.type === "error") {
           setError(event.message || "An error occurred");
           setIsStreaming(false);
@@ -813,9 +771,6 @@ export function ChatWidget({
             content={streamingContent || undefined}
           />
         )}
-
-        <ChatBoxSources sources={sources} />
-
         <ChatBoxError error={error} />
 
         <div ref={messagesEndRef} />

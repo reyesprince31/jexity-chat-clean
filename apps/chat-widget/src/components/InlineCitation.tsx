@@ -30,7 +30,7 @@ export function InlineCitation({
   const sourceEntries = indices.map((citationIndex, idx) => {
     return {
       citationIndex,
-      displayNumber: citationIndex,
+      displayNumber: idx + 1,
       source: sources?.[idx],
       supportingText: supportingTexts[idx]?.trim(),
     };
@@ -39,9 +39,7 @@ export function InlineCitation({
   const hasAnySource = sourceEntries.some((entry) => entry.source);
   const displayNumbers = sourceEntries.map((entry) => entry.displayNumber);
   const citationText =
-    displayNumbers.length > 0
-      ? `[${displayNumbers.join(", ")}]`
-      : content || "";
+    displayNumbers.length > 0 ? displayNumbers.join(", ") : content || "";
 
   const primaryEntry =
     sourceEntries.find((entry) => entry.source) ?? sourceEntries[0];
@@ -53,11 +51,6 @@ export function InlineCitation({
     : citationText;
 
   const shouldShowExtraCount = extraSourceCount > 0 && hasAnySource;
-
-  const pillLabel =
-    fallbackPrimaryLabel && shouldShowExtraCount
-      ? `${fallbackPrimaryLabel} + ${extraSourceCount}`
-      : fallbackPrimaryLabel;
 
   const titleParts: string[] = [];
   const nonEmptySupporting = sourceEntries
@@ -71,9 +64,7 @@ export function InlineCitation({
   if (sourceEntries.length > 0) {
     titleParts.push(
       ...sourceEntries.map((entry) =>
-        entry.source
-          ? entry.source.filename
-          : `Reference [${entry.displayNumber}]`
+        entry.source ? entry.source.filename : "Source unavailable"
       )
     );
   }
@@ -88,12 +79,21 @@ export function InlineCitation({
         className={cn(
           "citation-marker",
           "inline-flex items-center justify-center rounded-full",
-          "bg-blue-50 text-blue-700 border border-blue-100",
+          "bg-gray-100 text-gray-700 border border-gray-200",
           "px-2 py-0.5 text-xs font-medium",
+          "max-w-8 min-w-0",
           className
         )}
+        title={pillTitle}
       >
-        {pillLabel}
+        <span className="inline-flex items-center gap-1 min-w-0">
+          <span className="truncate">{fallbackPrimaryLabel}</span>
+          {shouldShowExtraCount ? (
+            <span className="shrink-0 whitespace-nowrap">
+              + {extraSourceCount}
+            </span>
+          ) : null}
+        </span>
       </span>
     );
   }
@@ -106,11 +106,12 @@ export function InlineCitation({
           className={cn(
             "citation-marker citation-marker--clickable",
             "inline-flex items-center justify-center rounded-full border",
-            "bg-white text-blue-700 border-blue-200",
+            "bg-white text-gray-700 border-gray-300",
             "px-2 py-0.5 text-xs font-medium",
-            "hover:bg-blue-50 hover:border-blue-300 hover:text-blue-800",
-            "focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-1",
+            "hover:bg-gray-100 hover:border-gray-400 hover:text-gray-900",
+            "focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-1",
             "transition-colors duration-150 cursor-pointer",
+            "max-w-32 min-w-0",
             className
           )}
           onClick={(e) => {
@@ -119,8 +120,16 @@ export function InlineCitation({
           }}
           aria-label={`View citation for ${pillTitle}`}
         >
-          <span className="max-w-48 truncate" title={pillTitle}>
-            {pillLabel}
+          <span
+            className="inline-flex items-center gap-1 min-w-0"
+            title={pillTitle}
+          >
+            <span className="truncate">{fallbackPrimaryLabel}</span>
+            {shouldShowExtraCount ? (
+              <span className="shrink-0 whitespace-nowrap">
+                + {extraSourceCount}
+              </span>
+            ) : null}
           </span>
         </button>
       </Popover.Trigger>
@@ -142,9 +151,6 @@ export function InlineCitation({
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <div className="text-xs font-medium uppercase text-gray-500 mb-1">
-                      Reference [{entry.displayNumber}]
-                    </div>
                     <div className="font-semibold text-gray-900 text-sm mb-1">
                       {entry.source?.filename ?? "Source unavailable"}
                     </div>

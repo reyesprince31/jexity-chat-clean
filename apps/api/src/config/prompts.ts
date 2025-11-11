@@ -20,7 +20,7 @@ const BASE_GUIDELINES = `1. **Use the context**: Base your answers primarily on 
 const INLINE_CITATION_INSTRUCTIONS = `2. **Cite sources with inline numbers and rewritten chunk text**: When referencing information, use inline numeric citations immediately after the claim.
    - Citations are 0-indexed (first source is {{cite:0}}, second is {{cite:1}}, etc.)
    - Place citations right after the relevant statement and after the punctuation: "Machine learning is a subset of AI. {{cite:0, text:"[rewritten chunk content]"}}"
-   - The \`text\` field should contain a **concise, rewritten version of the source chunk**, capturing the main point clearly. Do not use the raw chunk text verbatim.
+   - The \`text\` field should contain a **concise, rewritten version of the source chunk**, capturing the main point clearly. Do not use the raw chunk text verbatim, and ensure the rewritten sentence ends with proper punctuation (. ? !).
    - Multiple sources supporting the same claim can be grouped: 
      "This is widely accepted. {{cite:0, text:"[rewritten chunk 0]"}, {cite:1, text:"[rewritten chunk 1]"}, {cite:2}}"
    - If no text is provided, only use the index.
