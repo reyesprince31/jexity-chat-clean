@@ -19,6 +19,29 @@ import { InlineCitation } from "./InlineCitation";
 
 type IconProps = ComponentPropsWithoutRef<"svg"> & { size?: number };
 
+// Hide in-progress citation markup so streaming text never exposes raw {{cite... braces
+function stripIncompleteCitationContent(text: string): string {
+  if (!text) {
+    return text;
+  }
+
+  const citationStartRegex = /\{\{\s*cite\b/gi;
+  let match: RegExpExecArray | null;
+
+  while ((match = citationStartRegex.exec(text)) !== null) {
+    const citationStart = match.index;
+    const closingIndex = text.indexOf("}}", citationStartRegex.lastIndex);
+
+    if (closingIndex === -1) {
+      return text.slice(0, citationStart);
+    }
+
+    citationStartRegex.lastIndex = closingIndex + 2;
+  }
+
+  return text;
+}
+
 function normalizeSegmentsForDisplay(
   segments: MessageSegment[]
 ): MessageSegment[] {
@@ -415,18 +438,24 @@ function ChatBoxMessageLoading({
   content?: string;
   className?: string;
 }) {
+  // Only render content once every citation token is fully closed with "}}"
+  const displayContent = useMemo(
+    () => (content ? stripIncompleteCitationContent(content) : ""),
+    [content]
+  );
+
   const segments = useMemo(
     () =>
-      content
-        ? normalizeSegmentsForDisplay(parseCitationsInText(content))
+      displayContent
+        ? normalizeSegmentsForDisplay(parseCitationsInText(displayContent))
         : [],
-    [content]
+    [displayContent]
   );
 
   return (
     <div className={cn("flex flex-col max-w-[80%] self-start", className)}>
       <div className="px-4 py-3 rounded-[20px] wrap-break-word leading-relaxed bg-gray-100 text-gray-900 border border-gray-200 rounded-bl-md">
-        {content ? (
+        {displayContent ? (
           segments.map((segment, idx) =>
             segment.type === "text" ? (
               <span key={idx}>{segment.content}</span>
