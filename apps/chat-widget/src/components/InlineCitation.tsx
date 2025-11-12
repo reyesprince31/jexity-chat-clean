@@ -109,7 +109,6 @@ export function InlineCitation({
             "bg-white text-gray-700 border-gray-300",
             "px-2 py-0.5 text-xs font-medium",
             "hover:bg-gray-100 hover:border-gray-400 hover:text-gray-900",
-            "focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-1",
             "transition-colors duration-150 cursor-pointer",
             "max-w-32 min-w-0",
             className

@@ -5,6 +5,7 @@ import {
   useCallback,
   useMemo,
   type ComponentPropsWithoutRef,
+  type ReactNode,
 } from "react";
 import * as PopoverPrimitive from "@radix-ui/react-popover";
 import { ApiClient, apiClient } from "../lib/api-client";
@@ -297,9 +298,122 @@ function ChatBoxMessageUser({
 }) {
   return (
     <div className={cn("flex flex-col max-w-[80%] self-end", className)}>
-      <div className="px-4 py-3 rounded-[20px] wrap-break-word leading-relaxed bg-black hover:bg-gray-900 text-white rounded-br-md">
+      <div className="px-4 py-3 rounded-[20px] wrap-break-word leading-relaxed bg-black hover:bg-gray-900 text-white rounded-br-md text-sm">
         {content}
       </div>
+    </div>
+  );
+}
+
+/**
+ * Renders the common shell for assistant messages, ensuring the header branding
+ * stays consistent while allowing custom body content and optional footer UI.
+ */
+function AgentMessageBubble({
+  children,
+  footer,
+  className,
+}: {
+  children: ReactNode;
+  footer?: ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={cn("flex flex-col max-w-[80%] self-start", className)}>
+      <div className="px-4 py-3 rounded-[20px] wrap-break-word leading-relaxed bg-gray-100 text-gray-900 border border-gray-200 rounded-bl-md">
+        <div className="mb-2 flex items-center">
+          <span className="inline mr-2">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="15"
+              height="15"
+              viewBox="0 0 587 610"
+              fill="none"
+            >
+              <path
+                d="M587 0H0V128.808H587V0Z"
+                fill="url(#paint0_linear_5821_404133)"
+              />
+              <path
+                d="M587 240.749H0V369.251H587V240.749Z"
+                fill="url(#paint1_linear_5821_404133)"
+              />
+              <path
+                d="M587 481.498H0V610H587V481.498Z"
+                fill="url(#paint2_linear_5821_404133)"
+              />
+              <defs>
+                <linearGradient
+                  id="paint0_linear_5821_404133"
+                  x1="0"
+                  y1="305.153"
+                  x2="4093.33"
+                  y2="305.153"
+                  gradientUnits="userSpaceOnUse"
+                >
+                  <stop stopColor="#40A4B4" />
+                  <stop offset="0.08" stopColor="#329AAB" />
+                  <stop offset="0.32" stopColor="#0E8194" />
+                  <stop offset="0.45" stopColor="#00778B" />
+                  <stop offset="0.6" stopColor="#007787" />
+                  <stop offset="1" stopColor="#007377" />
+                </linearGradient>
+                <linearGradient
+                  id="paint1_linear_5821_404133"
+                  x1="0"
+                  y1="305.153"
+                  x2="4093.33"
+                  y2="305.153"
+                  gradientUnits="userSpaceOnUse"
+                >
+                  <stop stopColor="#40A4B4" />
+                  <stop offset="0.08" stopColor="#329AAB" />
+                  <stop offset="0.32" stopColor="#0E8194" />
+                  <stop offset="0.45" stopColor="#00778B" />
+                  <stop offset="0.6" stopColor="#007787" />
+                  <stop offset="1" stopColor="#007377" />
+                </linearGradient>
+                <linearGradient
+                  id="paint2_linear_5821_404133"
+                  x1="0"
+                  y1="305.153"
+                  x2="4093.33"
+                  y2="305.153"
+                  gradientUnits="userSpaceOnUse"
+                >
+                  <stop stopColor="#40A4B4" />
+                  <stop offset="0.08" stopColor="#329AAB" />
+                  <stop offset="0.32" stopColor="#0E8194" />
+                  <stop offset="0.45" stopColor="#00778B" />
+                  <stop offset="0.6" stopColor="#007787" />
+                  <stop offset="1" stopColor="#007377" />
+                </linearGradient>
+              </defs>
+            </svg>
+          </span>
+
+          <p className="inline font-medium text-sm">
+            Jexity
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="8"
+              height="8"
+              viewBox="0 0 48 48"
+              className="inline mx-1"
+            >
+              <path
+                fill="currentColor"
+                stroke="currentColor"
+                strokeWidth="4"
+                d="M24 33a9 9 0 1 0 0-18a9 9 0 0 0 0 18Z"
+              />
+            </svg>
+            AI Agent
+          </p>
+        </div>
+        {children}
+      </div>
+      {footer}
     </div>
   );
 }
@@ -314,11 +428,9 @@ function ChatBoxMessageAgent({
   className?: string;
 }) {
   return (
-    <div className={cn("flex flex-col max-w-[80%] self-start", className)}>
-      <div className="px-4 py-3 rounded-[20px] wrap-break-word leading-relaxed bg-gray-100 text-gray-900 border border-gray-200 rounded-bl-md">
-        <Content value={content} sources={sources} />
-      </div>
-    </div>
+    <AgentMessageBubble className={className}>
+      <Content value={content} sources={sources} className="text-sm" />
+    </AgentMessageBubble>
   );
 }
 
@@ -332,22 +444,24 @@ function ChatBoxMessageLoading({
   const hasContent = Boolean(content && content.trim().length > 0);
 
   return (
-    <div className={cn("flex flex-col max-w-[80%] self-start", className)}>
-      <div className="px-4 py-3 rounded-[20px] wrap-break-word leading-relaxed bg-gray-100 text-gray-900 border border-gray-200 rounded-bl-md">
-        {hasContent ? (
-          <Content value={content} hideIncompleteCitations />
-        ) : (
-          <span className="inline-block w-0.5 h-5 bg-black animate-blink"></span>
-        )}
-      </div>
-      {content && (
-        <div className="flex gap-1 pt-2 pl-4">
-          <span className="w-2 h-2 rounded-full bg-gray-400 animate-typing"></span>
-          <span className="w-2 h-2 rounded-full bg-gray-400 animate-typing [animation-delay:0.2s]"></span>
-          <span className="w-2 h-2 rounded-full bg-gray-400 animate-typing [animation-delay:0.4s]"></span>
-        </div>
+    <AgentMessageBubble
+      className={className}
+      footer={
+        content ? (
+          <div className="flex gap-1 pt-2 pl-4">
+            <span className="w-2 h-2 rounded-full bg-gray-400 animate-typing"></span>
+            <span className="w-2 h-2 rounded-full bg-gray-400 animate-typing [animation-delay:0.2s]"></span>
+            <span className="w-2 h-2 rounded-full bg-gray-400 animate-typing [animation-delay:0.4s]"></span>
+          </div>
+        ) : null
+      }
+    >
+      {hasContent ? (
+        <Content value={content} hideIncompleteCitations />
+      ) : (
+        <span className="inline-block w-0.5 h-5 bg-black animate-blink"></span>
       )}
-    </div>
+    </AgentMessageBubble>
   );
 }
 
@@ -575,7 +689,6 @@ export function ChatWidget({
           setIsStreaming(false);
           setStreamingContent("");
           setMessages((prev) => [...prev, assistantMsg]);
-
         } else if (event.type === "error") {
           setError(event.message || "An error occurred");
           setIsStreaming(false);
@@ -635,9 +748,7 @@ export function ChatWidget({
         )}
 
         {isStreaming && (
-          <ChatBoxMessageLoading
-            content={streamingContent || undefined}
-          />
+          <ChatBoxMessageLoading content={streamingContent || undefined} />
         )}
         <ChatBoxError error={error} />
 
