@@ -31,29 +31,26 @@ yarn add chat-widget
 ```html
 <!DOCTYPE html>
 <html>
-<head>
-  <script type="module" src="https://unpkg.com/chat-widget"></script>
-</head>
-<body>
-  <div
-    data-chat-widget
-    data-api-url="https://your-api.com"
-  ></div>
-</body>
+  <head>
+    <script type="module" src="https://unpkg.com/chat-widget"></script>
+  </head>
+  <body>
+    <div data-chat-widget data-api-url="https://your-api.com"></div>
+  </body>
 </html>
 ```
 
 ### JavaScript/TypeScript
 
 ```typescript
-import { initChatWidget } from 'chat-widget';
+import { initChatWidget } from "chat-widget";
 
 const cleanup = initChatWidget({
-  apiUrl: 'https://your-api.com',
-  containerId: 'chat-widget-container',
+  apiUrl: "https://your-api.com",
+  containerId: "chat-widget-container",
   onConversationCreate: (conversationId) => {
-    console.log('Conversation created:', conversationId);
-  }
+    console.log("Conversation created:", conversationId);
+  },
 });
 
 // Later, to unmount:
@@ -63,13 +60,13 @@ cleanup();
 ### React
 
 ```tsx
-import { ChatWidget } from 'chat-widget';
+import { ChatWidget } from "chat-widget";
 
 function App() {
   return (
     <ChatWidget
       apiUrl="https://your-api.com"
-      onConversationCreate={(id) => console.log('Created:', id)}
+      onConversationCreate={(id) => console.log("Created:", id)}
     />
   );
 }
@@ -84,55 +81,19 @@ The widget uses Shadow DOM for style isolation, but provides two ways to customi
 Pass a \`theme\` object to customize colors, fonts, and other styles:
 
 ```typescript
-import { initChatWidget } from 'chat-widget';
+import { initChatWidget } from "chat-widget";
 
 initChatWidget({
-  apiUrl: 'https://your-api.com',
+  apiUrl: "https://your-api.com",
   theme: {
-    // Primary colors
-    primaryColor: '#ff0000',
-    primaryHoverColor: '#cc0000',
-
-    // Background colors
-    backgroundColor: '#ffffff',
-    backgroundSecondaryColor: '#f9fafb',
-    messageUserBackground: 'linear-gradient(to right, #ff6b6b, #ee5a6f)',
-    messageAssistantBackground: '#f0f0f0',
-
-    // Text colors
-    textColor: '#1a1a1a',
-    textSecondaryColor: '#6b7280',
-
-    // Border colors
-    borderColor: '#d1d5db',
-
-    // Input styling
-    inputBackgroundColor: '#ffffff',
-    inputBorderColor: '#d1d5db',
-    inputFocusBorderColor: '#ff0000',
-
-    // Button styling
-    buttonBackgroundColor: '#ff0000',
-    buttonHoverBackgroundColor: '#cc0000',
-    buttonTextColor: '#ffffff',
-
-    // Sources/Citations
-    sourcesBackgroundColor: '#fff3cd',
-    sourcesBorderColor: '#ffb020',
-    sourcesTextColor: '#856404',
-
-    // Error messages
-    errorBackgroundColor: '#fee',
-    errorBorderColor: '#fcc',
-    errorTextColor: '#c00',
-
-    // Other customization
-    borderRadius: '12px',
-    fontFamily: 'Inter, sans-serif',
-    fontSize: '16px'
-  }
+    bg: { chatMessageUser: "#ff0000" },
+    text: { chatMessageUser: "#ffffff" },
+  },
 });
 ```
+
+- Runtime theme hooks currently exposed: `theme.bg.chatMessageUser` and `theme.text.chatMessageUser`. Manage any additional styling hooks directly in your host stylesheet.
+- The widget does not ship with defaults for host-level custom properties; declare the ones you use to avoid unresolved values.
 
 ### Method 2: CSS Variables
 
@@ -140,75 +101,27 @@ Override CSS custom properties from the host page. This works because CSS variab
 
 ```html
 <style>
-  /* Override widget colors */
+  /* Override widget variables */
   #chat-widget-container {
-    --chatwidget-primary: #ff0000;
-    --chatwidget-primary-hover: #cc0000;
-    --chatwidget-bg: #ffffff;
-    --chatwidget-text: #1a1a1a;
-    --chatwidget-border-radius: 12px;
-    --chatwidget-font-family: 'Inter', sans-serif;
+    --jexity-assistant-bg-chat-message-user: #ff0000;
+    --jexity-assistant-text-chat-message-user: #ffffff;
   }
 </style>
 
 <div id="chat-widget-container"></div>
-<script>
+<script type="module">
+  import { initChatWidget } from "/src/main.tsx";
+  import "/src/styles.css";
+
   initChatWidget({
-    containerId: 'chat-widget-container',
-    apiUrl: 'https://your-api.com'
+    containerElement: document.querySelector("#chat-widget-container"),
   });
 </script>
 ```
 
 ### Available CSS Variables
 
-All available CSS variables with their default values:
-
-```css
-:host {
-  /* Primary colors */
-  --chatwidget-primary: #4f46e5;
-  --chatwidget-primary-hover: #4338ca;
-
-  /* Text colors */
-  --chatwidget-text: #1f2937;
-  --chatwidget-text-secondary: #6b7280;
-
-  /* Background colors */
-  --chatwidget-bg: #ffffff;
-  --chatwidget-bg-secondary: #f9fafb;
-  --chatwidget-message-user-bg: linear-gradient(to bottom right, #6366f1, #a855f7);
-  --chatwidget-message-assistant-bg: #ffffff;
-
-  /* Border colors */
-  --chatwidget-border: #d1d5db;
-
-  /* Input colors */
-  --chatwidget-input-bg: #ffffff;
-  --chatwidget-input-border: #d1d5db;
-  --chatwidget-input-focus-border: #6366f1;
-
-  /* Button colors */
-  --chatwidget-button-bg: linear-gradient(to bottom right, #6366f1, #a855f7);
-  --chatwidget-button-hover-bg: linear-gradient(to bottom right, #4f46e5, #9333ea);
-  --chatwidget-button-text: #ffffff;
-
-  /* Sources colors */
-  --chatwidget-sources-bg: #fffbeb;
-  --chatwidget-sources-border: #fbbf24;
-  --chatwidget-sources-text: #92400e;
-
-  /* Error colors */
-  --chatwidget-error-bg: #fef2f2;
-  --chatwidget-error-border: #fca5a5;
-  --chatwidget-error-text: #991b1b;
-
-  /* Other */
-  --chatwidget-border-radius: 0.75rem;
-  --chatwidget-font-family: system-ui, -apple-system, sans-serif;
-  --chatwidget-font-size: 14px;
-}
-```
+The widget ships without default values for host-facing CSS variables. Declare the ones you need (for example, colors, typography, etc.) inside your application styles and the widget will inherit them through the shadow boundary.
 
 ## API Reference
 
@@ -218,14 +131,14 @@ Initializes and mounts the chat widget.
 
 **Parameters:**
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| \`apiUrl\` | \`string\` | \`undefined\` | Base URL for the chat API |
-| \`conversationId\` | \`string\` | \`undefined\` | Existing conversation ID to resume |
-| \`containerId\` | \`string\` | \`undefined\` | ID of the container element |
-| \`containerElement\` | \`HTMLElement\` | \`undefined\` | Container element (alternative to containerId) |
-| \`theme\` | \`ChatWidgetTheme\` | \`undefined\` | Theme customization object |
-| \`onConversationCreate\` | \`(id: string) => void\` | \`undefined\` | Callback when conversation is created |
+| Option                   | Type                     | Default       | Description                                    |
+| ------------------------ | ------------------------ | ------------- | ---------------------------------------------- |
+| \`apiUrl\`               | \`string\`               | \`undefined\` | Base URL for the chat API                      |
+| \`conversationId\`       | \`string\`               | \`undefined\` | Existing conversation ID to resume             |
+| \`containerId\`          | \`string\`               | \`undefined\` | ID of the container element                    |
+| \`containerElement\`     | \`HTMLElement\`          | \`undefined\` | Container element (alternative to containerId) |
+| \`theme\`                | \`ChatWidgetTheme\`      | \`undefined\` | Theme customization object                     |
+| \`onConversationCreate\` | \`(id: string) => void\` | \`undefined\` | Callback when conversation is created          |
 
 **Returns:** \`() => void\` - Cleanup function to unmount the widget
 
@@ -233,30 +146,8 @@ Initializes and mounts the chat widget.
 
 ```typescript
 interface ChatWidgetTheme {
-  primaryColor?: string;
-  primaryHoverColor?: string;
-  textColor?: string;
-  textSecondaryColor?: string;
-  backgroundColor?: string;
-  backgroundSecondaryColor?: string;
-  messageUserBackground?: string;
-  messageAssistantBackground?: string;
-  borderColor?: string;
-  inputBackgroundColor?: string;
-  inputBorderColor?: string;
-  inputFocusBorderColor?: string;
-  buttonBackgroundColor?: string;
-  buttonHoverBackgroundColor?: string;
-  buttonTextColor?: string;
-  sourcesBackgroundColor?: string;
-  sourcesBorderColor?: string;
-  sourcesTextColor?: string;
-  errorBackgroundColor?: string;
-  errorBorderColor?: string;
-  errorTextColor?: string;
-  borderRadius?: string;
-  fontFamily?: string;
-  fontSize?: string;
+  bg?: { chatMessageUser?: string };
+  text?: { chatMessageUser?: string };
 }
 ```
 
@@ -266,49 +157,17 @@ interface ChatWidgetTheme {
 
 ```typescript
 initChatWidget({
-  apiUrl: 'https://api.example.com',
+  apiUrl: "https://api.example.com",
   theme: {
-    primaryColor: '#7c3aed',
-    primaryHoverColor: '#6d28d9',
-    messageUserBackground: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    fontFamily: 'Poppins, sans-serif'
-  }
+    bg: { chatMessageUser: "#7c3aed" },
+    text: { chatMessageUser: "#f8fafc" },
+  },
 });
 ```
 
-### Dark Mode
+### Additional Styling
 
-```typescript
-initChatWidget({
-  apiUrl: 'https://api.example.com',
-  theme: {
-    backgroundColor: '#1a1a1a',
-    backgroundSecondaryColor: '#2d2d2d',
-    textColor: '#ffffff',
-    textSecondaryColor: '#a0a0a0',
-    borderColor: '#404040',
-    messageAssistantBackground: '#2d2d2d',
-    inputBackgroundColor: '#2d2d2d',
-    inputBorderColor: '#404040',
-    inputFocusBorderColor: '#667eea'
-  }
-});
-```
-
-### Minimalist Theme
-
-```typescript
-initChatWidget({
-  apiUrl: 'https://api.example.com',
-  theme: {
-    primaryColor: '#000000',
-    borderRadius: '4px',
-    messageUserBackground: '#000000',
-    buttonBackgroundColor: '#000000',
-    fontFamily: 'SF Pro Display, system-ui, sans-serif'
-  }
-});
-```
+Inject any extra CSS you need alongside the widget—for example, typography or layout rules applied to the host container—then call `initChatWidget` as shown above.
 
 ## Development
 

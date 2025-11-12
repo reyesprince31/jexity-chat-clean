@@ -142,8 +142,15 @@ export * from './types/api';
 // Auto-initialize if data-chat-widget attribute is present
 if (typeof window !== 'undefined') {
   window.addEventListener('DOMContentLoaded', () => {
-    const element = document.querySelector('[data-chat-widget]');
-    if (element && element instanceof HTMLElement) {
+    document.querySelectorAll('[data-chat-widget]').forEach((element) => {
+      if (!(element instanceof HTMLElement)) {
+        return;
+      }
+
+      if (element.getAttribute('data-auto-init') === 'false') {
+        return;
+      }
+
       const apiUrl = element.getAttribute('data-api-url') || undefined;
       const conversationId =
         element.getAttribute('data-conversation-id') || undefined;
@@ -153,7 +160,7 @@ if (typeof window !== 'undefined') {
         apiUrl,
         conversationId,
       });
-    }
+    });
   });
 }
 

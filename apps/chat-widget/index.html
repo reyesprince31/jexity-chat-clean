@@ -65,6 +65,11 @@
         overflow-x: auto;
         font-size: 13px;
       }
+
+      /* #chat-widget-demo {
+        --jexity-assistant-bg-chat-message-user: #ff0000;
+        --jexity-assistant-text-chat-message-user: #ffffff;
+      } */
     </style>
   </head>
   <body>
@@ -72,15 +77,21 @@
       <h1>Chat Widget Development</h1>
 
       <div class="demo-container">
-        <!-- Widget will be mounted here via data-chat-widget attribute -->
-        <div data-chat-widget></div>
+        <!-- Widget is manually initialized below to showcase theming -->
+        <div
+          id="chat-widget-demo"
+          data-chat-widget
+          data-auto-init="false"
+        ></div>
 
         <div class="info-card">
           <h2>Development Mode</h2>
           <p>
-            This page demonstrates the chat widget in development mode. The
-            widget auto-initializes when the <code>data-chat-widget</code>
-            attribute is present.
+            This page demonstrates the chat widget in development mode. By
+            default the widget auto-initializes when the
+            <code>data-chat-widget</code> attribute is present, but in this demo
+            we disable auto init with <code>data-auto-init="false"</code> so we
+            can demonstrate custom styling via host-defined CSS variables.
           </p>
 
           <h3>Environment</h3>
@@ -99,28 +110,44 @@ cd apps/chat-widget
 pnpm dev</code></pre>
 
           <h3>Usage Examples</h3>
-          <p><strong>HTML attribute:</strong></p>
+          <p><strong>Declarative HTML (auto-init):</strong></p>
           <pre><code>&lt;div data-chat-widget
      data-api-url="http://localhost:3001"
      data-conversation-id="optional-id"&gt;
 &lt;/div&gt;</code></pre>
 
-          <p><strong>JavaScript:</strong></p>
-          <pre><code>import { initChatWidget } from 'chat-widget';
-
-const cleanup = initChatWidget({
-  containerId: 'my-container',
-  apiUrl: 'http://localhost:3001',
-  onConversationCreate: (id) => {
-    console.log('Conversation created:', id);
+          <p><strong>Manual init with CSS variables:</strong></p>
+          <pre><code>&lt;style&gt;
+  #my-widget {
+    --jexity-assistant-bg-chat-message-user: #ff0000;
+    --jexity-assistant-text-chat-message-user: #ffffff;
   }
-});
+&lt;/style&gt;
 
-// Later: cleanup();</code></pre>
+&lt;div id="my-widget" data-chat-widget data-auto-init="false"&gt;&lt;/div&gt;
+
+&lt;script type="module"&gt;
+  import { initChatWidget } from '/src/main.tsx';
+  import '/src/styles.css';
+
+  initChatWidget({
+    containerElement: document.querySelector('#my-widget'),
+  });
+&lt;/script&gt;</code></pre>
         </div>
       </div>
     </div>
 
-    <script type="module" src="/src/main.tsx"></script>
+    <script type="module">
+      import { initChatWidget } from "/src/main.tsx";
+      import "/src/styles.css";
+
+      const container = document.querySelector("#chat-widget-demo");
+      if (container instanceof HTMLElement) {
+        initChatWidget({
+          containerElement: container,
+        });
+      }
+    </script>
   </body>
 </html>

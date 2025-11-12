@@ -1,48 +1,8 @@
 @import "tailwindcss";
 
-/* CSS Custom Properties for Theming */
-:host {
-  /* Primary colors */
-  --chatwidget-primary: #000000;
-  --chatwidget-primary-hover: #1f2937;
-
-  /* Text colors */
-  --chatwidget-text: #1f2937;
-  --chatwidget-text-secondary: #6b7280;
-
-  /* Background colors */
-  --chatwidget-bg: #ffffff;
-  --chatwidget-bg-secondary: #f9fafb;
-  --chatwidget-message-user-bg: #000000;
-  --chatwidget-message-assistant-bg: #f3f4f6;
-
-  /* Border colors */
-  --chatwidget-border: #d1d5db;
-
-  /* Input colors */
-  --chatwidget-input-bg: #ffffff;
-  --chatwidget-input-border: #d1d5db;
-  --chatwidget-input-focus-border: #000000;
-
-  /* Button colors */
-  --chatwidget-button-bg: #000000;
-  --chatwidget-button-hover-bg: #1f2937;
-  --chatwidget-button-text: #ffffff;
-
-  /* Sources colors */
-  --chatwidget-sources-bg: #f3f4f6;
-  --chatwidget-sources-border: #d1d5db;
-  --chatwidget-sources-text: #1f2937;
-
-  /* Error colors */
-  --chatwidget-error-bg: #f3f4f6;
-  --chatwidget-error-border: #d1d5db;
-  --chatwidget-error-text: #1f2937;
-
-  /* Other */
-  --chatwidget-border-radius: 0.75rem;
-  --chatwidget-font-family: system-ui, -apple-system, sans-serif;
-  --chatwidget-font-size: 14px;
+:root {
+  --jexity-assistant-bg-chat-message-user: #000000;
+  --jexity-assistant-text-chat-message-user: #ffffff;
 }
 
 /* Custom animations */
@@ -125,4 +85,3 @@
 .animate-slideUp {
   animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
-
