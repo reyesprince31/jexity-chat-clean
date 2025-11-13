@@ -245,7 +245,7 @@ function ChatBoxHeaderMenu({ options }: { options: HeaderMenuOption[] }) {
 }
 
 function ChatBoxHeader({
-  title = "Chat Assist",
+  title = "Jexity Chat Assistant",
   isExpanded,
   onExpandClick,
   onCloseClick,
@@ -269,13 +269,16 @@ function ChatBoxHeader({
   return (
     <div
       className={cn(
-        "bg-white text-black px-5 py-4",
+        "bg-white text-black px-5 py-3",
         "border-b border-gray-200",
         "flex items-center justify-between",
         className
       )}
     >
-      <p className="m-0 text-md font-normal">{title}</p>
+      <div className="flex items-center">
+        <JexityLogo className="mr-1" />
+        <p className="m-0 text-md font-medium">{title}</p>
+      </div>
       <div className="flex items-center gap-1">
         <ChatBoxHeaderMenu options={menuOptions} />
 

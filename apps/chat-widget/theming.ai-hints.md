@@ -12,7 +12,7 @@ Example: the background color of `ChatBoxMessageUser`’s bubble currently uses 
 Create a variable with the `--jexity-assistant-*` prefix:
 
 1. Start with the prefix `--jexity-assistant-`.
-2. Append the utility group (e.g., `color`, `border`, `font`).
+2. Append the utility group (e.g., `bg`, `border`, `font`).
 3. Finish with a descriptive snake-cased name.
 
 For the user message background this becomes:
@@ -24,7 +24,7 @@ For the user message background this becomes:
 
 ## 3. Register the Variable in `styles.css`
 
-Add a default value under `:root` in `apps/chat-widget/src/styles.css` (or reuse an existing section if present). This provides fallback styling when the host does not override the variable.
+Add a default value under `:root` in `apps/chat-widget/src/styles.css` (or reuse an existing section if present). This provides default or fallback styling when the host does not override the variable.
 
 ```css
 :root {
@@ -35,11 +35,13 @@ Add a default value under `:root` in `apps/chat-widget/src/styles.css` (or reuse
 
 ## 4. Consume the Variable in the Component
 
-Replace the hard-coded utility with the Tailwind v4 variable helper.  
-For the chat bubble background and text color:
+Replace the hard-coded utility with the variable.
+Using TailwindCSS v4, here is an example:
 
 ```tsx
-<div className="bg-(--jexity-assistant-bg-chat-message-user) text-(--jexity-assistant-text-chat-message-user)">…</div>
+<div className="bg-(--jexity-assistant-bg-chat-message-user) text-(--jexity-assistant-text-chat-message-user)">
+  …
+</div>
 ```
 
 The value from `:root` (or any host override) is now applied automatically; keep the original class around until you confirm the variable is wired correctly.
@@ -62,7 +64,7 @@ Reload the dev server (`pnpm dev` in `apps/chat-widget`) and ensure the user bub
 
 ## 6. Wire Up the JavaScript Theme API (Optional)
 
-If the token should also be configurable via `initChatWidget({ theme })`, add a matching entry to `apps/chat-widget/src/types/theme.ts`:
+The token should also be configurable via `initChatWidget({ theme })`, add a matching entry to `apps/chat-widget/src/types/theme.ts`:
 
 ```ts
 export interface ChatWidgetTheme {
