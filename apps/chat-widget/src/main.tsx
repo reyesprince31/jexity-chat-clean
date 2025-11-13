@@ -1,21 +1,27 @@
 import './styles.css';
-import React, { useEffect, useState, useRef } from 'react';
-import ReactDOM from 'react-dom/client';
+import { useEffect, useState } from 'preact/hooks';
+import type { ComponentChildren, ComponentType } from 'preact';
+import { render } from 'preact';
 import root from 'react-shadow';
 import { ChatWidget, type ChatWidgetProps } from './components/ChatWidget';
 import { themeToCSSVars } from './types/theme';
 
 // Create a typed Shadow DOM wrapper component
-const ShadowRoot = root.div as React.ComponentType<
-  React.HTMLProps<HTMLDivElement> & { mode?: 'open' | 'closed' }
+type ThemeStyles = Record<string, string>;
+
+const ShadowRoot = root.div as ComponentType<
+  {
+    style?: ThemeStyles;
+    mode?: 'open' | 'closed';
+    children?: ComponentChildren;
+  } & Record<string, unknown>
 >;
 
 // Shadow DOM wrapper that loads CSS
-function ShadowWidgetWrapper(props: ChatWidgetProps & { themeStyles: React.CSSProperties }) {
+function ShadowWidgetWrapper(props: ChatWidgetProps & { themeStyles: ThemeStyles }) {
   const { themeStyles, ...widgetProps } = props;
   const [cssContent, setCssContent] = useState<string>('');
   const [stylesLoaded, setStylesLoaded] = useState(false);
-  const shadowRootRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     // Extract CSS from document stylesheets
@@ -73,7 +79,7 @@ function ShadowWidgetWrapper(props: ChatWidgetProps & { themeStyles: React.CSSPr
 
   return (
     <div style={{ visibility: stylesLoaded ? 'visible' : 'hidden' }}>
-      <ShadowRoot ref={shadowRootRef as never} style={themeStyles}>
+      <ShadowRoot style={themeStyles}>
         <style>{cssContent}</style>
         <ChatWidget {...widgetProps} />
       </ShadowRoot>
@@ -114,17 +120,12 @@ export function initChatWidget(options: InitChatWidgetOptions = {}): () => void 
   // Apply theme CSS variables if provided
   const themeStyles = options.theme ? themeToCSSVars(options.theme) : {};
 
-  // Mount the React component with Shadow DOM
-  const reactRoot = ReactDOM.createRoot(container);
-  reactRoot.render(
-    <React.StrictMode>
-      <ShadowWidgetWrapper {...widgetProps} themeStyles={themeStyles} />
-    </React.StrictMode>
-  );
+  // Mount the Preact component with Shadow DOM
+  render(<ShadowWidgetWrapper {...widgetProps} themeStyles={themeStyles} />, container);
 
   // Return cleanup function
   return () => {
-    reactRoot.unmount();
+    render(null, container);
   };
 }
 

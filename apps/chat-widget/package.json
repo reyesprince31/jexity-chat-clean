@@ -24,13 +24,12 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
-    "@radix-ui/react-popover": "^1.1.15",
+    "@radix-ui/react-popover": "1.1.15",
     "@repo/dto": "workspace:*",
-    "clsx": "^2.1.1",
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
-    "react-shadow": "^20.6.0",
-    "tailwind-merge": "^3.3.1"
+    "clsx": "2.1.1",
+    "preact": "10.23.2",
+    "react-shadow": "20.6.0",
+    "tailwind-merge": "3.3.1"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
@@ -38,7 +37,7 @@
     "@tailwindcss/vite": "4.1.16",
     "@types/react": "19.1.0",
     "@types/react-dom": "19.1.1",
-    "@vitejs/plugin-react": "4.3.4",
+    "@preact/preset-vite": "2.9.1",
     "eslint": "9.34.0",
     "rollup-plugin-filesize": "10.0.0",
     "rollup-plugin-visualizer": "5.12.0",

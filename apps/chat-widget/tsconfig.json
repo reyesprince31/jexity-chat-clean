@@ -1,12 +1,25 @@
 {
-  "extends": "@repo/typescript-config/react-library.json",
+  "extends": "@repo/typescript-config/preact-library.json",
   "compilerOptions": {
     "outDir": "./dist",
     "declaration": true,
     "declarationDir": "./dist",
     "types": ["vite/client"],
     "module": "ESNext",
-    "moduleResolution": "bundler"
+    "moduleResolution": "bundler",
+    "baseUrl": ".",
+    "paths": {
+      /**
+       * Required React to Preact paths
+       * Dependencies that expect to import from react/react-dom will use this.
+       */
+      "react": ["./node_modules/preact/compat"],
+      "react-dom": ["./node_modules/preact/compat"],
+      "react-dom/*": ["./node_modules/preact/compat/*"],
+      "react/jsx-runtime": ["./node_modules/preact/jsx-runtime"],
+      "react/jsx-dev-runtime": ["./node_modules/preact/jsx-dev-runtime"],
+      "preact-render-to-string": ["./src/compat/preact-render-to-string"]
+    }
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]

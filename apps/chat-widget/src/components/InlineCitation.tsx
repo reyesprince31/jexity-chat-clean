@@ -5,7 +5,7 @@
  * Citations are colored and become clickable when source data is available.
  */
 
-import { useState } from "react";
+import { useState } from "preact/hooks";
 import * as Popover from "@radix-ui/react-popover";
 import type { Source } from "../types/api";
 import { cn } from "../lib/utils";

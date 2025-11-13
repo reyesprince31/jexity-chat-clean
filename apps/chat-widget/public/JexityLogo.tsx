@@ -1,6 +1,6 @@
-import type { SVGProps } from "react";
+import type { JSX } from "preact";
 
-type JexityLogoProps = SVGProps<SVGSVGElement> & {
+type JexityLogoProps = JSX.SVGAttributes<SVGSVGElement> & {
   wrapperClassName?: string;
 };
 

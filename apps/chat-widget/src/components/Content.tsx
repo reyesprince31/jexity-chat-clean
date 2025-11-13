@@ -1,4 +1,6 @@
-import { Fragment, useMemo, type ReactNode } from "react";
+import { Fragment } from "preact";
+import { useMemo } from "preact/hooks";
+import type { ComponentChildren } from "preact";
 import type { Source } from "../types/api";
 import {
   parseCitationsInText,
@@ -104,11 +106,11 @@ const INLINE_MARKDOWN_REGEX =
   /(\*\*[^*]+\*\*|__[^_]+__|\*[^*]+?\*|_[^_]+?_|\~\~[^~]+?\~\~|`[^`]+`|\[([^\]]+)\]\(([^)]+)\)|(https?:\/\/[^\s<]+))/g;
 
 /**
- * Turns supported inline markdown tokens into lightweight React elements while preserving surrounding text.
+ * Turns supported inline markdown tokens into lightweight Preact nodes while preserving surrounding text.
  */
-function parseInlineMarkdown(text: string, keyPrefix: string): ReactNode[] {
-  // Single-pass tokenizer turns inline markdown tokens into lightweight React elements.
-  const nodes: ReactNode[] = [];
+function parseInlineMarkdown(text: string, keyPrefix: string): ComponentChildren[] {
+  // Single-pass tokenizer turns inline markdown tokens into lightweight Preact nodes.
+  const nodes: ComponentChildren[] = [];
   let lastIndex = 0;
   let match: RegExpExecArray | null;
   let elementIndex = 0;
@@ -124,7 +126,7 @@ function parseInlineMarkdown(text: string, keyPrefix: string): ReactNode[] {
     }
 
     const { 0: token, 2: linkText, 3: linkHref, 4: autoHref } = match;
-    let content: ReactNode;
+    let content: ComponentChildren;
 
     if (token.startsWith("**") || token.startsWith("__")) {
       content = (

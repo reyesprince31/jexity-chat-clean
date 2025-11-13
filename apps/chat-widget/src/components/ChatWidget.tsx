@@ -1,12 +1,6 @@
-import {
-  useState,
-  useEffect,
-  useRef,
-  useCallback,
-  useMemo,
-  type ComponentPropsWithoutRef,
-  type ReactNode,
-} from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "preact/hooks";
+import type { ComponentChildren } from "preact";
+import type { JSX } from "preact";
 import * as PopoverPrimitive from "@radix-ui/react-popover";
 import { ApiClient, apiClient } from "../lib/api-client";
 import type { Message, MessageWithSources, Source } from "../types/api";
@@ -16,7 +10,12 @@ import { Content } from "./Content";
 import { JexityLogo } from "../../public/JexityLogo";
 import "../styles.css";
 
-type IconProps = ComponentPropsWithoutRef<"svg"> & { size?: number };
+/**
+ * TODO: Transfer icons to separate files, export IconProps to a common file.
+ * In src/components, add svg-icons directory. Transfer the icons in ChatWidget there and add a types.ts file. IconProps should
+ * be placed in there.
+ */
+type IconProps = JSX.SVGAttributes<SVGSVGElement> & { size?: number };
 
 function ChatbotIcon({ size = 24, className, ...props }: IconProps) {
   return (
@@ -196,7 +195,7 @@ function ChatBoxTrigger({
   );
 }
 
-type HeaderMenuOptionIcon = (props: IconProps) => React.ReactNode;
+type HeaderMenuOptionIcon = (props: IconProps) => ComponentChildren;
 
 interface HeaderMenuOption {
   id: string;
@@ -319,8 +318,8 @@ function AgentMessageBubble({
   footer,
   className,
 }: {
-  children: ReactNode;
-  footer?: ReactNode;
+  children: ComponentChildren;
+  footer?: ComponentChildren;
   className?: string;
 }) {
   return (
@@ -432,8 +431,8 @@ function ChatBoxInput({
   className,
 }: {
   value: string;
-  onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
-  onKeyDown: (e: React.KeyboardEvent) => void;
+  onChange: (e: JSX.TargetedEvent<HTMLTextAreaElement, Event>) => void;
+  onKeyDown: (e: JSX.TargetedKeyboardEvent<HTMLTextAreaElement>) => void;
   onSend: () => void;
   disabled?: boolean;
   className?: string;
@@ -470,7 +469,7 @@ function ChatBoxMessages({
   children,
   className,
 }: {
-  children: React.ReactNode;
+  children: ComponentChildren;
   className?: string;
 }) {
   return (
@@ -490,7 +489,7 @@ function ChatBoxContainer({
   isExpanded,
   className,
 }: {
-  children: React.ReactNode;
+  children: ComponentChildren;
   isExpanded?: boolean;
   className?: string;
 }) {
@@ -622,7 +621,7 @@ export function ChatWidget({
             sources: event.sources || [],
           };
 
-          // Update all states together - React will batch these
+          // Update all states together - Preact batches state updates during event loops
           setIsStreaming(false);
           setStreamingContent("");
           setMessages((prev) => [...prev, assistantMsg]);
@@ -639,7 +638,7 @@ export function ChatWidget({
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: JSX.TargetedKeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
@@ -694,7 +693,7 @@ export function ChatWidget({
 
       <ChatBoxInput
         value={input}
-        onChange={(e) => setInput(e.target.value)}
+        onChange={(e) => setInput(e.currentTarget.value)}
         onKeyDown={handleKeyDown}
         onSend={sendMessage}
         disabled={isStreaming}

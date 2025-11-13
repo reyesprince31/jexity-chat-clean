@@ -1,6 +1,6 @@
 # Chat Widget
 
-An embeddable AI chat widget with RAG (Retrieval Augmented Generation) support, built with React, TypeScript, and Tailwind CSS. Features full style isolation using Shadow DOM.
+An embeddable AI chat widget with RAG (Retrieval Augmented Generation) support, built with Preact, TypeScript, and Tailwind CSS. Features full style isolation using Shadow DOM.
 
 ## Features
 
@@ -57,7 +57,7 @@ const cleanup = initChatWidget({
 cleanup();
 ```
 
-### React
+### Framework Component Usage (React, Preact, etc.)
 
 ```tsx
 import { ChatWidget } from "chat-widget";
@@ -71,6 +71,8 @@ function App() {
   );
 }
 ```
+
+> The ES module build bundles Preact internally, so you can drop the widget into React, Vue, or vanilla SPA tooling without configuring `preact/compat` aliases. Treat the component as an isolated subtree: it will not share hooks or context with a surrounding React tree.
 
 ## Theming & Customization
 
@@ -191,11 +193,20 @@ pnpm lint
 ## Architecture
 
 - **Shadow DOM**: Ensures style isolation from the host page
-- **React 19**: Latest React with concurrent features
+- **Preact 10**: Lightweight React-compatible runtime
 - **Tailwind CSS v4**: Utility-first CSS framework
 - **TypeScript**: Full type safety
 - **Vite**: Fast build tool and dev server
-- **react-shadow**: React integration for Shadow DOM
+- **react-shadow**: Shadow DOM integration powered by `preact/compat`
+
+## React Compatibility Notes
+
+- The library ships with `preact/compat`, exposing the React 18+ component API surface while keeping the bundle lean. No peer dependency on `react`/`react-dom` is required when you import the widget.
+- Script embeds (`chat-widget.umd.js`) auto-register `initChatWidget` globally; no framework runtime needs to be present on the host page.
+- When you import `ChatWidget` inside an existing React application, it renders within its own Preact tree. Do not expect shared React context, Suspense boundaries, or error boundaries to cross that boundary.
+- Server-side rendering is intentionally unsupported—SSR helpers are stubbed so accidental usage fails fast. Mount the widget on the client only.
+- React DevTools will not inspect the widget tree because it runs on Preact internals. Use standard browser tooling (or preload Preact DevTools) if you need debugging inside the widget.
+- Avoid project-level aliases that globally swap React for Preact unless you have audited the rest of your codebase; the widget already bundles what it needs and can coexist with a full React app without extra configuration.
 
 ## Browser Support
 
