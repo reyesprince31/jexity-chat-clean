@@ -90,7 +90,7 @@ export function InlineCitation({
           "citation-marker",
           "inline-flex items-center justify-center rounded-full",
           "bg-gray-100 text-gray-700 border border-gray-200",
-          "px-2 py-0.5 text-xs font-medium",
+          "px-2 py-0.5 text-xs font-medium mx-1",
           "max-w-32 min-w-[2.75rem]",
           className
         )}
@@ -117,7 +117,7 @@ export function InlineCitation({
             "citation-marker citation-marker--clickable",
             "inline-flex items-center justify-center rounded-full border",
             "bg-white text-gray-700 border-gray-300",
-            "px-2 py-0.5 text-xs font-medium",
+            "px-2 py-0.5 text-xs font-medium mx-1",
             "hover:bg-gray-100 hover:border-gray-400 hover:text-gray-900",
             "transition-colors duration-150 cursor-pointer",
             "max-w-32 min-w-11",
