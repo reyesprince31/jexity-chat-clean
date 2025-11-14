@@ -1,5 +1,11 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from "preact/hooks";
-import type { ComponentChildren } from "preact";
+import {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+} from "preact/hooks";
+import type { ComponentChildren, FunctionalComponent } from "preact";
 import type { JSX } from "preact";
 import * as PopoverPrimitive from "@radix-ui/react-popover";
 import { ApiClient, apiClient } from "../lib/api-client";
@@ -195,7 +201,7 @@ function ChatBoxTrigger({
   );
 }
 
-type HeaderMenuOptionIcon = (props: IconProps) => ComponentChildren;
+type HeaderMenuOptionIcon = FunctionalComponent<IconProps>;
 
 interface HeaderMenuOption {
   id: string;
