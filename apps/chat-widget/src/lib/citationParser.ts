@@ -15,6 +15,7 @@ export type CitationSegment = {
   content: string;            // Original text containing citation markup
   indices: number[];          // Citation numbers included in the group
   supportingTexts?: (string | undefined)[]; // Optional supporting text per citation
+  filenames?: (string | undefined)[];        // Optional source filename per citation
 };
 
 export type MessageSegment = TextSegment | CitationSegment;
@@ -26,26 +27,34 @@ export type MessageSegment = TextSegment | CitationSegment;
  * @returns Array of text and citation segments in order
  *
  * @example
- * parseCitationsInText('Text{{cite:0, text:"Citation A"}} more{{cite:1}}') returns:
+ * parseCitationsInText('Text{{cite:0, filename:"doc.pdf", text:"Citation A"}} more{{cite:1, filename:"backup.pdf"}}') returns:
  * [
  *   { type: 'text', content: 'Text' },
  *   {
  *     type: 'citation',
- *     content: '{{cite:0, text:"Citation A"}}',
+ *     content: '{{cite:0, filename:"doc.pdf", text:"Citation A"}}',
  *     indices: [0],
- *     supportingTexts: ['Citation A']
+ *     supportingTexts: ['Citation A'],
+ *     filenames: ['doc.pdf']
  *   },
  *   { type: 'text', content: ' more' },
- *   { type: 'citation', content: '{{cite:1}}', indices: [1], supportingTexts: [undefined] }
+ *   {
+ *     type: 'citation',
+ *     content: '{{cite:1, filename:"backup.pdf"}}',
+ *     indices: [1],
+ *     supportingTexts: [undefined],
+ *     filenames: ['backup.pdf']
+ *   }
  * ]
  *
- * parseCitationsInText('{{cite:0, text:"First"}, {cite:1, text:"Second"}}') returns:
+ * parseCitationsInText('{{cite:0, filename:"first.pdf", text:"First"}, {cite:1, filename:"second.pdf", text:"Second"}}') returns:
  * [
  *   {
  *     type: 'citation',
- *     content: '{{cite:0, text:"First"}, {cite:1, text:"Second"}}',
+ *     content: '{{cite:0, filename:"first.pdf", text:"First"}, {cite:1, filename:"second.pdf", text:"Second"}}',
  *     indices: [0, 1],
- *     supportingTexts: ['First', 'Second']
+ *     supportingTexts: ['First', 'Second'],
+ *     filenames: ['first.pdf', 'second.pdf']
  *   }
  * ]
  */
@@ -63,9 +72,10 @@ export function parseCitationsInText(text: string): MessageSegment[] {
     if (!citationBody) continue;
 
     const entryRegex =
-      /cite:\s*([0-9]+(?:\s*,\s*[0-9]+)*)(?:,\s*text:"([^"]*)")?/g;
+      /cite:\s*([0-9]+(?:\s*,\s*[0-9]+)*)((?:,\s*(?:filename|text):"[^"]*")*)/g;
     const citationNumbers: number[] = [];
     const supportingTexts: (string | undefined)[] = [];
+    const filenames: (string | undefined)[] = [];
     let entryMatch;
 
     while ((entryMatch = entryRegex.exec(citationBody)) !== null) {
@@ -73,7 +83,11 @@ export function parseCitationsInText(text: string): MessageSegment[] {
       if (!indicesString) {
         continue;
       }
-      const supportingTextRaw = entryMatch[2];
+      const optionsString = entryMatch[2] || '';
+      const supportingTextRaw =
+        optionsString.match(/text:"([^"]*)"/)?.[1] ?? undefined;
+      const filenameRaw =
+        optionsString.match(/filename:"([^"]*)"/)?.[1] ?? undefined;
       const parsedIndices = indicesString
         .split(',')
         .map((value) => value.trim())
@@ -86,6 +100,7 @@ export function parseCitationsInText(text: string): MessageSegment[] {
       parsedIndices.forEach((idx) => {
         citationNumbers.push(idx);
         supportingTexts.push(supportingTextRaw?.trim() || undefined);
+        filenames.push(filenameRaw?.trim() || undefined);
       });
     }
 
@@ -105,6 +120,7 @@ export function parseCitationsInText(text: string): MessageSegment[] {
       content: match[0], // e.g., "{{cite:0}}"
       indices: citationNumbers,
       supportingTexts,
+      filenames,
     });
 
     lastIndex = citationRegex.lastIndex;

@@ -21,15 +21,16 @@ const INLINE_CITATION_INSTRUCTIONS = `2. **Cite sources with inline numbers and 
    - Citations are 0-indexed (first source is {{cite:0}}, second is {{cite:1}}, etc.)
    - Place citations right after the relevant statement and after the punctuation: "Machine learning is a subset of AI. {{cite:0, text:"[rewritten chunk content]"}}"
    - The \`text\` field should contain a **concise, rewritten version of the source chunk**, capturing the main point clearly. Do not use the raw chunk text verbatim, and ensure the rewritten sentence ends with proper punctuation (. ? !).
+   - Include the source filename in each citation entry using filename:"<SOURCE FILENAME>" (matching the filename exactly as provided in the context): {{cite:0, filename:"example.pdf", text:"[rewritten chunk content]"}}.
    - Multiple sources supporting the same claim can be grouped: 
-     "This is widely accepted. {{cite:0, text:"[rewritten chunk 0]"}, {cite:1, text:"[rewritten chunk 1]"}, {cite:2}}"
-   - If no text is provided, only use the index.
+     "This is widely accepted. {{cite:0, filename:"chunk0.pdf", text:"[rewritten chunk 0]"}, {cite:1, filename:"chunk1.pdf", text:"[rewritten chunk 1]"}, {cite:2, filename:"chunk2.pdf"}}"
+   - If no text is provided, still include the filename with the index.
    - Always cite specific sources when using information from the context
 
 **Examples of proper inline citations:**
-- "The transformer architecture was introduced in 2017. {{cite:0, text:"Introduced the Transformer model for sequence processing"}}"
-- "Deep learning has revolutionized computer vision. {{cite:1, text:"AlexNet improved image recognition accuracy"}, {cite:2, text:"ResNet enabled deeper networks"}}"
-- "According to the research {{cite:0, text:"Experiment showed 15% improvement"}}, accuracy improved significantly."`;
+- "The transformer architecture was introduced in 2017. {{cite:0, filename:"attention_is_all_you_need.pdf", text:"Introduced the Transformer model for sequence processing"}}"
+- "Deep learning has revolutionized computer vision. {{cite:1, filename:"alexnet_paper.pdf", text:"AlexNet improved image recognition accuracy"}, {cite:2, filename:"resnet_paper.pdf", text:"ResNet enabled deeper networks"}}"
+- "According to the research {{cite:0, filename:"study_results.pdf", text:"Experiment showed 15% improvement"}}, accuracy improved significantly."`;
 
 /**
  * Generate RAG system prompt with inline citation instructions

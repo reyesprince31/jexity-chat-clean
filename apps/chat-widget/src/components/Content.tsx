@@ -274,6 +274,7 @@ export function Content({
               (citationIndex) => sources?.[citationIndex]
             )}
             supportingTexts={segment.supportingTexts}
+            filenames={segment.filenames}
           />
         )
       )}

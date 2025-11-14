@@ -15,6 +15,7 @@ interface InlineCitationProps {
   indices: number[];
   sources?: (Source | undefined)[];
   supportingTexts?: (string | undefined)[];
+  filenames?: (string | undefined)[];
   className?: string;
 }
 
@@ -23,16 +24,24 @@ export function InlineCitation({
   indices,
   sources = [],
   supportingTexts = [],
+  filenames = [],
   className,
 }: InlineCitationProps) {
   const [open, setOpen] = useState(false);
 
   const sourceEntries = indices.map((citationIndex, idx) => {
+    const rawFilename = filenames[idx];
+    const normalizedFilename =
+      typeof rawFilename === "string" && rawFilename.trim().length > 0
+        ? rawFilename.trim()
+        : undefined;
+
     return {
       citationIndex,
       displayNumber: idx + 1,
       source: sources?.[idx],
       supportingText: supportingTexts[idx]?.trim(),
+      filename: normalizedFilename,
     };
   });
 
@@ -48,7 +57,7 @@ export function InlineCitation({
 
   const fallbackPrimaryLabel = primaryEntry?.source?.filename
     ? primaryEntry.source.filename
-    : citationText;
+    : (primaryEntry?.filename ?? citationText);
 
   const shouldShowExtraCount = extraSourceCount > 0 && hasAnySource;
 
@@ -63,8 +72,9 @@ export function InlineCitation({
 
   if (sourceEntries.length > 0) {
     titleParts.push(
-      ...sourceEntries.map((entry) =>
-        entry.source ? entry.source.filename : "Source unavailable"
+      ...sourceEntries.map(
+        (entry) =>
+          entry.source?.filename ?? entry.filename ?? "Source unavailable"
       )
     );
   }
@@ -81,7 +91,7 @@ export function InlineCitation({
           "inline-flex items-center justify-center rounded-full",
           "bg-gray-100 text-gray-700 border border-gray-200",
           "px-2 py-0.5 text-xs font-medium",
-          "max-w-8 min-w-0",
+          "max-w-32 min-w-[2.75rem]",
           className
         )}
         title={pillTitle}
@@ -110,7 +120,7 @@ export function InlineCitation({
             "px-2 py-0.5 text-xs font-medium",
             "hover:bg-gray-100 hover:border-gray-400 hover:text-gray-900",
             "transition-colors duration-150 cursor-pointer",
-            "max-w-32 min-w-0",
+            "max-w-32 min-w-11",
             className
           )}
           onClick={(e) => {
@@ -151,7 +161,9 @@ export function InlineCitation({
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="font-semibold text-gray-900 text-sm mb-1">
-                      {entry.source?.filename ?? "Source unavailable"}
+                      {entry.source?.filename ??
+                        entry.filename ??
+                        "Source unavailable"}
                     </div>
                     {entry.source ? (
                       <div className="text-xs text-gray-500 space-y-0.5">
