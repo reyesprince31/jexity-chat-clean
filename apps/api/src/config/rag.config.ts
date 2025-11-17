@@ -116,7 +116,7 @@ export const CHAT_MODEL_CONFIG = {
   /**
    * OpenAI model to use for chat completions
    */
-  model: "gpt-5-mini" as const,
+  model: "gpt-4o" as const,
 
   /**
    * Temperature for response generation (0-2)

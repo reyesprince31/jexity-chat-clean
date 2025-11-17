@@ -71,6 +71,16 @@ model conversations {
   id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   /// Optional title for the conversation - can be auto-generated from first message
   title      String?
+  /// Indicates whether the conversation has been escalated to a human agent
+  is_escalated Boolean  @default(false)
+  /// Optional escalation reason captured when the AI routes to a human
+  escalated_reason String?
+  /// Timestamp of when the conversation was escalated
+  escalated_at DateTime? @db.Timestamptz(6)
+  /// (Optional) Name of the human agent that picked up the conversation
+  agent_name String?
+  /// Timestamp of when the agent joined the conversation
+  agent_joined_at DateTime? @db.Timestamptz(6)
   created_at DateTime  @default(now()) @db.Timestamptz(6)
   updated_at DateTime  @default(now()) @db.Timestamptz(6)
   /// Relation to messages - one conversation has many messages

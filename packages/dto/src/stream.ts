@@ -42,6 +42,30 @@ export const ErrorEventSchema = z.object({
 export type ErrorEvent = z.infer<typeof ErrorEventSchema>;
 
 /**
+ * Escalation event schema (conversation routed to human agent)
+ */
+export const EscalatedEventSchema = z.object({
+  type: z.literal("escalated"),
+  conversationId: z.string().uuid(),
+  reason: z.string().optional(),
+  escalatedAt: z.string().datetime(),
+});
+
+export type EscalatedEvent = z.infer<typeof EscalatedEventSchema>;
+
+/**
+ * Agent joined event schema (human agent picked up chat)
+ */
+export const AgentJoinedEventSchema = z.object({
+  type: z.literal("agent_joined"),
+  conversationId: z.string().uuid(),
+  agentName: z.string(),
+  joinedAt: z.string().datetime(),
+});
+
+export type AgentJoinedEvent = z.infer<typeof AgentJoinedEventSchema>;
+
+/**
  * Stream event discriminated union
  * Use this to parse SSE events from the API
  */
@@ -50,6 +74,8 @@ export const StreamEventSchema = z.discriminatedUnion("type", [
   DoneEventSchema,
   TitleEventSchema,
   ErrorEventSchema,
+  EscalatedEventSchema,
+  AgentJoinedEventSchema,
 ]);
 
 export type StreamEvent = z.infer<typeof StreamEventSchema>;

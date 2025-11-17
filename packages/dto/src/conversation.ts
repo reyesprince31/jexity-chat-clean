@@ -7,6 +7,11 @@ import { PaginationSchema } from "./common";
 export const ConversationSchema = z.object({
   id: z.string().uuid(),
   title: z.string().nullable(),
+  isEscalated: z.boolean(),
+  escalatedReason: z.string().nullable(),
+  escalatedAt: z.string().datetime().nullable(),
+  agentName: z.string().nullable(),
+  agentJoinedAt: z.string().datetime().nullable(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });

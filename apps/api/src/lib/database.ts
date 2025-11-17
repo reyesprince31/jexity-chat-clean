@@ -136,6 +136,11 @@ export async function updateDocumentRecord(
 export interface Conversation {
   id: string;
   title: string | null;
+  is_escalated: boolean;
+  escalated_reason: string | null;
+  escalated_at: Date | null;
+  agent_name: string | null;
+  agent_joined_at: Date | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -293,6 +298,71 @@ export async function updateConversationTitle(
     return conversation;
   } catch (error) {
     throw new Error(`Failed to update conversation title: ${error}`);
+  }
+}
+
+/**
+ * Update the escalation metadata for a conversation. Used when the AI hands the
+ * session off to a human so downstream clients can lock the transcript.
+ */
+export async function setConversationEscalationStatus(
+  id: string,
+  options: {
+    isEscalated: boolean;
+    reason?: string | null;
+    escalatedAt?: Date;
+  }
+): Promise<Conversation> {
+  const { isEscalated, reason = null, escalatedAt = new Date() } = options;
+
+  try {
+    const conversation = await prisma.conversations.update({
+      where: {
+        id,
+      },
+      data: {
+        is_escalated: isEscalated,
+        escalated_reason: isEscalated ? reason : null,
+        escalated_at: isEscalated ? escalatedAt : null,
+        agent_name: isEscalated ? undefined : null,
+        agent_joined_at: isEscalated ? undefined : null,
+        updated_at: new Date(),
+      },
+    });
+
+    return conversation;
+  } catch (error) {
+    throw new Error(`Failed to update conversation escalation: ${error}`);
+  }
+}
+
+/**
+ * Record when a human agent joins an escalated conversation.
+ */
+export async function setConversationAgentJoin(
+  id: string,
+  options: {
+    agentName: string;
+    joinedAt?: Date;
+  }
+): Promise<Conversation> {
+  const { agentName, joinedAt = new Date() } = options;
+
+  try {
+    const conversation = await prisma.conversations.update({
+      where: {
+        id,
+      },
+      data: {
+        agent_name: agentName,
+        agent_joined_at: joinedAt,
+        updated_at: new Date(),
+      },
+    });
+
+    return conversation;
+  } catch (error) {
+    throw new Error(`Failed to update conversation agent join: ${error}`);
   }
 }
 

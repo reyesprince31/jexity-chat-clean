@@ -9,7 +9,13 @@ import type { ComponentChildren, FunctionalComponent } from "preact";
 import type { JSX } from "preact";
 import * as PopoverPrimitive from "@radix-ui/react-popover";
 import { ApiClient, apiClient } from "../lib/api-client";
-import type { Message, MessageWithSources, Source } from "../types/api";
+import type {
+  Conversation,
+  Message,
+  MessageWithSources,
+  Source,
+  StreamEvent,
+} from "../types/api";
 import type { ChatWidgetTheme } from "../types/theme";
 import { cn } from "../lib/utils";
 import { Content } from "./Content";
@@ -315,6 +321,55 @@ function ChatBoxError({
 }
 
 /**
+ * Communicates that the automation handed the conversation to a human teammate.
+ */
+function ChatBoxEscalationBanner({
+  reason,
+  className,
+}: {
+  reason?: string;
+  className?: string;
+}) {
+  return (
+    <div
+      className={cn(
+        "mx-4 mb-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900",
+        className
+      )}
+    >
+      <p className="m-0 font-semibold">We're connecting you with a human agent.</p>
+      <p className="m-0 mt-1 text-amber-900/90">
+        {reason || "Hang tight - someone will reply shortly."}
+      </p>
+    </div>
+  );
+}
+
+/**
+ * Highlights that a named human agent has entered the conversation.
+ */
+function ChatBoxAgentBanner({
+  agentName,
+  className,
+}: {
+  agentName: string;
+  className?: string;
+}) {
+  return (
+    <div
+      className={cn(
+        "mx-4 mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900",
+        className
+      )}
+    >
+      <p className="m-0 font-semibold">
+        {agentName} has joined the chat. You're now connected to a human teammate.
+      </p>
+    </div>
+  );
+}
+
+/**
  * Textarea plus send control used for composing user prompts.
  */
 function ChatBoxInput({
@@ -421,6 +476,31 @@ export interface ChatWidgetProps {
   theme?: ChatWidgetTheme;
 }
 
+interface EscalationState {
+  isEscalated: boolean;
+  reason?: string;
+  escalatedAt?: string;
+  agentName?: string;
+  agentJoinedAt?: string;
+}
+
+/**
+ * Normalizes conversation metadata from the API into a widget-friendly structure.
+ */
+function extractEscalationState(conversation?: Conversation | null): EscalationState {
+  if (!conversation) {
+    return { isEscalated: false };
+  }
+
+  return {
+    isEscalated: conversation.isEscalated,
+    reason: conversation.escalatedReason ?? undefined,
+    escalatedAt: conversation.escalatedAt ?? undefined,
+    agentName: conversation.agentName ?? undefined,
+    agentJoinedAt: conversation.agentJoinedAt ?? undefined,
+  };
+}
+
 /**
  * Entry component that wires together API calls, window chrome, and chat state.
  */
@@ -441,6 +521,9 @@ export function ChatWidget({
   const [error, setError] = useState<string | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  const [escalationState, setEscalationState] = useState<EscalationState>({
+    isEscalated: false,
+  });
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Initialize API client with custom URL if provided
@@ -468,6 +551,7 @@ export function ChatWidget({
       setIsLoading(true);
       const response = await client.createConversation();
       setConversationId(response.conversation.id);
+      setEscalationState(extractEscalationState(response.conversation));
       onConversationCreate?.(response.conversation.id);
     } catch (err) {
       setError("Failed to create conversation");
@@ -483,6 +567,30 @@ export function ChatWidget({
       createConversation();
     }
   }, [conversationId, createConversation]);
+
+  useEffect(() => {
+    if (!conversationId) {
+      return undefined;
+    }
+
+    const unsubscribe = client.subscribeToConversationEvents(
+      conversationId,
+      (event: StreamEvent) => {
+        if (event.type === "agent_joined") {
+          setEscalationState((prev) => ({
+            ...prev,
+            agentName: event.agentName,
+            agentJoinedAt: event.joinedAt,
+            isEscalated: true,
+          }));
+        }
+      }
+    );
+
+    return () => {
+      unsubscribe();
+    };
+  }, [conversationId, client]);
 
   const sendMessage = async () => {
     if (!input.trim() || !conversationId || isStreaming) return;
@@ -533,6 +641,16 @@ export function ChatWidget({
           setIsStreaming(false);
           setStreamingContent("");
           setMessages((prev) => [...prev, assistantMsg]);
+        } else if (event.type === "escalated") {
+          setEscalationState((prev) => ({
+            ...prev,
+            isEscalated: true,
+            reason: event.reason,
+            escalatedAt: event.escalatedAt,
+          }));
+          setIsStreaming(false);
+          setStreamingContent("");
+          break;
         } else if (event.type === "error") {
           setError(event.message || "An error occurred");
           setIsStreaming(false);
@@ -598,6 +716,13 @@ export function ChatWidget({
 
         <div ref={messagesEndRef} />
       </ChatBoxMessages>
+
+      {escalationState.isEscalated && (
+        <ChatBoxEscalationBanner reason={escalationState.reason} />
+      )}
+      {escalationState.agentName && (
+        <ChatBoxAgentBanner agentName={escalationState.agentName} />
+      )}
 
       <ChatBoxInput
         value={input}

@@ -145,6 +145,70 @@ export class ApiClient {
       reader.releaseLock();
     }
   }
+
+  /**
+   * Subscribe to conversation-level events (agent joined, etc.). Returns an unsubscribe function.
+   */
+  subscribeToConversationEvents(
+    conversationId: string,
+    onEvent: (event: StreamEvent) => void
+  ): () => void {
+    const controller = new AbortController();
+    const url = `${this.baseUrl}/conversations/${conversationId}/events`;
+
+    (async () => {
+      try {
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: {
+            Accept: 'text/event-stream',
+          },
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to subscribe: ${response.statusText}`);
+        }
+        if (!response.body) {
+          throw new Error('Response body is null');
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const data = line.slice(6);
+              try {
+                const event = JSON.parse(data) as StreamEvent;
+                onEvent(event);
+              } catch (error) {
+                console.error('Failed to parse conversation event:', error);
+              }
+            }
+          }
+        }
+      } catch (error) {
+        if ((error as DOMException)?.name === 'AbortError') {
+          return;
+        }
+        console.error('Conversation event stream terminated:', error);
+      }
+    })();
+
+    return () => {
+      controller.abort();
+    };
+  }
 }
 
 // Export a default instance

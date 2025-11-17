@@ -32,12 +32,17 @@ import {
   createMessage,
   getMessages,
   getMessageWithSources,
+  setConversationEscalationStatus,
+  setConversationAgentJoin,
+  type Conversation,
 } from "../lib/database.js";
 import {
   streamChatWithRAG,
   generateConversationTitle,
   type ChatMessage,
 } from "../lib/chat.js";
+import { evaluateEscalationNeed } from "../lib/escalation.js";
+import { conversationEventHub } from "../lib/conversation-events.js";
 
 // Request/Response Types (Fastify-specific structure)
 interface CreateConversationRequest {
@@ -77,6 +82,44 @@ interface ListConversationsRequest {
     limit?: string;
     offset?: string;
   };
+}
+
+interface AgentJoinRequest {
+  Params: {
+    id: string;
+  };
+  Body: {
+    agentName?: string;
+  };
+}
+
+/**
+ * Convert a database conversation record into the DTO returned by the API.
+ */
+function serializeConversation(conversation: Conversation) {
+  return {
+    id: conversation.id,
+    title: conversation.title,
+    isEscalated: conversation.is_escalated,
+    escalatedReason: conversation.escalated_reason,
+    escalatedAt: conversation.escalated_at
+      ? conversation.escalated_at.toISOString()
+      : null,
+    agentName: conversation.agent_name,
+    agentJoinedAt: conversation.agent_joined_at
+      ? conversation.agent_joined_at.toISOString()
+      : null,
+    createdAt: conversation.created_at.toISOString(),
+    updatedAt: conversation.updated_at.toISOString(),
+  };
+}
+
+/** Apply the headers Fastify needs for Server-Sent Events. */
+function setSseHeaders(reply: FastifyReply) {
+  reply.raw.setHeader("Content-Type", "text/event-stream");
+  reply.raw.setHeader("Cache-Control", "no-cache");
+  reply.raw.setHeader("Connection", "keep-alive");
+  reply.raw.setHeader("Access-Control-Allow-Origin", "*");
 }
 
 /**
@@ -133,12 +176,7 @@ export default async function chatRoutes(
 
         return reply.code(201).send({
           success: true,
-          conversation: {
-            id: conversation.id,
-            title: conversation.title,
-            createdAt: conversation.created_at.toISOString(),
-            updatedAt: conversation.updated_at.toISOString(),
-          },
+          conversation: serializeConversation(conversation),
         });
       } catch (error) {
         fastify.log.error(error);
@@ -213,6 +251,21 @@ export default async function chatRoutes(
           });
         }
 
+        // Prevent AI responses if conversation already escalated.
+        if (conversation.is_escalated) {
+          setSseHeaders(reply);
+          reply.raw.write(
+            `data: ${JSON.stringify({
+              type: "escalated",
+              conversationId,
+              reason: conversation.escalated_reason ?? undefined,
+              escalatedAt: (conversation.escalated_at ?? new Date()).toISOString(),
+            })}\n\n`
+          );
+          reply.raw.end();
+          return;
+        }
+
         // Save user message to database
         await createMessage({
           conversation_id: conversationId,
@@ -233,6 +286,36 @@ export default async function chatRoutes(
             content: msg.content,
           }));
 
+        const escalationDecision = evaluateEscalationNeed({
+          userMessage,
+          conversationHistory,
+        });
+
+        if (escalationDecision.shouldEscalate) {
+          const escalatedAt = new Date();
+          await setConversationEscalationStatus(conversationId, {
+            isEscalated: true,
+            reason: escalationDecision.reason,
+            escalatedAt,
+          });
+
+          fastify.log.info(
+            `Conversation ${conversationId} escalated: ${escalationDecision.reason}`
+          );
+
+          setSseHeaders(reply);
+          reply.raw.write(
+            `data: ${JSON.stringify({
+              type: "escalated",
+              conversationId,
+              reason: escalationDecision.reason,
+              escalatedAt: escalatedAt.toISOString(),
+            })}\n\n`
+          );
+          reply.raw.end();
+          return;
+        }
+
         // Stream chat response with RAG
         const { stream, sourceDocuments } = await streamChatWithRAG({
           userQuery: userMessage,
@@ -242,10 +325,7 @@ export default async function chatRoutes(
         });
 
         // Set headers for Server-Sent Events (SSE)
-        reply.raw.setHeader("Content-Type", "text/event-stream");
-        reply.raw.setHeader("Cache-Control", "no-cache");
-        reply.raw.setHeader("Connection", "keep-alive");
-        reply.raw.setHeader("Access-Control-Allow-Origin", "*");
+        setSseHeaders(reply);
 
         // Stream tokens to client
         let fullResponse = "";
@@ -362,10 +442,7 @@ export default async function chatRoutes(
         return reply.code(200).send({
           success: true,
           conversation: {
-            id: conversation.id,
-            title: conversation.title,
-            createdAt: conversation.created_at.toISOString(),
-            updatedAt: conversation.updated_at.toISOString(),
+            ...serializeConversation(conversation),
             messages: conversation.messages.map((msg) => ({
               id: msg.id,
               role: msg.role,
@@ -409,12 +486,9 @@ export default async function chatRoutes(
 
         return reply.code(200).send({
           success: true,
-          conversations: conversations.map((conv) => ({
-            id: conv.id,
-            title: conv.title,
-            createdAt: conv.created_at.toISOString(),
-            updatedAt: conv.updated_at.toISOString(),
-          })),
+          conversations: conversations.map((conv) =>
+            serializeConversation(conv)
+          ),
           pagination: {
             limit,
             offset,
@@ -577,6 +651,97 @@ export default async function chatRoutes(
         return reply.code(500).send({
           success: false,
           message: "Failed to get message sources",
+        });
+      }
+    }
+  );
+
+  /**
+   * GET /conversations/:id/events
+   * Persistent SSE stream that emits conversation-level events (agent joined, etc.).
+   */
+  fastify.get<GetConversationRequest>(
+    "/conversations/:id/events",
+    async (
+      request: FastifyRequest<GetConversationRequest>,
+      reply: FastifyReply
+    ) => {
+      try {
+        const { id } = request.params;
+        const conversation = await getConversation(id);
+
+        if (!conversation) {
+          return reply.code(404).send({
+            success: false,
+            message: "Conversation not found",
+          });
+        }
+
+        setSseHeaders(reply);
+        reply.raw.write(": connected\n\n");
+        conversationEventHub.subscribe(id, reply);
+      } catch (error) {
+        fastify.log.error(error);
+        return reply.code(500).send({
+          success: false,
+          message: "Failed to subscribe to events",
+        });
+      }
+    }
+  );
+
+  /**
+   * POST /conversations/:id/agent/join
+   * Mark that a human agent has joined and broadcast an SSE event.
+   */
+  fastify.post<AgentJoinRequest>(
+    "/conversations/:id/agent/join",
+    async (
+      request: FastifyRequest<AgentJoinRequest>,
+      reply: FastifyReply
+    ) => {
+      try {
+        const { id } = request.params;
+        const { agentName } = request.body ?? {};
+
+        if (!agentName || typeof agentName !== "string") {
+          return reply.code(400).send({
+            success: false,
+            message: "agentName is required",
+          });
+        }
+
+        const conversation = await getConversation(id);
+        if (!conversation) {
+          return reply.code(404).send({
+            success: false,
+            message: "Conversation not found",
+          });
+        }
+
+        const updated = await setConversationAgentJoin(id, {
+          agentName,
+        });
+
+        const joinedAt = updated.agent_joined_at?.toISOString();
+        if (joinedAt) {
+          conversationEventHub.emit(id, {
+            type: "agent_joined",
+            conversationId: id,
+            agentName,
+            joinedAt,
+          });
+        }
+
+        return reply.code(200).send({
+          success: true,
+          conversation: serializeConversation(updated),
+        });
+      } catch (error) {
+        fastify.log.error(error);
+        return reply.code(500).send({
+          success: false,
+          message: "Failed to record agent join",
         });
       }
     }
