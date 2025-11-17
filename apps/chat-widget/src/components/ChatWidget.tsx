@@ -21,8 +21,14 @@ import "../styles.css";
  * In src/components, add svg-icons directory. Transfer the icons in ChatWidget there and add a types.ts file. IconProps should
  * be placed in there.
  */
+/**
+ * Common props shared across inline SVG icons rendered within the chat widget.
+ */
 type IconProps = JSX.SVGAttributes<SVGSVGElement> & { size?: number };
 
+/**
+ * Chat bubble glyph shown on the floating trigger button.
+ */
 function ChatbotIcon({ size = 24, className, ...props }: IconProps) {
   return (
     <svg
@@ -53,6 +59,9 @@ function ChatbotIcon({ size = 24, className, ...props }: IconProps) {
   );
 }
 
+/**
+ * Three vertical dots used for contextual menus.
+ */
 function OptionsVerticalIcon({ size = 24, className, ...props }: IconProps) {
   return (
     <svg
@@ -73,6 +82,9 @@ function OptionsVerticalIcon({ size = 24, className, ...props }: IconProps) {
   );
 }
 
+/**
+ * Outward arrows indicating the chat can expand.
+ */
 function ExpandIcon({ size = 24, className, ...props }: IconProps) {
   return (
     <svg
@@ -101,6 +113,9 @@ function ExpandIcon({ size = 24, className, ...props }: IconProps) {
   );
 }
 
+/**
+ * Inward arrows indicating the chat can collapse back down.
+ */
 function CollapseIcon({ size = 24, className, ...props }: IconProps) {
   return (
     <svg
@@ -128,6 +143,9 @@ function CollapseIcon({ size = 24, className, ...props }: IconProps) {
   );
 }
 
+/**
+ * Simple “×” glyph for dismissal actions.
+ */
 function CloseIcon({ size = 24, className, ...props }: IconProps) {
   return (
     <svg
@@ -152,6 +170,9 @@ function CloseIcon({ size = 24, className, ...props }: IconProps) {
   );
 }
 
+/**
+ * Upward chevron used on the send button.
+ */
 function ArrowUpIcon({ size = 24, className, ...props }: IconProps) {
   return (
     <svg
@@ -175,6 +196,9 @@ function ArrowUpIcon({ size = 24, className, ...props }: IconProps) {
   );
 }
 
+/**
+ * Floating button that summons the chat widget when it is closed.
+ */
 function ChatBoxTrigger({
   onClick,
   className,
@@ -201,8 +225,14 @@ function ChatBoxTrigger({
   );
 }
 
+/**
+ * Helper type for header menu icon components.
+ */
 type HeaderMenuOptionIcon = FunctionalComponent<IconProps>;
 
+/**
+ * Configuration for an action inside the chat header popover menu.
+ */
 interface HeaderMenuOption {
   id: string;
   label: string;
@@ -210,6 +240,9 @@ interface HeaderMenuOption {
   onClick: () => void;
 }
 
+/**
+ * Popover-based menu that surfaces contextual actions for the chat header.
+ */
 function ChatBoxHeaderMenu({ options }: { options: HeaderMenuOption[] }) {
   const [open, setOpen] = useState(false);
 
@@ -249,6 +282,9 @@ function ChatBoxHeaderMenu({ options }: { options: HeaderMenuOption[] }) {
   );
 }
 
+/**
+ * Renders the assistant identity row with controls for expanding or closing the widget.
+ */
 function ChatBoxHeader({
   title = "Jexity Chat Assistant",
   isExpanded,
@@ -299,6 +335,9 @@ function ChatBoxHeader({
   );
 }
 
+/**
+ * Formats outbound user messages with right alignment and theme colors.
+ */
 function ChatBoxMessageUser({
   content,
   className,
@@ -316,18 +355,34 @@ function ChatBoxMessageUser({
 }
 
 /**
- * Renders the common shell for assistant messages, ensuring the header branding
- * stays consistent while allowing custom body content and optional footer UI.
+ * Assistant bubble that renders branding plus either markdown content or custom children.
  */
-function AgentMessageBubble({
+function ChatBoxMessageAgent({
+  content,
+  sources = [],
   children,
   footer,
   className,
+  hideIncompleteCitations = false,
 }: {
-  children: ComponentChildren;
+  content?: string;
+  sources?: Source[];
+  children?: ComponentChildren;
   footer?: ComponentChildren;
   className?: string;
+  hideIncompleteCitations?: boolean;
 }) {
+  const bodyContent =
+    children ??
+    (content ? (
+      <Content
+        value={content}
+        sources={sources}
+        className="text-sm"
+        hideIncompleteCitations={hideIncompleteCitations}
+      />
+    ) : null);
+
   return (
     <div className={cn("flex flex-col max-w-[80%] self-start", className)}>
       <div className="px-4 py-3 rounded-[20px] wrap-break-word leading-relaxed bg-gray-100 text-gray-900 border border-gray-200 rounded-bl-md">
@@ -353,29 +408,16 @@ function AgentMessageBubble({
             AI Agent
           </p>
         </div>
-        {children}
+        {bodyContent}
       </div>
       {footer}
     </div>
   );
 }
 
-function ChatBoxMessageAgent({
-  content,
-  sources = [],
-  className,
-}: {
-  content: string;
-  sources?: Source[];
-  className?: string;
-}) {
-  return (
-    <AgentMessageBubble className={className}>
-      <Content value={content} sources={sources} className="text-sm" />
-    </AgentMessageBubble>
-  );
-}
-
+/**
+ * Streaming placeholder that switches between a spinner and partial assistant output.
+ */
 function ChatBoxMessageLoading({
   content,
   className,
@@ -385,28 +427,45 @@ function ChatBoxMessageLoading({
 }) {
   const hasContent = Boolean(content && content.trim().length > 0);
 
+  if (!hasContent) {
+    return (
+      <div
+        className={cn(
+          "flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-gray-500",
+          className
+        )}
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="15"
+          height="15"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className={"thinking-spinner"}
+        >
+          <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+        </svg>
+        Thinking
+      </div>
+    );
+  }
+
   return (
-    <AgentMessageBubble
+    <ChatBoxMessageAgent
       className={className}
-      footer={
-        content ? (
-          <div className="flex gap-1 pt-2 pl-4">
-            <span className="w-2 h-2 rounded-full bg-gray-400 animate-typing"></span>
-            <span className="w-2 h-2 rounded-full bg-gray-400 animate-typing [animation-delay:0.2s]"></span>
-            <span className="w-2 h-2 rounded-full bg-gray-400 animate-typing [animation-delay:0.4s]"></span>
-          </div>
-        ) : null
-      }
-    >
-      {hasContent ? (
-        <Content value={content} hideIncompleteCitations />
-      ) : (
-        <span className="inline-block w-0.5 h-5 bg-black animate-blink"></span>
-      )}
-    </AgentMessageBubble>
+      content={content}
+      hideIncompleteCitations
+    />
   );
 }
 
+/**
+ * Lightweight inline error banner shown beneath the transcript.
+ */
 function ChatBoxError({
   error,
   className,
@@ -428,6 +487,9 @@ function ChatBoxError({
   );
 }
 
+/**
+ * Textarea plus send control used for composing user prompts.
+ */
 function ChatBoxInput({
   value,
   onChange,
@@ -471,6 +533,9 @@ function ChatBoxInput({
   );
 }
 
+/**
+ * Scrollable transcript area that stacks chat bubbles.
+ */
 function ChatBoxMessages({
   children,
   className,
@@ -490,6 +555,9 @@ function ChatBoxMessages({
   );
 }
 
+/**
+ * Outer shell that controls the widget’s floating positioning and sizing.
+ */
 function ChatBoxContainer({
   children,
   isExpanded,
@@ -516,6 +584,9 @@ function ChatBoxContainer({
   );
 }
 
+/**
+ * Public configuration options for embedding the chat widget.
+ */
 export interface ChatWidgetProps {
   apiUrl?: string;
   conversationId?: string;
@@ -523,6 +594,9 @@ export interface ChatWidgetProps {
   theme?: ChatWidgetTheme;
 }
 
+/**
+ * Entry component that wires together API calls, window chrome, and chat state.
+ */
 export function ChatWidget({
   apiUrl,
   conversationId: initialConversationId,
@@ -610,6 +684,7 @@ export function ChatWidget({
         useRAG: true,
       })) {
         if (event.type === "token" && event.content) {
+          console.log("[ChatWidget] Token chunk:", event.content);
           fullResponse += event.content;
           setStreamingContent(fullResponse);
         } else if (event.type === "done") {

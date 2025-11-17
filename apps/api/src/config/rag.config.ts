@@ -116,15 +116,13 @@ export const CHAT_MODEL_CONFIG = {
   /**
    * OpenAI model to use for chat completions
    */
-  model: "gpt-4o" as const,
+  model: "gpt-5-mini" as const,
 
   /**
    * Temperature for response generation (0-2)
-   * - 0 = Deterministic, focused
-   * - 0.7 = Balanced (default)
-   * - 1+ = More creative/random
+   * GPT-5 only supports the default (1), so keep it fixed to avoid 400 errors.
    */
-  temperature: 0.7,
+  temperature: 1,
 
   /**
    * Maximum tokens in response

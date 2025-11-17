@@ -2,6 +2,13 @@
 
 This Turborepo starter is maintained by the Turborepo core team.
 
+## AI Chat Customizations
+
+This repo now includes a GPT-5 powered chat API (`apps/api`) and a shareable widget (`apps/chat-widget`) with incremental streaming responses:
+
+- **Model selection**: `apps/api/src/config/rag.config.ts` targets `gpt-5`, so every conversation automatically benefits from the latest reasoning-capable model.
+- **Streaming events**: The API streams `token` events for incremental UI updates and a final `done` event that carries citation metadata. See `packages/dto/src/stream.ts` for the shared SSE shape.
+
 ## Using this example
 
 Run the following command:

@@ -91,7 +91,7 @@ export function InlineCitation({
           "inline-flex items-center justify-center rounded-full",
           "bg-gray-100 text-gray-700 border border-gray-200",
           "px-2 py-0.5 text-xs font-medium mx-1",
-          "max-w-32 min-w-[2.75rem]",
+          "max-w-32 min-w-11",
           className
         )}
         title={pillTitle}

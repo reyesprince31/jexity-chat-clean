@@ -1,5 +1,11 @@
 import { ChatOpenAI } from '@langchain/openai';
-import { HumanMessage, AIMessage, SystemMessage, BaseMessage } from '@langchain/core/messages';
+import {
+  HumanMessage,
+  AIMessage,
+  SystemMessage,
+  BaseMessage,
+  BaseMessageChunk,
+} from '@langchain/core/messages';
 import { retrieveDocuments } from './rag';
 import type { Document } from '@langchain/core/documents';
 import {
@@ -36,8 +42,14 @@ export interface StreamChatParams {
   };
 }
 
+// Internal stream payload for streamed assistant tokens
+export type ChatStreamChunk = {
+  type: 'response';
+  content: string;
+};
+
 export interface StreamChatResult {
-  stream: AsyncIterable<string>;
+  stream: AsyncIterable<ChatStreamChunk>;
   sourceDocuments: Document[];
 }
 
@@ -114,21 +126,27 @@ export async function streamChatWithRAG(params: StreamChatParams): Promise<Strea
   messages.push(new HumanMessage(userQuery));
 
   // Create an async generator that yields string tokens
-  async function* tokenGenerator(): AsyncIterable<string> {
+  async function* tokenGenerator(): AsyncIterable<ChatStreamChunk> {
     try {
       // Stream the response
       const stream = await chatModel.stream(messages);
 
       for await (const chunk of stream) {
-        // Extract the content from the chunk
-        const content = chunk.content;
-        if (typeof content === 'string' && content.length > 0) {
-          yield content;
+        const responseText = extractChunkText(chunk);
+        if (responseText) {
+          yield {
+            type: 'response',
+            content: responseText,
+          };
         }
       }
     } catch (error) {
       console.error('Error during streaming:', error);
-      throw new Error(`Streaming failed: ${error}`);
+      if (error instanceof Error) {
+        // Preserve original stack/message so callers (and logs) have actionable context
+        throw error;
+      }
+      throw new Error(`Streaming failed: ${JSON.stringify(error)}`);
     }
   }
 
@@ -185,11 +203,51 @@ export async function chatWithRAG(
   // Collect all chunks into a single response
   let fullResponse = '';
   for await (const chunk of stream) {
-    fullResponse += chunk;
+    if (chunk.type === 'response') {
+      fullResponse += chunk.content;
+    }
   }
 
   return {
     response: fullResponse,
     sourceDocuments,
   };
+}
+
+/**
+ * Extract string content from a message chunk, regardless of structure.
+ */
+function extractChunkText(chunk: BaseMessageChunk | { content?: unknown }): string | undefined {
+  const { content } = chunk ?? {};
+
+  if (!content) {
+    return undefined;
+  }
+
+  if (typeof content === 'string') {
+    return content;
+  }
+
+  if (Array.isArray(content)) {
+    const combined = content
+      .map((part) => {
+        if (typeof part === 'string') {
+          return part;
+        }
+        if (part && typeof part === 'object' && 'text' in part && typeof part.text === 'string') {
+          return part.text;
+        }
+        return '';
+      })
+      .join('');
+
+    return combined.length > 0 ? combined : undefined;
+  }
+
+  if (typeof content === 'object' && 'text' in (content as Record<string, unknown>)) {
+    const maybeText = (content as Record<string, unknown>).text;
+    return typeof maybeText === 'string' && maybeText.length > 0 ? maybeText : undefined;
+  }
+
+  return undefined;
 }

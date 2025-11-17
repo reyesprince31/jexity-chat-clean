@@ -251,11 +251,14 @@ export default async function chatRoutes(
         let fullResponse = "";
 
         try {
-          for await (const token of stream) {
-            fullResponse += token;
+          for await (const chunk of stream) {
+            fullResponse += chunk.content;
             // Send token as SSE event
             reply.raw.write(
-              `data: ${JSON.stringify({ type: "token", content: token })}\n\n`
+              `data: ${JSON.stringify({
+                type: "token",
+                content: chunk.content,
+              })}\n\n`
             );
           }
 
