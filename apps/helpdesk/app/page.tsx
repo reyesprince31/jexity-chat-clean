@@ -47,8 +47,8 @@ const mockConversations: ConversationRecord[] = [
     customerName: "Kai Moreno",
     subject: "Escalated: subscription not updating",
     lastMessageSnippet:
-      "The payment went through but the plan is still the same.",
-    updatedAt: "2024-11-18T08:41:00Z",
+      "Looping in billing support so we can re-sync your plan.",
+    updatedAt: "2024-11-18T08:52:00Z",
     unreadCount: 0,
     status: "waiting",
     messages: [
@@ -69,6 +69,12 @@ const mockConversations: ConversationRecord[] = [
         sender: "assistant",
         body: "Can you confirm the last 4 digits of the card you used?",
         timestamp: "2024-11-18T08:41:00Z",
+      },
+      {
+        id: "conv-2-msg-4",
+        sender: "human_agent",
+        body: "Looping in billing now so we can re-sync your workspace.",
+        timestamp: "2024-11-18T08:52:00Z",
       },
     ],
   },

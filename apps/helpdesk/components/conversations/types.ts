@@ -10,7 +10,7 @@ export type ConversationSummary = {
 
 export type ConversationMessage = {
   id: string;
-  sender: "customer" | "assistant";
+  sender: "customer" | "assistant" | "human_agent" | "system";
   body: string;
   timestamp: string;
 };
