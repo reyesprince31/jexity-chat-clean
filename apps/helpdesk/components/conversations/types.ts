@@ -6,7 +6,6 @@ export type ConversationSummary = {
   updatedAt: string;
   unreadCount?: number;
   status: "open" | "waiting" | "resolved";
-  priority: "low" | "medium" | "high";
 };
 
 export type ConversationMessage = {
@@ -17,6 +16,5 @@ export type ConversationMessage = {
 };
 
 export type ConversationRecord = ConversationSummary & {
-  channel: "chat" | "email";
   messages: ConversationMessage[];
 };

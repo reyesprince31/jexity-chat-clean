@@ -52,8 +52,7 @@ export function ConversationsPanel({
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    {conversation.subject} •{" "}
-                    {conversation.priority.toUpperCase()}
+                    {conversation.subject}
                   </p>
                   <p className="mt-1 line-clamp-2 text-sm text-foreground/80">
                     {conversation.lastMessageSnippet}

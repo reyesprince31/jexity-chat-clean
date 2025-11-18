@@ -21,8 +21,6 @@ const mockConversations: ConversationRecord[] = [
     updatedAt: "2024-11-18T10:24:00Z",
     unreadCount: 2,
     status: "open",
-    priority: "medium",
-    channel: "chat",
     messages: [
       {
         id: "conv-1-msg-1",
@@ -53,8 +51,6 @@ const mockConversations: ConversationRecord[] = [
     updatedAt: "2024-11-18T08:41:00Z",
     unreadCount: 0,
     status: "waiting",
-    priority: "high",
-    channel: "chat",
     messages: [
       {
         id: "conv-2-msg-1",
@@ -85,8 +81,6 @@ const mockConversations: ConversationRecord[] = [
     updatedAt: "2024-11-17T16:15:00Z",
     unreadCount: 5,
     status: "open",
-    priority: "low",
-    channel: "email",
     messages: [
       {
         id: "conv-3-msg-1",
