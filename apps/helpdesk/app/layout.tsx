@@ -31,8 +31,8 @@ export default function RootLayout({
       >
         <SidebarProvider>
           <AppSidebar />
-          <SidebarInset className="h-svh bg-zinc-50 flex">
-            <div className="my-2 mr-2 grow">{children}</div>
+          <SidebarInset className="h-svh bg-zinc-100 flex">
+            <div className="py-2 pr-2 grow h-screen">{children}</div>
           </SidebarInset>
         </SidebarProvider>
       </body>

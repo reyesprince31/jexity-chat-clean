@@ -13,7 +13,7 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
-import { ConversationDetailPanel } from "@/components/conversations/ConversationDetailPanel";
+import { ConversationPanel } from "@/components/conversations/ConversationPanel";
 import { ConversationsPanel } from "@/components/conversations/ConversationsPanel";
 import type {
   ConversationMessage,
@@ -292,7 +292,7 @@ export default function Home() {
       </ResizablePanel>
       <ResizableHandle />
       <ResizablePanel className="min-w-0 bg-background">
-        <ConversationDetailPanel
+        <ConversationPanel
           conversation={selectedConversation}
           currentAgentName={AGENT_NAME}
           onJoinConversation={handleJoinConversation}
