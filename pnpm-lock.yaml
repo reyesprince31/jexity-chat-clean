@@ -21,13 +21,13 @@ importers:
   apps/api:
     dependencies:
       '@fastify/cors':
-        specifier: ^11.1.0
+        specifier: 11.1.0
         version: 11.1.0
       '@fastify/multipart':
         specifier: 9.2.1
         version: 9.2.1
       '@fastify/websocket':
-        specifier: ^11.2.0
+        specifier: 11.2.0
         version: 11.2.0
       '@langchain/core':
         specifier: 1.0.1
@@ -36,10 +36,10 @@ importers:
         specifier: 1.0.0
         version: 1.0.0(@langchain/core@1.0.1(@opentelemetry/api@1.9.0)(@opentelemetry/exporter-trace-otlp-proto@0.57.2(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@1.30.1(@opentelemetry/api@1.9.0))(openai@6.7.0(ws@8.18.0)(zod@4.1.12)))(ws@8.18.0)
       '@langchain/textsplitters':
-        specifier: ^1.0.0
+        specifier: 1.0.0
         version: 1.0.0(@langchain/core@1.0.1(@opentelemetry/api@1.9.0)(@opentelemetry/exporter-trace-otlp-proto@0.57.2(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@1.30.1(@opentelemetry/api@1.9.0))(openai@6.7.0(ws@8.18.0)(zod@4.1.12)))
       '@prisma/client':
-        specifier: ^6.18.0
+        specifier: 6.18.0
         version: 6.18.0(prisma@6.18.0(typescript@5.9.2))(typescript@5.9.2)
       '@repo/dto':
         specifier: workspace:*
@@ -57,7 +57,7 @@ importers:
         specifier: 3.44.3
         version: 3.44.3(encoding@0.1.13)(fastify@5.2.0)(next@16.0.3(@opentelemetry/api@1.9.0)(react-dom@19.2.0(react@19.2.0))(react@19.2.0))(typescript@5.9.2)(zod@4.1.12)
       langchain:
-        specifier: ^1.0.2
+        specifier: 1.0.2
         version: 1.0.2(@langchain/core@1.0.1(@opentelemetry/api@1.9.0)(@opentelemetry/exporter-trace-otlp-proto@0.57.2(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@1.30.1(@opentelemetry/api@1.9.0))(openai@6.7.0(ws@8.18.0)(zod@4.1.12)))(@opentelemetry/api@1.9.0)(@opentelemetry/exporter-trace-otlp-proto@0.57.2(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@1.30.1(@opentelemetry/api@1.9.0))(openai@6.7.0(ws@8.18.0)(zod@4.1.12))(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       pdf-parse:
         specifier: 2.4.5
@@ -88,7 +88,7 @@ importers:
         specifier: 13.1.2
         version: 13.1.2
       prisma:
-        specifier: ^6.18.0
+        specifier: 6.18.0
         version: 6.18.0(typescript@5.9.2)
       tsup:
         specifier: 8.3.5
@@ -164,31 +164,31 @@ importers:
   apps/helpdesk:
     dependencies:
       '@radix-ui/react-dialog':
-        specifier: ^1.1.15
+        specifier: 1.1.15
         version: 1.1.15(@types/react-dom@19.1.1(@types/react@19.1.0))(@types/react@19.1.0)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       '@radix-ui/react-popover':
         specifier: 1.1.15
         version: 1.1.15(@types/react-dom@19.1.1(@types/react@19.1.0))(@types/react@19.1.0)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       '@radix-ui/react-separator':
-        specifier: ^1.1.8
+        specifier: 1.1.8
         version: 1.1.8(@types/react-dom@19.1.1(@types/react@19.1.0))(@types/react@19.1.0)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       '@radix-ui/react-slot':
-        specifier: ^1.2.4
+        specifier: 1.2.4
         version: 1.2.4(@types/react@19.1.0)(react@19.2.0)
       '@radix-ui/react-tooltip':
-        specifier: ^1.2.8
+        specifier: 1.2.8
         version: 1.2.8(@types/react-dom@19.1.1(@types/react@19.1.0))(@types/react@19.1.0)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       '@repo/dto':
         specifier: workspace:*
         version: link:../../packages/dto
       class-variance-authority:
-        specifier: ^0.7.1
+        specifier: 0.7.1
         version: 0.7.1
       clsx:
         specifier: 2.1.1
         version: 2.1.1
       lucide-react:
-        specifier: ^0.554.0
+        specifier: 0.554.0
         version: 0.554.0(react@19.2.0)
       next:
         specifier: 16.0.3
@@ -200,7 +200,7 @@ importers:
         specifier: 19.2.0
         version: 19.2.0(react@19.2.0)
       react-resizable-panels:
-        specifier: ^3.0.6
+        specifier: 3.0.6
         version: 3.0.6(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       tailwind-merge:
         specifier: 3.3.1
@@ -228,7 +228,7 @@ importers:
         specifier: '4'
         version: 4.1.16
       tw-animate-css:
-        specifier: ^1.4.0
+        specifier: 1.4.0
         version: 1.4.0
       typescript:
         specifier: '5'
@@ -237,8 +237,8 @@ importers:
   packages/dto:
     dependencies:
       zod:
-        specifier: ^3.23.8
-        version: 3.25.76
+        specifier: 3.23.8
+        version: 3.23.8
     devDependencies:
       '@repo/eslint-config':
         specifier: workspace:*
@@ -247,10 +247,10 @@ importers:
         specifier: workspace:*
         version: link:../typescript-config
       '@types/node':
-        specifier: ^22.15.3
+        specifier: 22.15.3
         version: 22.15.3
       eslint:
-        specifier: ^9.34.0
+        specifier: 9.34.0
         version: 9.34.0(jiti@2.6.1)
       typescript:
         specifier: 5.9.2
@@ -5581,8 +5581,8 @@ packages:
     peerDependencies:
       zod: ^3.25.0 || ^4.0.0
 
-  zod@3.25.76:
-    resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
+  zod@3.23.8:
+    resolution: {integrity: sha512-XBx9AXhXktjUqnepgTiE5flcKIYWi/rme0Eaj+5Y0lftuGBq+jyRu/md4WnuxqgP1ubdpNCsYEYPxrzVHD8d6g==}
 
   zod@4.1.12:
     resolution: {integrity: sha512-JInaHOamG8pt5+Ey8kGmdcAcg3OL9reK8ltczgHTAwNhMys/6ThXHityHxVV2p3fkw/c+MAvBHFVYHFZDmjMCQ==}
@@ -8850,8 +8850,8 @@ snapshots:
       '@babel/parser': 7.28.5
       eslint: 9.34.0(jiti@2.6.1)
       hermes-parser: 0.25.1
-      zod: 3.25.76
-      zod-validation-error: 4.0.2(zod@3.25.76)
+      zod: 4.1.12
+      zod-validation-error: 4.0.2(zod@4.1.12)
     transitivePeerDependencies:
       - supports-color
 
@@ -11289,10 +11289,10 @@ snapshots:
 
   yocto-queue@0.1.0: {}
 
-  zod-validation-error@4.0.2(zod@3.25.76):
+  zod-validation-error@4.0.2(zod@4.1.12):
     dependencies:
-      zod: 3.25.76
+      zod: 4.1.12
 
-  zod@3.25.76: {}
+  zod@3.23.8: {}
 
   zod@4.1.12: {}
