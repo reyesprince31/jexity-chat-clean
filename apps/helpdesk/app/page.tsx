@@ -245,7 +245,7 @@ export default function Home() {
         );
       }
     },
-    []
+    [appendMessageToConversation]
   );
 
   /**

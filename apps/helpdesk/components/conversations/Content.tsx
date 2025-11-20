@@ -1,7 +1,166 @@
-import { useState } from "preact/hooks";
+"use client";
+
+import * as React from "react";
 import * as Popover from "@radix-ui/react-popover";
-import type { Source } from "../types/api";
-import { cn } from "../lib/utils";
+import type { Source } from "@repo/dto";
+import {
+  getContentSegments,
+  type ContentValue,
+  type MessageSegment,
+} from "@repo/ui/content";
+import { cn } from "@/lib/utils";
+
+const INLINE_MARKDOWN_REGEX =
+  /(\*\*[^*]+\*\*|__[^_]+__|\*[^*]+?\*|_[^_]+?_|\~\~[^~]+?\~\~|`[^`]+`|\[([^\]]+)\]\(([^)]+)\)|(https?:\/\/[^\s<]+))/g;
+
+function parseInlineMarkdown(text: string, keyPrefix: string) {
+  const nodes: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  let elementIndex = 0;
+
+  while ((match = INLINE_MARKDOWN_REGEX.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      nodes.push(
+        <span key={`${keyPrefix}-text-${elementIndex}`}>
+          {text.slice(lastIndex, match.index)}
+        </span>
+      );
+      elementIndex += 1;
+    }
+
+    const { 0: token, 2: linkText, 3: linkHref, 4: autoHref } = match;
+    let content: React.ReactNode;
+
+    if (token.startsWith("**") || token.startsWith("__")) {
+      content = (
+        <strong key={`${keyPrefix}-strong-${elementIndex}`}>
+          {token.slice(2, -2)}
+        </strong>
+      );
+    } else if (token.startsWith("~~")) {
+      content = (
+        <del key={`${keyPrefix}-del-${elementIndex}`}>{token.slice(2, -2)}</del>
+      );
+    } else if (token.startsWith("`")) {
+      content = (
+        <code
+          key={`${keyPrefix}-code-${elementIndex}`}
+          className="inline-code whitespace-pre-wrap"
+        >
+          {token.slice(1, -1)}
+        </code>
+      );
+    } else if (token.startsWith("*") || token.startsWith("_")) {
+      content = (
+        <em key={`${keyPrefix}-em-${elementIndex}`}>{token.slice(1, -1)}</em>
+      );
+    } else if (linkText && linkHref) {
+      content = (
+        <a
+          key={`${keyPrefix}-link-${elementIndex}`}
+          href={linkHref}
+          target="_blank"
+          rel="noreferrer"
+          className="text-blue-600 underline hover:text-blue-700"
+        >
+          {linkText}
+        </a>
+      );
+    } else if (autoHref) {
+      content = (
+        <a
+          key={`${keyPrefix}-autolink-${elementIndex}`}
+          href={autoHref}
+          target="_blank"
+          rel="noreferrer"
+          className="text-blue-600 underline hover:text-blue-700"
+        >
+          {autoHref}
+        </a>
+      );
+    } else {
+      content = <span key={`${keyPrefix}-text-${elementIndex}`}>{token}</span>;
+    }
+
+    nodes.push(content);
+    elementIndex += 1;
+    lastIndex = INLINE_MARKDOWN_REGEX.lastIndex;
+  }
+
+  if (lastIndex < text.length) {
+    nodes.push(
+      <span key={`${keyPrefix}-text-${elementIndex}`}>
+        {text.slice(lastIndex)}
+      </span>
+    );
+  }
+
+  return nodes;
+}
+
+function renderTextContent(content: string, key: string) {
+  if (content.length === 0) {
+    return null;
+  }
+
+  const lines = content.split(/\n/);
+  return lines.map((line, lineIndex) => (
+    <React.Fragment key={`${key}-line-${lineIndex}`}>
+      {parseInlineMarkdown(line, `${key}-line-${lineIndex}`)}
+      {lineIndex < lines.length - 1 ? <br /> : null}
+    </React.Fragment>
+  ));
+}
+
+interface ContentProps {
+  value: ContentValue;
+  sources?: Source[];
+  hideIncompleteCitations?: boolean;
+  className?: string;
+}
+
+export function Content({
+  value,
+  sources = [],
+  hideIncompleteCitations = false,
+  className,
+}: ContentProps) {
+  const segments = React.useMemo(
+    () =>
+      getContentSegments(value, {
+        hideIncompleteCitations,
+      }),
+    [value, hideIncompleteCitations]
+  );
+
+  if (segments.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className={cn("content-renderer whitespace-pre-wrap", className)}>
+      {segments.map((segment: MessageSegment, idx: number) =>
+        segment.type === "text" ? (
+          <React.Fragment key={`text-${idx}`}>
+            {renderTextContent(segment.content, `segment-${idx}`)}
+          </React.Fragment>
+        ) : (
+          <InlineCitation
+            key={`citation-${idx}`}
+            content={segment.content}
+            indices={segment.indices}
+            sources={segment.indices.map(
+              (citationIndex: number) => sources?.[citationIndex]
+            )}
+            supportingTexts={segment.supportingTexts}
+            filenames={segment.filenames}
+          />
+        )
+      )}
+    </div>
+  );
+}
 
 interface InlineCitationProps {
   content: string;
@@ -12,7 +171,7 @@ interface InlineCitationProps {
   className?: string;
 }
 
-export function InlineCitation({
+function InlineCitation({
   content,
   indices,
   sources = [],
@@ -20,7 +179,7 @@ export function InlineCitation({
   filenames = [],
   className,
 }: InlineCitationProps) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = React.useState(false);
 
   const sourceEntries = indices.map((citationIndex, idx) => {
     const rawFilename = filenames[idx];

@@ -6,8 +6,6 @@ generator client {
 
 datasource db {
   provider   = "postgresql"
-  url        = env("DATABASE_URL")
-  directUrl  = env("DIRECT_URL")
   extensions = [vector]
 }
 
@@ -43,54 +41,54 @@ model documents {
 /// Documents are split into overlapping chunks (1000 chars, 200 overlap) to enable
 /// precise semantic search and handle large documents within embedding token limits.
 model document_chunks {
-  id          String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id              String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   /// Foreign key to parent document - links chunk back to its source document
-  document_id String                 @db.Uuid
+  document_id     String                 @db.Uuid
   /// Position of chunk in document (0, 1, 2...) - used to retrieve chunks in order
-  chunk_index Int
+  chunk_index     Int
   /// The actual text content of this chunk - returned in search results
-  content     String
+  content         String
   /// Estimated token count (~chars/4) - useful for cost tracking and debugging
-  token_count Int?
+  token_count     Int?
   /// 3072-dimensional vector embedding from OpenAI (text-embedding-3-large)
   /// Used for cosine similarity search with pgvector's <=> operator
-  embedding   Unsupported("vector")?
+  embedding       Unsupported("vector")?
   /// JSON metadata storing chunk position info: chunkIndex, startPosition, endPosition, length
   /// Useful for highlighting matches and retrieving surrounding context
-  metadata    Json?
-  created_at  DateTime               @default(now()) @db.Timestamptz(6)
-  document    documents              @relation(fields: [document_id], references: [id], onDelete: Cascade)
+  metadata        Json?
+  created_at      DateTime               @default(now()) @db.Timestamptz(6)
+  document        documents              @relation(fields: [document_id], references: [id], onDelete: Cascade)
+  message_sources message_sources[]
 
   @@unique([document_id, chunk_index], map: "idx_document_chunks_unique")
   @@index([document_id], map: "idx_document_chunks_document_id")
-  message_sources message_sources[]
 }
 
 /// Stores chat conversations - each conversation is a separate chat session
 model conversations {
-  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id               String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   /// Optional title for the conversation - can be auto-generated from first message
-  title      String?
+  title            String?
   /// Indicates whether the conversation has been escalated to a human agent
-  is_escalated Boolean  @default(false)
+  is_escalated     Boolean    @default(false)
   /// Optional escalation reason captured when the AI routes to a human
   escalated_reason String?
   /// Timestamp of when the conversation was escalated
-  escalated_at DateTime? @db.Timestamptz(6)
+  escalated_at     DateTime?  @db.Timestamptz(6)
   /// Indicates whether the conversation has been resolved by a human agent
-  is_resolved Boolean @default(false)
+  is_resolved      Boolean    @default(false)
   /// Timestamp of when the conversation was resolved
-  resolved_at DateTime? @db.Timestamptz(6)
+  resolved_at      DateTime?  @db.Timestamptz(6)
   /// Name of the agent that closed the conversation
-  resolved_by String?
+  resolved_by      String?
   /// (Optional) Name of the human agent that picked up the conversation
-  agent_name String?
+  agent_name       String?
   /// Timestamp of when the agent joined the conversation
-  agent_joined_at DateTime? @db.Timestamptz(6)
-  created_at DateTime  @default(now()) @db.Timestamptz(6)
-  updated_at DateTime  @default(now()) @db.Timestamptz(6)
+  agent_joined_at  DateTime?  @db.Timestamptz(6)
+  created_at       DateTime   @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime   @default(now()) @db.Timestamptz(6)
   /// Relation to messages - one conversation has many messages
-  messages   messages[]
+  messages         messages[]
 
   @@index([created_at(sort: Desc)], map: "idx_conversations_created_at")
   @@index([updated_at(sort: Desc)], map: "idx_conversations_updated_at")

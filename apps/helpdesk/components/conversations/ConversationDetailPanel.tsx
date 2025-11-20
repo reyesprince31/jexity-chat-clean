@@ -4,6 +4,7 @@ import * as React from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 
 import type { ConversationMessage, ConversationRecord } from "./types";
+import { Content } from "./Content";
 
 import { Button } from "@/components/ui/button";
 import { cn, formatDetailTimestamp } from "@/lib/utils";
@@ -320,7 +321,7 @@ function HumanAgentBubble({ message, agentName }: HumanAgentBubbleProps) {
         {agentName}
       </span>
       <div className="max-w-[480px] rounded-lg bg-primary/90 px-4 py-2 text-primary-foreground shadow-sm">
-        {message.body}
+        <Content value={message.body} />
       </div>
       <span className="text-xs text-muted-foreground">
         {formatDetailTimestamp(message.timestamp)}
@@ -333,7 +334,7 @@ function AiAgentBubble({ message }: MessageComponentProps) {
   return (
     <article className="flex flex-col items-end gap-1 text-sm">
       <div className="max-w-[480px] rounded-lg bg-primary px-4 py-2 text-primary-foreground shadow-sm">
-        {message.body}
+        <Content value={message.body} />
       </div>
       <span className="text-xs text-muted-foreground">
         {formatDetailTimestamp(message.timestamp)}
@@ -346,7 +347,7 @@ function CustomerBubble({ message }: MessageComponentProps) {
   return (
     <article className="flex flex-col items-start gap-1 text-sm">
       <div className="max-w-[480px] rounded-lg bg-muted px-4 py-2 text-foreground shadow-sm">
-        {message.body}
+        <Content value={message.body} />
       </div>
       <span className="text-xs text-muted-foreground">
         {formatDetailTimestamp(message.timestamp)}
