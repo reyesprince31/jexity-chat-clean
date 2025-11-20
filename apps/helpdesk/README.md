@@ -1,36 +1,59 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Helpdesk Dashboard
 
-## Getting Started
+Next.js dashboard that surfaces escalated widget conversations in real time so human agents can claim, reply, and resolve threads.
 
-First, run the development server:
+## Key Features
+
+- Live list of escalated conversations pulled from `GET /helpdesk/escalations`
+- Websocket feed (`/ws/helpdesk`) for new escalations, agent claims, messages, and resolutions
+- Claim/resolve workflow that locks the widget and displays system banners
+- Inline transcript viewer with system breadcrumbs (escalated, joined, resolved)
+
+## Local Development
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
+pnpm dev --filter helpdesk
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Set the following env vars (e.g., via `.env.local`):
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```
+NEXT_PUBLIC_API_URL=http://localhost:3001
+NEXT_PUBLIC_API_WS_URL=ws://localhost:3001
+NEXT_PUBLIC_AGENT_NAME=Your Name
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Agent Workflow
 
-## Learn More
+```mermaid
+sequenceDiagram
+    participant Widget
+    participant API
+    participant Helpdesk
 
-To learn more about Next.js, take a look at the following resources:
+    Widget->>API: POST /conversations/:id/messages (escalated)
+    API-->>Helpdesk: ws helpdesk.conversation_escalated
+    Helpdesk->>API: POST /helpdesk/conversations/:id/agent/join
+    API-->>Widget: ws agent_joined
+    Helpdesk->>API: POST /helpdesk/conversations/:id/messages
+    API-->>Widget: ws agent_message
+    Helpdesk->>API: POST /helpdesk/conversations/:id/resolve
+    API-->>Helpdesk: ws helpdesk.conversation_resolved
+    API-->>Widget: ws resolved
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Files of Interest
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- `app/page.tsx` – Shell that loads conversations, opens websockets, and wires state.
+- `components/conversations/ConversationsPanel.tsx` – Sidebar list.
+- `components/conversations/ConversationDetailPanel.tsx` – Transcript, claim, resolve UI.
+- `lib/api.ts` – Thin client for helpdesk-specific endpoints.
 
-## Deploy on Vercel
+## Testing & Linting
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+pnpm lint --filter helpdesk
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+End-to-end flows currently rely on the API + widget running locally; start those apps before testing claim/resolve behavior.

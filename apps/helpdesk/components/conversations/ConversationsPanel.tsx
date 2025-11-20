@@ -10,12 +10,14 @@ type ConversationsPanelProps = {
   conversations: ConversationSummary[];
   activeConversationId?: string;
   onSelectConversation: (conversationId: string) => void;
+  isLoading?: boolean;
 };
 
 export function ConversationsPanel({
   conversations,
   activeConversationId,
   onSelectConversation,
+  isLoading = false,
 }: ConversationsPanelProps) {
   return (
     <section className="flex h-full flex-col bg-card">
@@ -28,7 +30,9 @@ export function ConversationsPanel({
       </header>
 
       <div className="flex-1 overflow-y-auto">
-        {conversations.length === 0 ? (
+        {isLoading ? (
+          <LoadingState />
+        ) : conversations.length === 0 ? (
           <EmptyState />
         ) : (
           <ul className="divide-border divide-y">
@@ -57,8 +61,17 @@ export function ConversationsPanel({
                   <p className="mt-1 line-clamp-2 text-sm text-foreground/80">
                     {conversation.lastMessageSnippet}
                   </p>
-                  <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                  <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                     <StatusPill status={conversation.status} />
+                    {conversation.agentName ? (
+                      <span className="text-muted-foreground/80">
+                        Claimed by {conversation.agentName}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground/80">
+                        Waiting for agent
+                      </span>
+                    )}
                     {conversation.unreadCount ? (
                       <span className="bg-primary text-primary-foreground inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold">
                         {conversation.unreadCount} new
@@ -72,6 +85,14 @@ export function ConversationsPanel({
         )}
       </div>
     </section>
+  );
+}
+
+function LoadingState() {
+  return (
+    <div className="flex h-full flex-col items-center justify-center px-6 text-center text-sm text-muted-foreground">
+      <p>Loading escalated conversations…</p>
+    </div>
   );
 }
 

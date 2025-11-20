@@ -16,6 +16,20 @@ export class ApiClient {
     this.baseUrl = baseUrl || API_URL;
   }
 
+  private buildWsUrl(path: string): string {
+    const normalizedBase = this.baseUrl.replace(/\/+$/, "");
+
+    if (normalizedBase.startsWith("http")) {
+      return normalizedBase.replace(/^http/, "ws") + path;
+    }
+
+    if (normalizedBase.startsWith("ws")) {
+      return normalizedBase + path;
+    }
+
+    return path;
+  }
+
   /**
    * Create a new conversation
    */
@@ -153,60 +167,34 @@ export class ApiClient {
     conversationId: string,
     onEvent: (event: StreamEvent) => void
   ): () => void {
-    const controller = new AbortController();
-    const url = `${this.baseUrl}/conversations/${conversationId}/events`;
+    const url = this.buildWsUrl(`/ws/conversations/${conversationId}`);
+    const socket = new WebSocket(url);
 
-    (async () => {
+    const handleMessage = (event: MessageEvent<string>) => {
       try {
-        const response = await fetch(url, {
-          method: 'GET',
-          headers: {
-            Accept: 'text/event-stream',
-          },
-          signal: controller.signal,
-        });
-
-        if (!response.ok) {
-          throw new Error(`Failed to subscribe: ${response.statusText}`);
-        }
-        if (!response.body) {
-          throw new Error('Response body is null');
-        }
-
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = '';
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split('\n\n');
-          buffer = lines.pop() || '';
-
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              const data = line.slice(6);
-              try {
-                const event = JSON.parse(data) as StreamEvent;
-                onEvent(event);
-              } catch (error) {
-                console.error('Failed to parse conversation event:', error);
-              }
-            }
-          }
-        }
+        const parsed = JSON.parse(event.data) as StreamEvent;
+        onEvent(parsed);
       } catch (error) {
-        if ((error as DOMException)?.name === 'AbortError') {
-          return;
-        }
-        console.error('Conversation event stream terminated:', error);
+        console.error('Failed to parse conversation websocket event:', error);
       }
-    })();
+    };
+
+    const handleError = (error: Event) => {
+      console.error('Conversation websocket error:', error);
+    };
+
+    socket.addEventListener('message', handleMessage);
+    socket.addEventListener('error', handleError);
 
     return () => {
-      controller.abort();
+      socket.removeEventListener('message', handleMessage);
+      socket.removeEventListener('error', handleError);
+      if (
+        socket.readyState === WebSocket.OPEN ||
+        socket.readyState === WebSocket.CONNECTING
+      ) {
+        socket.close();
+      }
     };
   }
 }

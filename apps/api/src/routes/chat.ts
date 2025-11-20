@@ -34,7 +34,6 @@ import {
   getMessageWithSources,
   setConversationEscalationStatus,
   setConversationAgentJoin,
-  type Conversation,
 } from "../lib/database.js";
 import {
   streamChatWithRAG,
@@ -43,6 +42,12 @@ import {
 } from "../lib/chat.js";
 import { evaluateEscalationNeed } from "../lib/escalation.js";
 import { conversationEventHub } from "../lib/conversation-events.js";
+import {
+  serializeConversation,
+  serializeConversationWithMessages,
+  serializeMessage,
+} from "../lib/serializers.js";
+import { realtimeGateway } from "../lib/realtime.js";
 
 // Request/Response Types (Fastify-specific structure)
 interface CreateConversationRequest {
@@ -90,27 +95,6 @@ interface AgentJoinRequest {
   };
   Body: {
     agentName?: string;
-  };
-}
-
-/**
- * Convert a database conversation record into the DTO returned by the API.
- */
-function serializeConversation(conversation: Conversation) {
-  return {
-    id: conversation.id,
-    title: conversation.title,
-    isEscalated: conversation.is_escalated,
-    escalatedReason: conversation.escalated_reason,
-    escalatedAt: conversation.escalated_at
-      ? conversation.escalated_at.toISOString()
-      : null,
-    agentName: conversation.agent_name,
-    agentJoinedAt: conversation.agent_joined_at
-      ? conversation.agent_joined_at.toISOString()
-      : null,
-    createdAt: conversation.created_at.toISOString(),
-    updatedAt: conversation.updated_at.toISOString(),
   };
 }
 
@@ -251,6 +235,44 @@ export default async function chatRoutes(
           });
         }
 
+        const emitResolvedEvent = (resolved: typeof conversation) => {
+          const resolvedAt = (resolved.resolved_at ?? new Date()).toISOString();
+          setSseHeaders(reply);
+          reply.raw.write(
+            `data: ${JSON.stringify({
+              type: "resolved",
+              conversationId,
+              resolvedBy: resolved.resolved_by ?? resolved.agent_name ?? null,
+              resolvedAt,
+            })}\n\n`
+          );
+          reply.raw.end();
+        };
+
+        if (conversation.is_resolved) {
+          emitResolvedEvent(conversation);
+          return;
+        }
+
+        // Save user message to database
+        const savedUserMessage = await createMessage({
+          conversation_id: conversationId,
+          role: "user",
+          content: userMessage,
+        });
+
+        fastify.log.info(
+          `User message saved to conversation: ${conversationId}`
+        );
+
+        const emitEscalatedMessageEvent = () => {
+          realtimeGateway.broadcastHelpdesk({
+            type: "helpdesk.message_created",
+            conversationId,
+            message: serializeMessage(savedUserMessage),
+          });
+        };
+
         // Prevent AI responses if conversation already escalated.
         if (conversation.is_escalated) {
           setSseHeaders(reply);
@@ -262,20 +284,10 @@ export default async function chatRoutes(
               escalatedAt: (conversation.escalated_at ?? new Date()).toISOString(),
             })}\n\n`
           );
+          emitEscalatedMessageEvent();
           reply.raw.end();
           return;
         }
-
-        // Save user message to database
-        await createMessage({
-          conversation_id: conversationId,
-          role: "user",
-          content: userMessage,
-        });
-
-        fastify.log.info(
-          `User message saved to conversation: ${conversationId}`
-        );
 
         // Get conversation history (excluding the just-added user message for now)
         const messages = await getMessages(conversationId);
@@ -298,6 +310,18 @@ export default async function chatRoutes(
             reason: escalationDecision.reason,
             escalatedAt,
           });
+
+          const escalatedConversation = await getConversationWithMessages(
+            conversationId
+          );
+          if (escalatedConversation) {
+            realtimeGateway.broadcastHelpdesk({
+              type: "helpdesk.conversation_escalated",
+              conversation: serializeConversationWithMessages(
+                escalatedConversation
+              ),
+            });
+          }
 
           fastify.log.info(
             `Conversation ${conversationId} escalated: ${escalationDecision.reason}`
@@ -441,15 +465,7 @@ export default async function chatRoutes(
 
         return reply.code(200).send({
           success: true,
-          conversation: {
-            ...serializeConversation(conversation),
-            messages: conversation.messages.map((msg) => ({
-              id: msg.id,
-              role: msg.role,
-              content: msg.content,
-              createdAt: msg.created_at.toISOString(),
-            })),
-          },
+          conversation: serializeConversationWithMessages(conversation),
         });
       } catch (error) {
         fastify.log.error(error);
@@ -719,17 +735,42 @@ export default async function chatRoutes(
           });
         }
 
+        if (
+          conversation.agent_name &&
+          conversation.agent_name !== agentName
+        ) {
+          return reply.code(409).send({
+            success: false,
+            message: `Conversation already claimed by ${conversation.agent_name}`,
+          });
+        }
+
+        if (conversation.agent_name === agentName) {
+          return reply.code(200).send({
+            success: true,
+            conversation: serializeConversation(conversation),
+          });
+        }
+
         const updated = await setConversationAgentJoin(id, {
           agentName,
         });
 
         const joinedAt = updated.agent_joined_at?.toISOString();
         if (joinedAt) {
-          conversationEventHub.emit(id, {
+          const eventPayload = {
             type: "agent_joined",
             conversationId: id,
             agentName,
             joinedAt,
+          } as const;
+          conversationEventHub.emit(id, eventPayload);
+          realtimeGateway.emitConversationEvent(id, eventPayload);
+          realtimeGateway.broadcastHelpdesk({
+            type: "helpdesk.conversation_claimed",
+            conversationId: id,
+            agentName,
+            agentJoinedAt: joinedAt,
           });
         }
 

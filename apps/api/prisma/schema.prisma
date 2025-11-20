@@ -77,6 +77,12 @@ model conversations {
   escalated_reason String?
   /// Timestamp of when the conversation was escalated
   escalated_at DateTime? @db.Timestamptz(6)
+  /// Indicates whether the conversation has been resolved by a human agent
+  is_resolved Boolean @default(false)
+  /// Timestamp of when the conversation was resolved
+  resolved_at DateTime? @db.Timestamptz(6)
+  /// Name of the agent that closed the conversation
+  resolved_by String?
   /// (Optional) Name of the human agent that picked up the conversation
   agent_name String?
   /// Timestamp of when the agent joined the conversation
@@ -88,6 +94,7 @@ model conversations {
 
   @@index([created_at(sort: Desc)], map: "idx_conversations_created_at")
   @@index([updated_at(sort: Desc)], map: "idx_conversations_updated_at")
+  @@index([is_resolved, updated_at(sort: Desc)], map: "idx_conversations_resolved")
 }
 
 /// Stores individual messages in conversations (user and assistant messages)

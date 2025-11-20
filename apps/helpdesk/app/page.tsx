@@ -2,6 +2,12 @@
 
 import * as React from "react";
 
+import type {
+  HelpdeskConversation,
+  HelpdeskSocketEvent,
+  Message,
+} from "@repo/dto";
+
 import {
   ResizableHandle,
   ResizablePanel,
@@ -9,118 +15,265 @@ import {
 } from "@/components/ui/resizable";
 import { ConversationDetailPanel } from "@/components/conversations/ConversationDetailPanel";
 import { ConversationsPanel } from "@/components/conversations/ConversationsPanel";
-import type { ConversationRecord } from "@/components/conversations/types";
+import type {
+  ConversationMessage,
+  ConversationRecord,
+} from "@/components/conversations/types";
+import {
+  claimConversation,
+  fetchEscalatedConversations,
+  openHelpdeskSocket,
+  sendAgentMessage,
+  resolveConversation,
+} from "@/lib/api";
 
-const mockConversations: ConversationRecord[] = [
-  {
-    id: "conv-1",
-    customerName: "Jasmine Patel",
-    subject: "Widget onboarding question",
-    lastMessageSnippet:
-      "I can't find the billing tab anywhere inside the widget.",
-    updatedAt: "2024-11-18T10:24:00Z",
-    unreadCount: 2,
-    status: "open",
-    messages: [
-      {
-        id: "conv-1-msg-1",
-        sender: "customer",
-        body: "Hi! I'm trying to enable billing in the widget but I can't find the tab.",
-        timestamp: "2024-11-18T09:58:00Z",
-      },
-      {
-        id: "conv-1-msg-2",
-        sender: "assistant",
-        body: "No worries, it's tucked under Settings -> Billing. Do you see it there?",
-        timestamp: "2024-11-18T10:05:00Z",
-      },
-      {
-        id: "conv-1-msg-3",
-        sender: "customer",
-        body: "I only see Integrations and Themes -- nothing else.",
-        timestamp: "2024-11-18T10:24:00Z",
-      },
-    ],
-  },
-  {
-    id: "conv-2",
-    customerName: "Kai Moreno",
-    subject: "Escalated: subscription not updating",
-    lastMessageSnippet:
-      "Looping in billing support so we can re-sync your plan.",
-    updatedAt: "2024-11-18T08:52:00Z",
-    unreadCount: 0,
-    status: "waiting",
-    messages: [
-      {
-        id: "conv-2-msg-1",
-        sender: "customer",
-        body: "I upgraded yesterday but my workspace still shows Starter.",
-        timestamp: "2024-11-18T08:02:00Z",
-      },
-      {
-        id: "conv-2-msg-2",
-        sender: "assistant",
-        body: "Thanks for flagging. Let me refresh your subscription status on our side.",
-        timestamp: "2024-11-18T08:18:00Z",
-      },
-      {
-        id: "conv-2-msg-3",
-        sender: "assistant",
-        body: "Can you confirm the last 4 digits of the card you used?",
-        timestamp: "2024-11-18T08:41:00Z",
-      },
-      {
-        id: "conv-2-msg-4",
-        sender: "human_agent",
-        body: "Looping in billing now so we can re-sync your workspace.",
-        timestamp: "2024-11-18T08:52:00Z",
-      },
-    ],
-  },
-  {
-    id: "conv-3",
-    customerName: "Studio North",
-    subject: "Need transcript of October chats",
-    lastMessageSnippet:
-      "Is there a way to export every conversation from last month?",
-    updatedAt: "2024-11-17T16:15:00Z",
-    unreadCount: 5,
-    status: "open",
-    messages: [
-      {
-        id: "conv-3-msg-1",
-        sender: "customer",
-        body: "We promised a compliance audit, so I need exports of October chats.",
-        timestamp: "2024-11-17T15:01:00Z",
-      },
-      {
-        id: "conv-3-msg-2",
-        sender: "assistant",
-        body: "Sure thing. Do you need them grouped by agent or a single CSV?",
-        timestamp: "2024-11-17T15:32:00Z",
-      },
-      {
-        id: "conv-3-msg-3",
-        sender: "customer",
-        body: "Single CSV is perfect. Earlier months would help too if possible.",
-        timestamp: "2024-11-17T16:15:00Z",
-      },
-    ],
-  },
-];
+const AGENT_NAME = process.env.NEXT_PUBLIC_AGENT_NAME || "First Agent";
+
+const ROLE_TO_SENDER: Record<Message["role"], ConversationMessage["sender"]> = {
+  user: "customer",
+  assistant: "assistant",
+  system: "system",
+  human_agent: "human_agent",
+};
+
+const sortConversations = (items: ConversationRecord[]) =>
+  [...items].sort(
+    (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+  );
 
 export default function Home() {
-  const [activeConversationId, setActiveConversationId] = React.useState<
-    string | undefined
-  >(() => mockConversations[0]?.id);
+  const [conversations, setConversations] = React.useState<
+    ConversationRecord[]
+  >([]);
+  const [activeConversationId, setActiveConversationId] =
+    React.useState<string>();
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [joiningConversationId, setJoiningConversationId] = React.useState<
+    string | null
+  >(null);
+  const [drafts, setDrafts] = React.useState<Record<string, string>>({});
+  const [sendingConversationId, setSendingConversationId] = React.useState<
+    string | null
+  >(null);
+  const [resolvingConversationId, setResolvingConversationId] = React.useState<
+    string | null
+  >(null);
+
+  const upsertConversation = React.useCallback((record: ConversationRecord) => {
+    setConversations((prev) => {
+      const next = [...prev];
+      const index = next.findIndex(
+        (conversation) => conversation.id === record.id
+      );
+      if (index === -1) {
+        next.push(record);
+      } else {
+        next[index] = record;
+      }
+      return sortConversations(next);
+    });
+  }, []);
+
+  const updateConversationMetadata = React.useCallback(
+    (conversationId: string, updates: Partial<ConversationRecord>) => {
+      setConversations((prev) => {
+        const index = prev.findIndex(
+          (conversation) => conversation.id === conversationId
+        );
+        if (index === -1) {
+          return prev;
+        }
+
+        const next = [...prev];
+        const merged = { ...next[index], ...updates } as ConversationRecord;
+        if (merged.isResolved) {
+          merged.status = "resolved";
+        }
+        next[index] = merged;
+        return sortConversations(next);
+      });
+    },
+    []
+  );
+
+  /**
+   * Inserts a freshly streamed message (widget/user/agent) into the cached
+   * transcript while keeping derived fields like snippet/updatedAt in sync.
+   */
+  const appendMessageToConversation = React.useCallback(
+    (conversationId: string, message: Message) => {
+      setConversations((prev) => {
+        const index = prev.findIndex(
+          (conversation) => conversation.id === conversationId
+        );
+        if (index === -1) {
+          return prev;
+        }
+
+        const mappedMessage = mapMessageToRecord(message);
+        const next = [...prev];
+
+        if (next[index].messages.some((msg) => msg.id === mappedMessage.id)) {
+          return prev;
+        }
+
+        next[index] = {
+          ...next[index],
+          messages: [...next[index].messages, mappedMessage],
+          lastMessageSnippet: mappedMessage.body,
+          updatedAt: mappedMessage.timestamp,
+        };
+
+        return sortConversations(next);
+      });
+    },
+    []
+  );
+
+  React.useEffect(() => {
+    let cancelled = false;
+
+    async function loadEscalations() {
+      try {
+        setIsLoading(true);
+        const response = await fetchEscalatedConversations();
+        if (cancelled) return;
+        const normalized = response.map(normalizeConversation);
+        setConversations(sortConversations(normalized));
+        setActiveConversationId((prev) => prev ?? normalized[0]?.id);
+      } catch (error) {
+        console.error("Failed to load escalated conversations", error);
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    loadEscalations();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  React.useEffect(() => {
+    const dispose = openHelpdeskSocket((event: HelpdeskSocketEvent) => {
+      switch (event.type) {
+        case "helpdesk.conversation_escalated": {
+          upsertConversation(normalizeConversation(event.conversation));
+          setActiveConversationId((prev) => prev ?? event.conversation.id);
+          return;
+        }
+        case "helpdesk.conversation_claimed": {
+          updateConversationMetadata(event.conversationId, {
+            agentName: event.agentName,
+            agentJoinedAt: event.agentJoinedAt,
+            status: "waiting",
+          });
+          return;
+        }
+        case "helpdesk.message_created": {
+          appendMessageToConversation(event.conversationId, event.message);
+          return;
+        }
+        case "helpdesk.conversation_resolved": {
+          updateConversationMetadata(event.conversationId, {
+            isResolved: true,
+            resolvedAt: event.resolvedAt,
+            resolvedBy: event.resolvedBy,
+            status: "resolved",
+          });
+          return;
+        }
+        default:
+          return;
+      }
+    });
+
+    return () => {
+      dispose();
+    };
+  }, [
+    appendMessageToConversation,
+    upsertConversation,
+    updateConversationMetadata,
+  ]);
+
+  const handleJoinConversation = React.useCallback(
+    async (conversationId: string) => {
+      try {
+        setJoiningConversationId(conversationId);
+        const updated = await claimConversation(conversationId, AGENT_NAME);
+        updateConversationMetadata(conversationId, {
+          agentName: updated.agentName ?? AGENT_NAME,
+          agentJoinedAt: updated.agentJoinedAt ?? new Date().toISOString(),
+          status: "waiting",
+        });
+      } catch (error) {
+        console.error("Failed to claim conversation", error);
+      } finally {
+        setJoiningConversationId(null);
+      }
+    },
+    [updateConversationMetadata]
+  );
+
+  const handleDraftChange = React.useCallback(
+    (conversationId: string, value: string) => {
+      setDrafts((prev) => ({ ...prev, [conversationId]: value }));
+    },
+    []
+  );
+
+  const handleSendAgentMessage = React.useCallback(
+    async (conversationId: string, body: string) => {
+      try {
+        setSendingConversationId(conversationId);
+        const message = await sendAgentMessage(
+          conversationId,
+          AGENT_NAME,
+          body
+        );
+        appendMessageToConversation(conversationId, message);
+        setDrafts((prev) => ({ ...prev, [conversationId]: "" }));
+      } catch (error) {
+        console.error("Failed to send agent message", error);
+      } finally {
+        setSendingConversationId((current) =>
+          current === conversationId ? null : current
+        );
+      }
+    },
+    []
+  );
+
+  /**
+   * Marks a conversation as resolved via the API so every client instantly
+   * locks the UI. Errors are logged but left unobtrusive for MVP.
+   */
+  const handleResolveConversation = React.useCallback(
+    async (conversationId: string) => {
+      try {
+        setResolvingConversationId(conversationId);
+        await resolveConversation(conversationId, AGENT_NAME);
+      } catch (error) {
+        console.error("Failed to resolve conversation", error);
+      } finally {
+        setResolvingConversationId((current) =>
+          current === conversationId ? null : current
+        );
+      }
+    },
+    []
+  );
 
   const selectedConversation = React.useMemo(
     () =>
-      mockConversations.find(
+      conversations.find(
         (conversation) => conversation.id === activeConversationId
       ),
-    [activeConversationId]
+    [activeConversationId, conversations]
   );
 
   return (
@@ -131,15 +284,69 @@ export default function Home() {
         className="min-w-[280px] border-border/80 border-r bg-card"
       >
         <ConversationsPanel
-          conversations={mockConversations}
+          conversations={conversations}
           activeConversationId={activeConversationId}
           onSelectConversation={setActiveConversationId}
+          isLoading={isLoading}
         />
       </ResizablePanel>
       <ResizableHandle />
       <ResizablePanel className="min-w-0 bg-background">
-        <ConversationDetailPanel conversation={selectedConversation} />
+        <ConversationDetailPanel
+          conversation={selectedConversation}
+          currentAgentName={AGENT_NAME}
+          onJoinConversation={handleJoinConversation}
+          joiningConversationId={joiningConversationId}
+          draft={selectedConversation ? drafts[selectedConversation.id] : ""}
+          onDraftChange={handleDraftChange}
+          onSendMessage={handleSendAgentMessage}
+          sendingConversationId={sendingConversationId}
+          onResolveConversation={handleResolveConversation}
+          resolvingConversationId={resolvingConversationId}
+        />
       </ResizablePanel>
     </ResizablePanelGroup>
   );
+}
+
+function normalizeConversation(
+  conversation: HelpdeskConversation
+): ConversationRecord {
+  const lastMessage = conversation.messages.at(-1);
+  const isResolved = conversation.isResolved;
+  const status: ConversationRecord["status"] = isResolved
+    ? "resolved"
+    : conversation.agentName
+      ? "waiting"
+      : "open";
+
+  return {
+    id: conversation.id,
+    customerName: conversation.title || "Site visitor",
+    subject:
+      conversation.escalatedReason ||
+      `Escalated conversation ${conversation.id.slice(0, 8)}`,
+    lastMessageSnippet: lastMessage?.content || "Awaiting context",
+    updatedAt: conversation.updatedAt,
+    status,
+    messages: conversation.messages.map(mapMessageToRecord),
+    escalatedReason: conversation.escalatedReason,
+    agentName: conversation.agentName,
+    agentJoinedAt: conversation.agentJoinedAt,
+    escalatedAt: conversation.escalatedAt,
+    isResolved,
+    resolvedAt: conversation.resolvedAt,
+    resolvedBy: conversation.resolvedBy,
+  };
+}
+
+function mapMessageToRecord(message: Message): ConversationMessage {
+  const sender = ROLE_TO_SENDER[message.role] || "system";
+
+  return {
+    id: message.id,
+    sender,
+    body: message.content,
+    timestamp: message.createdAt,
+  };
 }

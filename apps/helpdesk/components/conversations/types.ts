@@ -6,6 +6,12 @@ export type ConversationSummary = {
   updatedAt: string;
   unreadCount?: number;
   status: "open" | "waiting" | "resolved";
+  escalatedReason?: string | null;
+  agentName?: string | null;
+  escalatedAt?: string | null;
+  isResolved?: boolean;
+  resolvedAt?: string | null;
+  resolvedBy?: string | null;
 };
 
 export type ConversationMessage = {
@@ -17,4 +23,5 @@ export type ConversationMessage = {
 
 export type ConversationRecord = ConversationSummary & {
   messages: ConversationMessage[];
+  agentJoinedAt?: string | null;
 };

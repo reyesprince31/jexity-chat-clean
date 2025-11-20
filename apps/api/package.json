@@ -16,6 +16,7 @@
   "dependencies": {
     "@fastify/cors": "^11.1.0",
     "@fastify/multipart": "9.2.1",
+    "@fastify/websocket": "^11.2.0",
     "@langchain/core": "1.0.1",
     "@langchain/openai": "1.0.0",
     "@langchain/textsplitters": "^1.0.0",
@@ -26,12 +27,14 @@
     "fastify": "5.2.0",
     "inngest": "3.44.3",
     "langchain": "^1.0.2",
-    "pdf-parse": "2.4.5"
+    "pdf-parse": "2.4.5",
+    "ws": "8.18.0"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
     "@types/node": "22.15.3",
+    "@types/ws": "8.5.12",
     "concurrently": "9.2.1",
     "eslint": "9.34.0",
     "pino-pretty": "13.1.2",

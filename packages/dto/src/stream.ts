@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { SourceSchema } from "./source";
+import { MessageSchema } from "./message";
 
 /**
  * Token event schema (streaming text chunks)
@@ -66,6 +67,31 @@ export const AgentJoinedEventSchema = z.object({
 export type AgentJoinedEvent = z.infer<typeof AgentJoinedEventSchema>;
 
 /**
+ * Broadcast whenever a human agent sends a message. Keeps both the widget and
+ * helpdesk in sync with the authoritative transcript stored in the API.
+ */
+export const AgentMessageEventSchema = z.object({
+  type: z.literal("agent_message"),
+  conversationId: z.string().uuid(),
+  message: MessageSchema,
+});
+
+export type AgentMessageEvent = z.infer<typeof AgentMessageEventSchema>;
+
+/**
+ * Emitted once a human agent resolves the conversation, instructing the widget
+ * to lock the UI and surface the closure timestamp.
+ */
+export const ResolvedEventSchema = z.object({
+  type: z.literal("resolved"),
+  conversationId: z.string().uuid(),
+  resolvedBy: z.string().nullable(),
+  resolvedAt: z.string().datetime(),
+});
+
+export type ResolvedEvent = z.infer<typeof ResolvedEventSchema>;
+
+/**
  * Stream event discriminated union
  * Use this to parse SSE events from the API
  */
@@ -76,6 +102,8 @@ export const StreamEventSchema = z.discriminatedUnion("type", [
   ErrorEventSchema,
   EscalatedEventSchema,
   AgentJoinedEventSchema,
+  AgentMessageEventSchema,
+  ResolvedEventSchema,
 ]);
 
 export type StreamEvent = z.infer<typeof StreamEventSchema>;

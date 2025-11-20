@@ -25,25 +25,46 @@ The API will be available at [http://localhost:3001](http://localhost:3001).
 - `GET /conversations/:id/events` - SSE stream for conversation-level events (agent joins)
 - `POST /conversations/:id/agent/join` - Mark a human agent as joined (emits SSE event)
 
-## Conversation Flow (Mermaid)
+## Conversation Flow
 
 ```mermaid
 flowchart TD
-    A[Client loads chat widget] --> B[POST /conversations]
-    B -->|Response includes escalation fields| C[Widget stores conversation metadata]
-    C --> D[User sends message]
-    D --> E[POST /conversations/:id/messages]
-    E --> F{Already escalated?}
-    F -- Yes --> G[Return SSE type escalated]
-    F -- No --> H[Persist user message]
-    H --> I[Load conversation history]
-    I --> J[evaluateEscalationNeed]
-    J --> K{Should escalate?}
-    K -- Yes --> L[setConversationEscalationStatus + SSE escalated]
-    K -- No --> M[streamChatWithRAG]
+    A[Widget boot] --> B[POST /conversations]
+    B --> C[Widget stores id + escalation metadata]
+    C --> D[POST /conversations/:id/messages]
+    D --> E{Already escalated/resolved?}
+    E -- resolved --> R[Emit resolved SSE + lock widget]
+    E -- escalated --> F[Emit escalated SSE]
+    E -- no --> G[Persist user message]
+    G --> H[Fetch conversation history]
+    H --> I[evaluateEscalationNeed]
+    I --> J{Should escalate?}
+    J -- yes --> K[setConversationEscalationStatus]
+    K --> L[Broadcast helpdesk.websocket + widget SSE escalated]
+    J -- no --> M[streamChatWithRAG]
     M --> N[Persist assistant + sources]
     N --> O[SSE token/done/title events]
-    O --> P[Client renders response]
+    O --> P[Widget renders response]
+```
+
+## Realtime Channels
+
+```mermaid
+flowchart LR
+    subgraph API
+      WS1[/ws/helpdesk/]
+      WS2[/ws/conversations/:id/]
+    end
+    Widget["Widget"]
+    HelpdeskUI["Helpdesk UI"]
+    Widget -->|join| WS2;
+    HelpdeskUI -->|join| WS1;
+    WS1 -->|helpdesk.message_created| HelpdeskUI;
+    WS1 -->|helpdesk.conversation_claimed| HelpdeskUI;
+    WS1 -->|helpdesk.conversation_resolved| HelpdeskUI;
+    WS2 -->|agent_joined| Widget;
+    WS2 -->|agent_message| Widget;
+    WS2 -->|resolved| Widget;
 ```
 
 ## Environment Variables

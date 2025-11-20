@@ -337,7 +337,7 @@ function ChatBoxEscalationBanner({
         className
       )}
     >
-      <p className="m-0 font-semibold">We're connecting you with a human agent.</p>
+      <p className="m-0 font-semibold">Connecting you with a human agent.</p>
       <p className="m-0 mt-1 text-amber-900/90">
         {reason || "Hang tight - someone will reply shortly."}
       </p>
@@ -362,9 +362,40 @@ function ChatBoxAgentBanner({
         className
       )}
     >
-      <p className="m-0 font-semibold">
-        {agentName} has joined the chat. You're now connected to a human teammate.
-      </p>
+      <p className="m-0 font-semibold">{agentName} has joined the chat.</p>
+    </div>
+  );
+}
+
+/** Informs the user that a teammate closed the conversation. */
+function ChatBoxResolvedBanner({
+  resolvedBy,
+  resolvedAt,
+  className,
+}: {
+  resolvedBy?: string | null;
+  resolvedAt?: string;
+  className?: string;
+}) {
+  const displayName = resolvedBy || "our support team";
+  const timestamp = resolvedAt
+    ? new Intl.DateTimeFormat("en", {
+        dateStyle: "medium",
+        timeStyle: "short",
+      }).format(new Date(resolvedAt))
+    : undefined;
+
+  return (
+    <div
+      className={cn(
+        "mx-4 mb-3 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-800",
+        className
+      )}
+    >
+      <p className="m-0 font-semibold">Conversation closed by {displayName}.</p>
+      {timestamp && (
+        <p className="m-0 mt-1 text-gray-600">Resolved on {timestamp}.</p>
+      )}
     </div>
   );
 }
@@ -482,12 +513,17 @@ interface EscalationState {
   escalatedAt?: string;
   agentName?: string;
   agentJoinedAt?: string;
+  isResolved?: boolean;
+  resolvedAt?: string;
+  resolvedBy?: string | null;
 }
 
 /**
  * Normalizes conversation metadata from the API into a widget-friendly structure.
  */
-function extractEscalationState(conversation?: Conversation | null): EscalationState {
+function extractEscalationState(
+  conversation?: Conversation | null
+): EscalationState {
   if (!conversation) {
     return { isEscalated: false };
   }
@@ -498,6 +534,9 @@ function extractEscalationState(conversation?: Conversation | null): EscalationS
     escalatedAt: conversation.escalatedAt ?? undefined,
     agentName: conversation.agentName ?? undefined,
     agentJoinedAt: conversation.agentJoinedAt ?? undefined,
+    isResolved: conversation.isResolved,
+    resolvedAt: conversation.resolvedAt ?? undefined,
+    resolvedBy: conversation.resolvedBy ?? undefined,
   };
 }
 
@@ -530,6 +569,30 @@ export function ChatWidget({
   const client = useMemo(
     () => (apiUrl ? new ApiClient(apiUrl) : apiClient),
     [apiUrl]
+  );
+
+  /**
+   * Locks the widget once the backend signals that a human agent resolved the
+   * chat. Keeps the transcript but prevents further input.
+   */
+  const handleResolution = useCallback(
+    (payload: { resolvedAt: string; resolvedBy?: string | null }) => {
+      setEscalationState((prev) => ({
+        ...prev,
+        isEscalated: true,
+        isResolved: true,
+        resolvedAt: payload.resolvedAt,
+        resolvedBy:
+          payload.resolvedBy ?? prev.resolvedBy ?? prev.agentName ?? null,
+      }));
+      setInput("");
+      setStreamingContent("");
+      setIsStreaming(false);
+      setError(
+        "This conversation was resolved by our team. Start a new chat if you need more help."
+      );
+    },
+    []
   );
 
   // Instant scroll to bottom when chat is opened
@@ -583,6 +646,28 @@ export function ChatWidget({
             agentJoinedAt: event.joinedAt,
             isEscalated: true,
           }));
+          return;
+        }
+
+        if (event.type === "agent_message") {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: event.message.id,
+              conversationId: event.conversationId,
+              role: event.message.role,
+              content: event.message.content,
+              createdAt: event.message.createdAt,
+            },
+          ]);
+          return;
+        }
+
+        if (event.type === "resolved") {
+          handleResolution({
+            resolvedAt: event.resolvedAt,
+            resolvedBy: event.resolvedBy,
+          });
         }
       }
     );
@@ -590,10 +675,20 @@ export function ChatWidget({
     return () => {
       unsubscribe();
     };
-  }, [conversationId, client]);
+  }, [conversationId, client, handleResolution]);
 
+  /**
+   * Sends the current draft unless the transcript is already locked. Users are
+   * nudged to open a new chat instead of replying to resolved threads.
+   */
   const sendMessage = async () => {
     if (!input.trim() || !conversationId || isStreaming) return;
+    if (escalationState.isResolved) {
+      setError(
+        "This conversation has been resolved. Start a new chat to continue."
+      );
+      return;
+    }
 
     const userMessage = input.trim();
     setInput("");
@@ -650,6 +745,12 @@ export function ChatWidget({
           }));
           setIsStreaming(false);
           setStreamingContent("");
+          break;
+        } else if (event.type === "resolved") {
+          handleResolution({
+            resolvedAt: event.resolvedAt,
+            resolvedBy: event.resolvedBy,
+          });
           break;
         } else if (event.type === "error") {
           setError(event.message || "An error occurred");
@@ -723,13 +824,19 @@ export function ChatWidget({
       {escalationState.agentName && (
         <ChatBoxAgentBanner agentName={escalationState.agentName} />
       )}
+      {escalationState.isResolved && (
+        <ChatBoxResolvedBanner
+          resolvedBy={escalationState.resolvedBy}
+          resolvedAt={escalationState.resolvedAt}
+        />
+      )}
 
       <ChatBoxInput
         value={input}
         onChange={(e) => setInput(e.currentTarget.value)}
         onKeyDown={handleKeyDown}
         onSend={sendMessage}
-        disabled={isStreaming}
+        disabled={isStreaming || escalationState.isResolved}
       />
     </ChatBoxContainer>
   );

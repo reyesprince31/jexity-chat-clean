@@ -199,6 +199,20 @@ pnpm lint
 - **Vite**: Fast build tool and dev server
 - **react-shadow**: Shadow DOM integration powered by `preact/compat`
 
+## Realtime Lifecycle
+
+```mermaid
+stateDiagram-v2
+    [*] --> Draft
+    Draft --> Streaming : POST /conversations/:id/messages
+    Streaming --> Draft : SSE done/title
+    Streaming --> Escalated : SSE escalated
+    Escalated --> Human : ws agent_joined
+    Human --> Human : ws agent_message
+    Human --> Resolved : ws resolved
+    Resolved --> [*] : User closes widget
+```
+
 ## React Compatibility Notes
 
 - The library ships with `preact/compat`, exposing the React 18+ component API surface while keeping the bundle lean. No peer dependency on `react`/`react-dom` is required when you import the widget.
