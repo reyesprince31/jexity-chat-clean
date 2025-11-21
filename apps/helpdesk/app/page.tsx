@@ -280,7 +280,7 @@ export default function Home() {
     <ResizablePanelGroup direction="horizontal" className="flex-1 rounded-2xl">
       <ResizablePanel
         defaultSize={28}
-        minSize={22}
+        minSize={15}
         className="min-w-[280px] border-border/80 border-r bg-card"
       >
         <ConversationsPanel
@@ -291,7 +291,7 @@ export default function Home() {
         />
       </ResizablePanel>
       <ResizableHandle />
-      <ResizablePanel className="min-w-0 bg-background">
+      <ResizablePanel defaultSize={72} className="min-w-0 bg-background">
         <ConversationPanel
           conversation={selectedConversation}
           currentAgentName={AGENT_NAME}
