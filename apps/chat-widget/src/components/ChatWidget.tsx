@@ -5,8 +5,12 @@ import {
   useCallback,
   useMemo,
 } from "preact/hooks";
-import type { ComponentChildren, FunctionalComponent } from "preact";
-import type { JSX } from "preact";
+import type {
+  ComponentChildren,
+  FunctionalComponent,
+  JSX,
+  Ref,
+} from "preact";
 import * as PopoverPrimitive from "@radix-ui/react-popover";
 import { ApiClient, apiClient } from "../lib/api-client";
 import type {
@@ -28,6 +32,8 @@ import { ExpandIcon } from "./icons/ExpandIcon";
 import { CollapseIcon } from "./icons/CollapseIcon";
 import { CloseIcon } from "./icons/CloseIcon";
 import { ArrowUpIcon } from "./icons/ArrowUpIcon";
+
+const MAX_MESSAGE_LENGTH = 2000;
 
 /**
  * Floating button that summons the chat widget when it is closed.
@@ -254,13 +260,19 @@ function ChatBoxMessageAgent({
 function ChatBoxMessageLoading({
   content,
   className,
+  isEscalated,
 }: {
   content?: string;
   className?: string;
+  isEscalated?: boolean;
 }) {
   const hasContent = Boolean(content && content.trim().length > 0);
 
   if (!hasContent) {
+    if (isEscalated) {
+      return null;
+    }
+
     return (
       <div
         className={cn(
@@ -301,9 +313,11 @@ function ChatBoxMessageLoading({
  */
 function ChatBoxError({
   error,
+  onRetry,
   className,
 }: {
   error?: string | null;
+  onRetry?: (() => void) | null;
   className?: string;
 }) {
   if (!error) return null;
@@ -315,7 +329,16 @@ function ChatBoxError({
         className
       )}
     >
-      {error}
+      <div>{error}</div>
+      {onRetry && (
+        <button
+          type="button"
+          onClick={onRetry}
+          className="mt-2 inline-flex items-center justify-center rounded-full border border-gray-400 px-3 py-1 text-xs font-medium text-gray-800 hover:bg-gray-200 transition-colors"
+        >
+          Retry
+        </button>
+      )}
     </div>
   );
 }
@@ -409,6 +432,9 @@ function ChatBoxInput({
   onKeyDown,
   onSend,
   disabled,
+  isSendDisabled,
+  textareaRef,
+  maxLength = MAX_MESSAGE_LENGTH,
   className,
 }: {
   value: string;
@@ -416,6 +442,9 @@ function ChatBoxInput({
   onKeyDown: (e: JSX.TargetedKeyboardEvent<HTMLTextAreaElement>) => void;
   onSend: () => void;
   disabled?: boolean;
+  isSendDisabled?: boolean;
+  textareaRef?: Ref<HTMLTextAreaElement>;
+  maxLength?: number;
   className?: string;
 }) {
   return (
@@ -428,19 +457,24 @@ function ChatBoxInput({
           onKeyDown={onKeyDown}
           placeholder="Message..."
           disabled={disabled}
+          maxLength={maxLength}
           rows={1}
+          ref={textareaRef}
           style={{
             scrollbarWidth: "none",
           }}
         />
         <button
           onClick={onSend}
-          disabled={!value.trim() || disabled}
+          disabled={!value.trim() || disabled || isSendDisabled}
           className="shrink-0 inline-flex items-center justify-center rounded-full w-[30px] h-[30px] transition-all disabled:bg-gray-300 disabled:text-white bg-black text-white hover:bg-gray-800 disabled:cursor-not-allowed"
           aria-label="Send message"
         >
           <ArrowUpIcon size={16} />
         </button>
+      </div>
+      <div className="mt-1 text-right text-xs text-gray-500">
+        {value.length}/{maxLength}
       </div>
     </div>
   );
@@ -558,12 +592,19 @@ export function ChatWidget({
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingContent, setStreamingContent] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [pendingRetryMessage, setPendingRetryMessage] = useState<string | null>(
+    null
+  );
   const [isExpanded, setIsExpanded] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [escalationState, setEscalationState] = useState<EscalationState>({
     isEscalated: false,
   });
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const focusInput = useCallback(() => {
+    inputRef.current?.focus();
+  }, []);
 
   // Initialize API client with custom URL if provided
   const client = useMemo(
@@ -681,30 +722,43 @@ export function ChatWidget({
    * Sends the current draft unless the transcript is already locked. Users are
    * nudged to open a new chat instead of replying to resolved threads.
    */
-  const sendMessage = async () => {
-    if (!input.trim() || !conversationId || isStreaming) return;
+  const sendMessage = async (messageOverride?: string) => {
+    const draft = messageOverride ?? input;
+    const userMessage = draft.trim();
+
+    if (!userMessage || !conversationId || isStreaming) {
+      focusInput();
+      return;
+    }
+
     if (escalationState.isResolved) {
       setError(
         "This conversation has been resolved. Start a new chat to continue."
       );
+      focusInput();
       return;
     }
 
-    const userMessage = input.trim();
-    setInput("");
+    if (!messageOverride) {
+      setInput("");
+    }
+
+    setPendingRetryMessage(null);
     setError(null);
     setIsStreaming(true);
     setStreamingContent("");
+    focusInput();
 
-    // Add user message optimistically
-    const userMsg: Message = {
-      id: `temp-${Date.now()}`,
-      conversationId: conversationId,
-      role: "user",
-      content: userMessage,
-      createdAt: new Date().toISOString(),
-    };
-    setMessages((prev) => [...prev, userMsg]);
+    if (!messageOverride) {
+      const userMsg: Message = {
+        id: `temp-${Date.now()}`,
+        conversationId: conversationId,
+        role: "user",
+        content: userMessage,
+        createdAt: new Date().toISOString(),
+      };
+      setMessages((prev) => [...prev, userMsg]);
+    }
 
     try {
       let fullResponse = "";
@@ -753,22 +807,41 @@ export function ChatWidget({
           });
           break;
         } else if (event.type === "error") {
-          setError(event.message || "An error occurred");
+          setError(event.message || "Failed to send message. Please try again.");
+          setPendingRetryMessage(userMessage);
+          setStreamingContent("");
           setIsStreaming(false);
+          break;
         }
       }
     } catch (err) {
-      setError("Failed to send message");
+      setPendingRetryMessage(userMessage);
+      setStreamingContent("");
+      setError("Failed to send message. Please try again.");
       console.error(err);
     } finally {
       setIsStreaming(false);
     }
   };
 
+  const handleInputChange = (
+    e: JSX.TargetedEvent<HTMLTextAreaElement, Event>
+  ) => {
+    const nextValue = e.currentTarget.value;
+    const safeValue =
+      nextValue.length > MAX_MESSAGE_LENGTH
+        ? nextValue.slice(0, MAX_MESSAGE_LENGTH)
+        : nextValue;
+    setInput(safeValue);
+    if (pendingRetryMessage) {
+      setPendingRetryMessage(null);
+    }
+  };
+
   const handleKeyDown = (e: JSX.TargetedKeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      sendMessage();
+      void sendMessage();
     }
   };
 
@@ -811,9 +884,21 @@ export function ChatWidget({
         )}
 
         {isStreaming && (
-          <ChatBoxMessageLoading content={streamingContent || undefined} />
+          <ChatBoxMessageLoading
+            content={streamingContent || undefined}
+            isEscalated={escalationState.isEscalated}
+          />
         )}
-        <ChatBoxError error={error} />
+        <ChatBoxError
+          error={error}
+          onRetry={
+            pendingRetryMessage
+              ? () => {
+                  void sendMessage(pendingRetryMessage);
+                }
+              : null
+          }
+        />
 
         <div ref={messagesEndRef} />
       </ChatBoxMessages>
@@ -833,10 +918,15 @@ export function ChatWidget({
 
       <ChatBoxInput
         value={input}
-        onChange={(e) => setInput(e.currentTarget.value)}
+        onChange={handleInputChange}
         onKeyDown={handleKeyDown}
-        onSend={sendMessage}
-        disabled={isStreaming || escalationState.isResolved}
+        onSend={() => {
+          void sendMessage();
+        }}
+        disabled={escalationState.isResolved}
+        isSendDisabled={isStreaming || escalationState.isResolved}
+        textareaRef={inputRef}
+        maxLength={MAX_MESSAGE_LENGTH}
       />
     </ChatBoxContainer>
   );
