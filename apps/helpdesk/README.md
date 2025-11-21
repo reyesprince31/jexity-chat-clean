@@ -47,7 +47,7 @@ sequenceDiagram
 
 - `app/page.tsx` – Shell that loads conversations, opens websockets, and wires state.
 - `components/conversations/ConversationsPanel.tsx` – Sidebar list.
-- `components/conversations/ConversationPanel.tsx` – Transcript, claim, resolve UI.
+- `components/conversations/Conversation.tsx` – Transcript, claim, resolve UI.
 - `lib/api.ts` – Thin client for helpdesk-specific endpoints.
 
 ## Testing & Linting

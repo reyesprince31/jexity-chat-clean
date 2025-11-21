@@ -13,7 +13,7 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
-import { ConversationPanel } from "@/components/conversations/ConversationPanel";
+import { ConversationPanel } from "@/components/conversations/Conversation";
 import { ConversationsPanel } from "@/components/conversations/ConversationsPanel";
 import type {
   ConversationMessage,

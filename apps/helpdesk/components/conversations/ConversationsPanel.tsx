@@ -106,15 +106,34 @@ function EmptyState() {
 }
 
 function StatusPill({ status }: { status: ConversationSummary["status"] }) {
-  const labelMap: Record<ConversationSummary["status"], string> = {
-    open: "Open",
-    waiting: "Waiting on user",
-    resolved: "Resolved",
+  const statusStyles: Record<
+    ConversationSummary["status"],
+    { label: string; className: string }
+  > = {
+    open: {
+      label: "Open",
+      className: "border border-amber-200 bg-amber-50 text-amber-900",
+    },
+    waiting: {
+      label: "Waiting for user",
+      className: "border border-slate-200 bg-slate-100 text-slate-900",
+    },
+    resolved: {
+      label: "Resolved",
+      className: "border border-emerald-200 bg-emerald-50 text-emerald-900",
+    },
   };
 
+  const { label, className } = statusStyles[status];
+
   return (
-    <span className="bg-secondary text-secondary-foreground inline-flex items-center rounded-full px-2 py-0.5">
-      {labelMap[status]}
+    <span
+      className={cn(
+        "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium",
+        className
+      )}
+    >
+      {label}
     </span>
   );
 }
