@@ -19,7 +19,7 @@ import type {
 import type { ChatWidgetTheme } from "../types/theme";
 import { cn } from "../lib/utils";
 import { Content } from "./Content";
-import { JexityLogo } from "../../public/JexityLogo";
+import { JexityLogo } from "./JexityLogo";
 import "../styles.css";
 import type { IconProps } from "./icons/types";
 import { ChatbotIcon } from "./icons/ChatbotIcon";
