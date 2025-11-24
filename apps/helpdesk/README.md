@@ -21,7 +21,6 @@ Set the following env vars (e.g., via `.env.local`):
 ```
 NEXT_PUBLIC_API_URL=http://localhost:3001
 NEXT_PUBLIC_API_WS_URL=ws://localhost:3001
-NEXT_PUBLIC_AGENT_NAME=Your Name
 ```
 
 ## Agent Workflow

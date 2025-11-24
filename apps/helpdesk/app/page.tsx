@@ -27,7 +27,7 @@ import {
   resolveConversation,
 } from "@/lib/api";
 
-const AGENT_NAME = process.env.NEXT_PUBLIC_AGENT_NAME || "First Agent";
+const AGENT_NAME = "John Doe";
 
 const ROLE_TO_SENDER: Record<Message["role"], ConversationMessage["sender"]> = {
   user: "customer",
