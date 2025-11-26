@@ -24,10 +24,13 @@ import {
   fetchEscalatedConversations,
   openHelpdeskSocket,
   sendAgentMessage,
+  sendAgentTypingIndicator,
   resolveConversation,
 } from "@/lib/api";
 
 const AGENT_NAME = "John Doe";
+const CUSTOMER_TYPING_RESET_MS = 4500;
+const AGENT_TYPING_RESET_MS = 3200;
 
 const ROLE_TO_SENDER: Record<Message["role"], ConversationMessage["sender"]> = {
   user: "customer",
@@ -58,6 +61,10 @@ export default function Home() {
   const [resolvingConversationId, setResolvingConversationId] = React.useState<
     string | null
   >(null);
+  const customerTypingResetTimers = React.useRef<Record<string, number>>({});
+  const agentTypingDispatchTimers = React.useRef<Record<string, number>>({});
+  const agentTypingResetTimers = React.useRef<Record<string, number>>({});
+  const agentTypingState = React.useRef<Record<string, boolean>>({});
 
   const upsertConversation = React.useCallback((record: ConversationRecord) => {
     setConversations((prev) => {
@@ -124,8 +131,93 @@ export default function Home() {
           updatedAt: mappedMessage.timestamp,
         };
 
-        return sortConversations(next);
+       return sortConversations(next);
       });
+    },
+    []
+  );
+
+  React.useEffect(() => {
+    const customerTimers = customerTypingResetTimers.current;
+    const agentDispatchTimers = agentTypingDispatchTimers.current;
+    const agentResetTimers = agentTypingResetTimers.current;
+
+    return () => {
+      Object.values(customerTimers).forEach((timerId) => {
+        window.clearTimeout(timerId);
+      });
+      Object.values(agentDispatchTimers).forEach((timerId) => {
+        window.clearTimeout(timerId);
+      });
+      Object.values(agentResetTimers).forEach((timerId) => {
+        window.clearTimeout(timerId);
+      });
+    };
+  }, []);
+
+  const scheduleAgentTypingIndicator = React.useCallback(
+    (conversationId: string) => {
+      if (!conversationId) {
+        return;
+      }
+
+      if (!agentTypingState.current[conversationId]) {
+        agentTypingState.current[conversationId] = true;
+        sendAgentTypingIndicator(conversationId, AGENT_NAME, true).catch(
+          (error) => {
+            console.error("Failed to start typing indicator", error);
+            agentTypingState.current[conversationId] = false;
+          }
+        );
+      }
+
+      if (agentTypingDispatchTimers.current[conversationId]) {
+        window.clearTimeout(
+          agentTypingDispatchTimers.current[conversationId]
+        );
+      }
+
+      agentTypingDispatchTimers.current[conversationId] = window.setTimeout(
+        () => {
+          agentTypingState.current[conversationId] = false;
+          sendAgentTypingIndicator(conversationId, AGENT_NAME, false).catch(
+            (error) => {
+              console.error("Failed to stop typing indicator", error);
+            }
+          );
+          delete agentTypingDispatchTimers.current[conversationId];
+          delete agentTypingState.current[conversationId];
+        },
+        AGENT_TYPING_RESET_MS
+      );
+    },
+    []
+  );
+
+  const stopAgentTypingIndicator = React.useCallback(
+    (conversationId: string) => {
+      if (!conversationId) {
+        return;
+      }
+
+      if (agentTypingDispatchTimers.current[conversationId]) {
+        window.clearTimeout(
+          agentTypingDispatchTimers.current[conversationId]
+        );
+        delete agentTypingDispatchTimers.current[conversationId];
+      }
+
+      if (!agentTypingState.current[conversationId]) {
+        return;
+      }
+
+      agentTypingState.current[conversationId] = false;
+      delete agentTypingState.current[conversationId];
+      sendAgentTypingIndicator(conversationId, AGENT_NAME, false).catch(
+        (error) => {
+          console.error("Failed to stop typing indicator", error);
+        }
+      );
     },
     []
   );
@@ -183,7 +275,65 @@ export default function Home() {
             resolvedAt: event.resolvedAt,
             resolvedBy: event.resolvedBy,
             status: "resolved",
+            isCustomerTyping: false,
+            isAgentTyping: false,
           });
+          if (customerTypingResetTimers.current[event.conversationId]) {
+            window.clearTimeout(
+              customerTypingResetTimers.current[event.conversationId]
+            );
+            delete customerTypingResetTimers.current[event.conversationId];
+          }
+          if (agentTypingResetTimers.current[event.conversationId]) {
+            window.clearTimeout(
+              agentTypingResetTimers.current[event.conversationId]
+            );
+            delete agentTypingResetTimers.current[event.conversationId];
+          }
+          return;
+        }
+        case "helpdesk.typing": {
+          if (event.actor === "user") {
+            updateConversationMetadata(event.conversationId, {
+              isCustomerTyping: event.isTyping,
+            });
+            if (customerTypingResetTimers.current[event.conversationId]) {
+              window.clearTimeout(
+                customerTypingResetTimers.current[event.conversationId]
+              );
+              delete customerTypingResetTimers.current[event.conversationId];
+            }
+
+            if (event.isTyping) {
+              customerTypingResetTimers.current[event.conversationId] =
+                window.setTimeout(() => {
+                  updateConversationMetadata(event.conversationId, {
+                    isCustomerTyping: false,
+                  });
+                  delete customerTypingResetTimers.current[event.conversationId];
+                }, CUSTOMER_TYPING_RESET_MS);
+            }
+          } else {
+            updateConversationMetadata(event.conversationId, {
+              isAgentTyping: event.isTyping,
+            });
+            if (agentTypingResetTimers.current[event.conversationId]) {
+              window.clearTimeout(
+                agentTypingResetTimers.current[event.conversationId]
+              );
+              delete agentTypingResetTimers.current[event.conversationId];
+            }
+
+            if (event.isTyping) {
+              agentTypingResetTimers.current[event.conversationId] =
+                window.setTimeout(() => {
+                  updateConversationMetadata(event.conversationId, {
+                    isAgentTyping: false,
+                  });
+                  delete agentTypingResetTimers.current[event.conversationId];
+                }, AGENT_TYPING_RESET_MS);
+            }
+          }
           return;
         }
         default:
@@ -222,8 +372,13 @@ export default function Home() {
   const handleDraftChange = React.useCallback(
     (conversationId: string, value: string) => {
       setDrafts((prev) => ({ ...prev, [conversationId]: value }));
+      if (!value.trim()) {
+        stopAgentTypingIndicator(conversationId);
+        return;
+      }
+      scheduleAgentTypingIndicator(conversationId);
     },
-    []
+    [scheduleAgentTypingIndicator, stopAgentTypingIndicator]
   );
 
   const handleSendAgentMessage = React.useCallback(
@@ -237,6 +392,7 @@ export default function Home() {
         );
         appendMessageToConversation(conversationId, message);
         setDrafts((prev) => ({ ...prev, [conversationId]: "" }));
+        stopAgentTypingIndicator(conversationId);
       } catch (error) {
         console.error("Failed to send agent message", error);
       } finally {
@@ -245,7 +401,7 @@ export default function Home() {
         );
       }
     },
-    [appendMessageToConversation]
+    [appendMessageToConversation, stopAgentTypingIndicator]
   );
 
   /**
@@ -257,6 +413,7 @@ export default function Home() {
       try {
         setResolvingConversationId(conversationId);
         await resolveConversation(conversationId, AGENT_NAME);
+        stopAgentTypingIndicator(conversationId);
       } catch (error) {
         console.error("Failed to resolve conversation", error);
       } finally {
@@ -265,7 +422,7 @@ export default function Home() {
         );
       }
     },
-    []
+    [stopAgentTypingIndicator]
   );
 
   const selectedConversation = React.useMemo(
@@ -337,6 +494,8 @@ function normalizeConversation(
     isResolved,
     resolvedAt: conversation.resolvedAt,
     resolvedBy: conversation.resolvedBy,
+    isCustomerTyping: false,
+    isAgentTyping: false,
   };
 }
 

@@ -29,6 +29,7 @@ This document explains how the chat widget and API coordinate to flag conversati
 - The composer is disabled and a yellow banner is shown when `isEscalated` is true.
 - When the widget receives the SSE `escalated` event mid-stream, it immediately stops streaming, clears the loader, and locks the UI.
 - Attempting to send more prompts after escalation is ignored, relying on the banner for context.
+- Once escalated, both clients emit typing heartbeats (`POST /conversations/:id/typing` for end-users, `POST /helpdesk/conversations/:id/typing` for agents) and listen for `typing` websocket events to render presence indicators.
 
 ```mermaid
 sequenceDiagram
@@ -70,11 +71,25 @@ interface AgentJoinedEvent {
   agentName: string;
   joinedAt: string; // ISO timestamp
 }
+
+interface TypingEvent {
+  type: "typing";
+  conversationId: string;
+  actor: "user" | "human_agent";
+  isTyping: boolean;
+  emittedAt: string; // ISO timestamp
+}
 ```
 
 Clients subscribe via the same `streamMessage` helper; they now need to handle this extra discriminant alongside `token`, `done`, `title`, and `error` events.
 
 For real-time agent presence, the widget also opens `GET /conversations/:id/events`, an SSE stream that emits `agent_joined` whenever a human takes over. Support tools trigger the event by calling `POST /conversations/:id/agent/join` with `{ agentName }`.
+
+### Typing Indicators
+
+- Widget: Calls `POST /conversations/:id/typing` while a user is actively composing. The API validates that the chat is escalated and rebroadcasts `helpdesk.typing`.
+- Helpdesk: Calls `POST /helpdesk/conversations/:id/typing` while an assigned agent is composing. The API fans out a `typing` event to the widget plus `helpdesk.typing` to every dashboard.
+- Receivers debounce UI state with short expiry timers so a missing "stop typing" heartbeat does not leave a stuck indicator.
 
 ## Testing Tips
 

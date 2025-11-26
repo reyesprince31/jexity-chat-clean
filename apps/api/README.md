@@ -24,6 +24,8 @@ The API will be available at [http://localhost:3001](http://localhost:3001).
 - `GET /health` - Health check endpoint
 - `GET /conversations/:id/events` - SSE stream for conversation-level events (agent joins)
 - `POST /conversations/:id/agent/join` - Mark a human agent as joined (emits SSE event)
+- `POST /conversations/:id/typing` - Record that the end-user is typing and fan out `helpdesk.typing`.
+- `POST /helpdesk/conversations/:id/typing` - Record agent typing activity and emit a `typing` websocket event to the widget.
 
 ## Conversation Flow
 
@@ -62,9 +64,11 @@ flowchart LR
     WS1 -->|helpdesk.message_created| HelpdeskUI;
     WS1 -->|helpdesk.conversation_claimed| HelpdeskUI;
     WS1 -->|helpdesk.conversation_resolved| HelpdeskUI;
+    WS1 -->|helpdesk.typing| HelpdeskUI;
     WS2 -->|agent_joined| Widget;
     WS2 -->|agent_message| Widget;
     WS2 -->|resolved| Widget;
+    WS2 -->|typing| Widget;
 ```
 
 ## Environment Variables

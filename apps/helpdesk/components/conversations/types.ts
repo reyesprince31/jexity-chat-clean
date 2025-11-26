@@ -12,6 +12,8 @@ export type ConversationSummary = {
   isResolved?: boolean;
   resolvedAt?: string | null;
   resolvedBy?: string | null;
+  isCustomerTyping?: boolean;
+  isAgentTyping?: boolean;
 };
 
 export type ConversationMessage = {

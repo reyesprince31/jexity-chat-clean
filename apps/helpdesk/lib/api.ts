@@ -130,6 +130,43 @@ export async function sendAgentMessage(
   return payload.message;
 }
 
+type TypingIndicatorResponse =
+  | { success: true }
+  | { success: false; message?: string };
+
+/**
+ * Broadcasts that the active agent is composing a reply so the widget can show
+ * a typing indicator in real time.
+ */
+export async function sendAgentTypingIndicator(
+  conversationId: string,
+  agentName: string,
+  isTyping: boolean
+): Promise<void> {
+  const response = await fetch(
+    `${normalizedApiBase}/helpdesk/conversations/${conversationId}/typing`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ agentName, isTyping }),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      `Failed to send typing indicator: ${response.statusText}`
+    );
+  }
+
+  const payload = (await response.json()) as TypingIndicatorResponse;
+
+  if (!payload.success) {
+    throw new Error(payload.message || "Unable to send typing indicator");
+  }
+}
+
 type ResolveConversationResponse =
   | {
       success: true;

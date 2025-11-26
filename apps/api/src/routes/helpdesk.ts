@@ -38,6 +38,16 @@ interface ResolveConversationRequest {
   };
 }
 
+interface HelpdeskTypingIndicatorRequest {
+  Params: {
+    id: string;
+  };
+  Body: {
+    agentName?: string;
+    isTyping?: boolean;
+  };
+}
+
 export default async function helpdeskRoutes(
   fastify: FastifyInstance
 ): Promise<void> {
@@ -160,6 +170,100 @@ export default async function helpdeskRoutes(
         return reply.code(500).send({
           success: false,
           message: "Failed to send message",
+        });
+      }
+    }
+  );
+
+  /**
+   * POST /helpdesk/conversations/:id/typing
+   * Broadcasts that a human agent is actively composing a response.
+   */
+  fastify.post<HelpdeskTypingIndicatorRequest>(
+    "/helpdesk/conversations/:id/typing",
+    async (
+      request: FastifyRequest<HelpdeskTypingIndicatorRequest>,
+      reply: FastifyReply
+    ) => {
+      try {
+        const { id } = request.params;
+        const { agentName, isTyping } = request.body ?? {};
+
+        if (!agentName || typeof agentName !== "string") {
+          return reply.code(400).send({
+            success: false,
+            message: "agentName is required",
+          });
+        }
+
+        if (typeof isTyping !== "boolean") {
+          return reply.code(400).send({
+            success: false,
+            message: "isTyping is required",
+          });
+        }
+
+        const conversation = await getConversation(id);
+        if (!conversation) {
+          return reply.code(404).send({
+            success: false,
+            message: "Conversation not found",
+          });
+        }
+
+        if (!conversation.is_escalated) {
+          return reply.code(409).send({
+            success: false,
+            message: "Conversation has not been escalated",
+          });
+        }
+
+        if (!conversation.agent_name) {
+          return reply.code(409).send({
+            success: false,
+            message: "Conversation has not been claimed",
+          });
+        }
+
+        if (conversation.agent_name !== agentName) {
+          return reply.code(403).send({
+            success: false,
+            message: "Conversation is assigned to another agent",
+          });
+        }
+
+        if (conversation.is_resolved) {
+          return reply.code(409).send({
+            success: false,
+            message: "Conversation has already been resolved",
+          });
+        }
+
+        const emittedAt = new Date().toISOString();
+        const typingEvent = {
+          type: "typing",
+          conversationId: id,
+          actor: "human_agent",
+          isTyping,
+          emittedAt,
+        } as const;
+
+        conversationEventHub.emit(id, typingEvent);
+        realtimeGateway.emitConversationEvent(id, typingEvent);
+        realtimeGateway.broadcastHelpdesk({
+          type: "helpdesk.typing",
+          conversationId: id,
+          actor: "human_agent",
+          isTyping,
+          emittedAt,
+        });
+
+        return reply.send({ success: true });
+      } catch (error) {
+        fastify.log.error(error);
+        return reply.code(500).send({
+          success: false,
+          message: "Failed to record typing indicator",
         });
       }
     }

@@ -98,6 +98,15 @@ interface AgentJoinRequest {
   };
 }
 
+interface TypingIndicatorRequest {
+  Params: {
+    id: string;
+  };
+  Body: {
+    isTyping?: boolean;
+  };
+}
+
 /** Apply the headers Fastify needs for Server-Sent Events. */
 function setSseHeaders(reply: FastifyReply) {
   reply.raw.setHeader("Content-Type", "text/event-stream");
@@ -701,6 +710,79 @@ export default async function chatRoutes(
         return reply.code(500).send({
           success: false,
           message: "Failed to subscribe to events",
+        });
+      }
+    }
+  );
+
+  /**
+   * POST /conversations/:id/typing
+   * Records that the end-user is typing so helpdesk dashboards can display presence.
+   */
+  fastify.post<TypingIndicatorRequest>(
+    "/conversations/:id/typing",
+    async (
+      request: FastifyRequest<TypingIndicatorRequest>,
+      reply: FastifyReply
+    ) => {
+      try {
+        const { id } = request.params;
+        const { isTyping } = request.body ?? {};
+
+        if (typeof isTyping !== "boolean") {
+          return reply.code(400).send({
+            success: false,
+            message: "isTyping is required",
+          });
+        }
+
+        const conversation = await getConversation(id);
+        if (!conversation) {
+          return reply.code(404).send({
+            success: false,
+            message: "Conversation not found",
+          });
+        }
+
+        if (!conversation.is_escalated) {
+          return reply.code(409).send({
+            success: false,
+            message: "Conversation is not escalated",
+          });
+        }
+
+        if (conversation.is_resolved) {
+          return reply.code(409).send({
+            success: false,
+            message: "Conversation has been resolved",
+          });
+        }
+
+        const emittedAt = new Date().toISOString();
+        const typingEvent = {
+          type: "typing",
+          conversationId: id,
+          actor: "user",
+          isTyping,
+          emittedAt,
+        } as const;
+
+        conversationEventHub.emit(id, typingEvent);
+        realtimeGateway.emitConversationEvent(id, typingEvent);
+        realtimeGateway.broadcastHelpdesk({
+          type: "helpdesk.typing",
+          conversationId: id,
+          actor: "user",
+          isTyping,
+          emittedAt,
+        });
+
+        return reply.send({ success: true });
+      } catch (error) {
+        fastify.log.error(error);
+        return reply.code(500).send({
+          success: false,
+          message: "Failed to record typing indicator",
         });
       }
     }

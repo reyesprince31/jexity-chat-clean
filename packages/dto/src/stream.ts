@@ -79,6 +79,19 @@ export const AgentMessageEventSchema = z.object({
 export type AgentMessageEvent = z.infer<typeof AgentMessageEventSchema>;
 
 /**
+ * Typing indicator emitted when either participant is actively composing a message.
+ */
+export const TypingEventSchema = z.object({
+  type: z.literal("typing"),
+  conversationId: z.string().uuid(),
+  actor: z.enum(["user", "human_agent"]),
+  isTyping: z.boolean(),
+  emittedAt: z.string().datetime(),
+});
+
+export type TypingEvent = z.infer<typeof TypingEventSchema>;
+
+/**
  * Emitted once a human agent resolves the conversation, instructing the widget
  * to lock the UI and surface the closure timestamp.
  */
@@ -103,6 +116,7 @@ export const StreamEventSchema = z.discriminatedUnion("type", [
   EscalatedEventSchema,
   AgentJoinedEventSchema,
   AgentMessageEventSchema,
+  TypingEventSchema,
   ResolvedEventSchema,
 ]);
 

@@ -13,6 +13,7 @@ An embeddable AI chat widget with RAG (Retrieval Augmented Generation) support, 
 - 💬 **Conversation History** - Maintains context across multiple messages
 - 📱 **Responsive Design** - Works on desktop and mobile devices
 - 🎭 **TypeScript** - Full type safety for better DX
+- ✍️ **Escalation Typing Indicator** - Emits user typing heartbeats and renders human agent presence once a chat is escalated.
 
 ## Installation
 
@@ -212,6 +213,12 @@ stateDiagram-v2
     Human --> Resolved : ws resolved
     Resolved --> [*] : User closes widget
 ```
+
+### Typing Indicators
+
+- The widget POSTs `/conversations/:id/typing` once a conversation is escalated and the end-user starts composing. The API rebroadcasts that signal over `/ws/helpdesk` so dashboards can render "customer is typing".
+- Conversely, when the helpdesk sends `helpdesk.typing` for the assigned agent, the widget receives a `typing` websocket event over `/ws/conversations/:id` and surfaces the in-flight indicator above the composer.
+- Heartbeats automatically stop when the user sends a message or when no keystrokes are detected for ~3 seconds, so stale indicators clear without extra work.
 
 ## React Compatibility Notes
 

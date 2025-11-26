@@ -50,6 +50,13 @@ export const HelpdeskSocketEventSchema = z.discriminatedUnion("type", [
     resolvedBy: z.string(),
     resolvedAt: z.string().datetime(),
   }),
+  z.object({
+    type: z.literal("helpdesk.typing"),
+    conversationId: z.string().uuid(),
+    actor: z.enum(["user", "human_agent"]),
+    isTyping: z.boolean(),
+    emittedAt: z.string().datetime(),
+  }),
 ]);
 
 export type HelpdeskSocketEvent = z.infer<typeof HelpdeskSocketEventSchema>;

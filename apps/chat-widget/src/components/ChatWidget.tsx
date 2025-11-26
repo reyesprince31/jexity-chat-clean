@@ -309,6 +309,36 @@ function ChatBoxMessageLoading({
 }
 
 /**
+ * Visual indicator rendered while a human agent is composing a reply.
+ */
+function ChatBoxTypingIndicator({
+  label = "Agent is typing...",
+  className,
+}: {
+  label?: string;
+  className?: string;
+}) {
+  return (
+    <div className={cn("flex flex-col max-w-[80%] self-start", className)}>
+      <div className="px-4 py-3 rounded-[20px] wrap-break-word leading-relaxed bg-gray-100 text-gray-900 border border-gray-200 rounded-bl-md">
+        <div className="flex items-center gap-2">
+          {[0, 1, 2].map((index) => (
+            <span
+              key={index}
+              className="h-2 w-2 rounded-full bg-gray-500 animate-typing"
+              style={{ animationDelay: `${index * 120}ms` }}
+            />
+          ))}
+          <span className="text-xs font-medium uppercase tracking-wide text-gray-500">
+            {label}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
  * Lightweight inline error banner shown beneath the transcript.
  */
 function ChatBoxError({
@@ -597,13 +627,28 @@ export function ChatWidget({
   );
   const [isExpanded, setIsExpanded] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  const [isAgentTyping, setIsAgentTyping] = useState(false);
   const [escalationState, setEscalationState] = useState<EscalationState>({
     isEscalated: false,
   });
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const agentTypingTimeoutRef = useRef<number | undefined>(undefined);
+  const userTypingTimeoutRef = useRef<number | undefined>(undefined);
+  const userTypingStateRef = useRef(false);
   const focusInput = useCallback(() => {
     inputRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (agentTypingTimeoutRef.current) {
+        window.clearTimeout(agentTypingTimeoutRef.current);
+      }
+      if (userTypingTimeoutRef.current) {
+        window.clearTimeout(userTypingTimeoutRef.current);
+      }
+    };
   }, []);
 
   // Initialize API client with custom URL if provided
@@ -635,6 +680,58 @@ export function ChatWidget({
     },
     []
   );
+
+  const emitUserTypingState = useCallback(
+    (nextState: boolean) => {
+      if (
+        !conversationId ||
+        !escalationState.isEscalated ||
+        escalationState.isResolved
+      ) {
+        return;
+      }
+
+      if (userTypingStateRef.current === nextState) {
+        return;
+      }
+
+      userTypingStateRef.current = nextState;
+      client
+        .sendTypingIndicator(conversationId, nextState)
+        .catch((error) => {
+          console.error("Failed to send typing indicator", error);
+        });
+    },
+    [
+      client,
+      conversationId,
+      escalationState.isEscalated,
+      escalationState.isResolved,
+    ]
+  );
+
+  const scheduleUserTypingReset = useCallback(() => {
+    if (
+      !conversationId ||
+      !escalationState.isEscalated ||
+      escalationState.isResolved
+    ) {
+      return;
+    }
+
+    emitUserTypingState(true);
+    if (userTypingTimeoutRef.current) {
+      window.clearTimeout(userTypingTimeoutRef.current);
+    }
+    userTypingTimeoutRef.current = window.setTimeout(() => {
+      emitUserTypingState(false);
+    }, 3000);
+  }, [
+    conversationId,
+    escalationState.isEscalated,
+    escalationState.isResolved,
+    emitUserTypingState,
+  ]);
 
   // Instant scroll to bottom when chat is opened
   useEffect(() => {
@@ -673,6 +770,31 @@ export function ChatWidget({
   }, [conversationId, createConversation]);
 
   useEffect(() => {
+    userTypingStateRef.current = false;
+    if (userTypingTimeoutRef.current) {
+      window.clearTimeout(userTypingTimeoutRef.current);
+    }
+  }, [conversationId]);
+
+  useEffect(() => {
+    if (!escalationState.isEscalated || escalationState.isResolved) {
+      userTypingStateRef.current = false;
+      if (userTypingTimeoutRef.current) {
+        window.clearTimeout(userTypingTimeoutRef.current);
+      }
+    }
+  }, [escalationState.isEscalated, escalationState.isResolved]);
+
+  useEffect(() => {
+    if (!escalationState.isEscalated || escalationState.isResolved) {
+      setIsAgentTyping(false);
+      if (agentTypingTimeoutRef.current) {
+        window.clearTimeout(agentTypingTimeoutRef.current);
+      }
+    }
+  }, [escalationState.isEscalated, escalationState.isResolved]);
+
+  useEffect(() => {
     if (!conversationId) {
       return undefined;
     }
@@ -701,6 +823,21 @@ export function ChatWidget({
               createdAt: event.message.createdAt,
             },
           ]);
+          return;
+        }
+
+        if (event.type === "typing") {
+          if (event.actor === "human_agent") {
+            setIsAgentTyping(event.isTyping);
+            if (agentTypingTimeoutRef.current) {
+              window.clearTimeout(agentTypingTimeoutRef.current);
+            }
+            if (event.isTyping) {
+              agentTypingTimeoutRef.current = window.setTimeout(() => {
+                setIsAgentTyping(false);
+              }, 4000);
+            }
+          }
           return;
         }
 
@@ -742,6 +879,10 @@ export function ChatWidget({
     if (!messageOverride) {
       setInput("");
     }
+    if (userTypingTimeoutRef.current) {
+      window.clearTimeout(userTypingTimeoutRef.current);
+    }
+    emitUserTypingState(false);
 
     setPendingRetryMessage(null);
     setError(null);
@@ -836,6 +977,7 @@ export function ChatWidget({
     if (pendingRetryMessage) {
       setPendingRetryMessage(null);
     }
+    scheduleUserTypingReset();
   };
 
   const handleKeyDown = (e: JSX.TargetedKeyboardEvent<HTMLTextAreaElement>) => {
@@ -899,6 +1041,13 @@ export function ChatWidget({
               : null
           }
         />
+        {isAgentTyping && !escalationState.isResolved && (
+          <ChatBoxTypingIndicator
+            label={`${
+              escalationState.agentName?.trim() || "Agent"
+            } is typing...`}
+          />
+        )}
 
         <div ref={messagesEndRef} />
       </ChatBoxMessages>

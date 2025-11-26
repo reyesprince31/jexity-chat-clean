@@ -452,6 +452,7 @@ export function ConversationPanel({
                 }}
               />
             ))}
+            {conversation.isCustomerTyping ? <CustomerTypingIndicator /> : null}
           </>
         )}
       </div>
@@ -592,5 +593,24 @@ function CustomerBubble({ message }: MessageComponentProps) {
         {formatDetailTimestamp(message.timestamp)}
       </span>
     </article>
+  );
+}
+
+function CustomerTypingIndicator() {
+  return (
+    <div
+      className="flex items-center gap-2 text-xs font-medium text-emerald-600"
+      aria-live="polite"
+    >
+      <div className="flex items-center gap-1">
+        {Array.from({ length: 3 }).map((_, index) => (
+          <span
+            key={index}
+            className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"
+            style={{ animationDelay: `${index * 120}ms` }}
+          />
+        ))}
+      </div>
+    </div>
   );
 }

@@ -101,6 +101,31 @@ export class ApiClient {
   }
 
   /**
+   * Emit a typing indicator for the current end-user once a chat is escalated.
+   */
+  async sendTypingIndicator(
+    conversationId: string,
+    isTyping: boolean
+  ): Promise<void> {
+    const response = await fetch(
+      `${this.baseUrl}/conversations/${conversationId}/typing`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ isTyping }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        `Failed to send typing indicator: ${response.statusText}`
+      );
+    }
+  }
+
+  /**
    * Send a message and receive streaming response
    * Returns an async iterator of stream events
    */
