@@ -81,7 +81,9 @@ export function InlineCitation({
         className={cn(
           "citation-marker",
           "inline-flex items-center justify-center rounded-full",
-          "bg-gray-100 text-gray-700 border border-gray-200",
+          "bg-(--jexity-assistant-bg-citation-pill-muted)",
+          "text-(--jexity-assistant-text-citation-pill-muted)",
+          "border border-(--jexity-assistant-border-citation-pill-muted)",
           "px-2 py-0.5 text-xs font-medium mx-1",
           "max-w-32 min-w-11",
           className
@@ -107,9 +109,13 @@ export function InlineCitation({
           className={cn(
             "citation-marker citation-marker--clickable",
             "inline-flex items-center justify-center rounded-full border",
-            "bg-white text-gray-700 border-gray-300",
+            "bg-(--jexity-assistant-bg-citation-pill)",
+            "text-(--jexity-assistant-text-citation-pill)",
+            "border-(--jexity-assistant-border-citation-pill)",
             "px-2 py-0.5 text-xs font-medium mx-1",
-            "hover:bg-gray-100 hover:border-gray-400 hover:text-gray-900",
+            "hover:bg-(--jexity-assistant-bg-citation-pill-hover)",
+            "hover:border-(--jexity-assistant-border-citation-pill-hover)",
+            "hover:text-(--jexity-assistant-text-citation-pill-hover)",
             "transition-colors duration-150 cursor-pointer",
             "max-w-32 min-w-11",
             className

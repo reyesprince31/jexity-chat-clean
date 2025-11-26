@@ -51,8 +51,9 @@ function ChatBoxTrigger({
       className={cn(
         "fixed bottom-5 right-5 z-50",
         "w-14 h-14 rounded-full",
-        "bg-black hover:bg-slate-900",
-        "text-white border-0 cursor-pointer",
+        "bg-(--jexity-assistant-bg-chat-trigger)",
+        "hover:bg-(--jexity-assistant-bg-chat-trigger-hover)",
+        "text-(--jexity-assistant-icon-color-chat-trigger) border-0 cursor-pointer",
         "shadow-lg hover:shadow-xl",
         "flex items-center justify-center",
         className
@@ -94,7 +95,7 @@ function ChatBoxHeaderMenu({ options }: { options: HeaderMenuOption[] }) {
     <PopoverPrimitive.Root open={open} onOpenChange={setOpen}>
       <PopoverPrimitive.Trigger asChild>
         <button
-          className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gray-300 disabled:pointer-events-none disabled:opacity-50 h-9 w-9 p-0 text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+          className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gray-300 disabled:pointer-events-none disabled:opacity-50 h-9 w-9 p-0 text-(--jexity-assistant-icon-color-chat-header) hover:bg-(--jexity-assistant-bg-chat-header-icon-hover) hover:text-(--jexity-assistant-text-color-chat-header)"
           aria-label="Options"
         >
           <OptionsVerticalIcon size={20} />
@@ -149,8 +150,9 @@ function ChatBoxHeader({
   return (
     <div
       className={cn(
-        "bg-white text-black px-5 py-3",
-        "border-b border-gray-200",
+        "px-5 py-3",
+        "bg-(--jexity-assistant-bg-chat-header) text-(--jexity-assistant-text-color-chat-header)",
+        "border-b border-(--jexity-assistant-border-color-chat-header)",
         "flex items-center justify-between",
         className
       )}
@@ -164,7 +166,7 @@ function ChatBoxHeader({
 
         <button
           onClick={onCloseClick}
-          className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gray-300 disabled:pointer-events-none disabled:opacity-50 h-9 w-9 p-0 text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+          className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gray-300 disabled:pointer-events-none disabled:opacity-50 h-9 w-9 p-0 text-(--jexity-assistant-icon-color-chat-header) hover:bg-(--jexity-assistant-bg-chat-header-icon-hover) hover:text-(--jexity-assistant-text-color-chat-header)"
           aria-label="Close"
         >
           <CloseIcon size={20} />
@@ -186,7 +188,7 @@ function ChatBoxMessageUser({
 }) {
   return (
     <div className={cn("flex flex-col max-w-[80%] self-end", className)}>
-      <div className="px-4 py-3 rounded-[20px] wrap-break-word leading-relaxed text-(--jexity-assistant-text-chat-message-user) rounded-br-md text-sm bg-(--jexity-assistant-bg-chat-message-user) hover:opacity-90 transition-opacity">
+      <div className="px-4 py-3 rounded-[20px] wrap-break-word leading-relaxed text-(--jexity-assistant-text-chat-message-user) rounded-br-md text-sm bg-(--jexity-assistant-bg-chat-message-user) border border-(--jexity-assistant-border-chat-message-user) hover:opacity-90 transition-opacity">
         {content}
       </div>
     </div>
@@ -224,7 +226,7 @@ function ChatBoxMessageAgent({
 
   return (
     <div className={cn("flex flex-col max-w-[80%] self-start", className)}>
-      <div className="px-4 py-3 rounded-[20px] wrap-break-word leading-relaxed bg-gray-100 text-gray-900 border border-gray-200 rounded-bl-md">
+      <div className="px-4 py-3 rounded-[20px] wrap-break-word leading-relaxed rounded-bl-md border bg-(--jexity-assistant-bg-chat-message-agent) text-(--jexity-assistant-text-chat-message-agent) border-(--jexity-assistant-border-chat-message-agent)">
         <div className="mb-2 flex items-center">
           <JexityLogo />
 
@@ -478,10 +480,15 @@ function ChatBoxInput({
   className?: string;
 }) {
   return (
-    <div className={cn("px-4 py-3 bg-white", className)}>
-      <div className="flex items-center gap-2 bg-white border border-gray-300 rounded-full pl-5 pr-2 py-2">
+    <div
+      className={cn(
+        "px-4 py-3 bg-(--jexity-assistant-bg-chat-container)",
+        className
+      )}
+    >
+      <div className="flex items-center gap-2 bg-(--jexity-assistant-bg-chat-input) border border-(--jexity-assistant-border-chat-input) rounded-full pl-5 pr-2 py-2">
         <textarea
-          className="flex-1 bg-transparent text-[15px] resize-none outline-none placeholder:text-gray-400 disabled:bg-transparent disabled:cursor-not-allowed max-h-24 leading-5 py-1.5"
+          className="flex-1 bg-transparent text-(--jexity-assistant-text-chat-input) placeholder:text-(--jexity-assistant-placeholder-chat-input) text-[15px] resize-none outline-none disabled:bg-transparent disabled:cursor-not-allowed max-h-24 leading-5 py-1.5"
           value={value}
           onChange={onChange}
           onKeyDown={onKeyDown}
@@ -497,13 +504,13 @@ function ChatBoxInput({
         <button
           onClick={onSend}
           disabled={!value.trim() || disabled || isSendDisabled}
-          className="shrink-0 inline-flex items-center justify-center rounded-full w-[30px] h-[30px] transition-all disabled:bg-gray-300 disabled:text-white bg-black text-white hover:bg-gray-800 disabled:cursor-not-allowed"
+          className="shrink-0 inline-flex items-center justify-center rounded-full w-[30px] h-[30px] transition-all bg-(--jexity-assistant-bg-chat-send-button) text-(--jexity-assistant-icon-color-chat-send-button) hover:bg-(--jexity-assistant-bg-chat-send-button-hover) disabled:bg-(--jexity-assistant-bg-chat-send-button-disabled) disabled:text-(--jexity-assistant-icon-color-chat-send-button-disabled) disabled:cursor-not-allowed"
           aria-label="Send message"
         >
           <ArrowUpIcon size={16} />
         </button>
       </div>
-      <div className="mt-1 text-right text-xs text-gray-500">
+      <div className="mt-1 text-right text-xs text-(--jexity-assistant-text-chat-input-counter)">
         {value.length}/{maxLength}
       </div>
     </div>
@@ -523,7 +530,7 @@ function ChatBoxMessages({
   return (
     <div
       className={cn(
-        "flex-1 overflow-y-auto px-5 py-5 flex flex-col gap-4 bg-white",
+        "flex-1 overflow-y-auto px-5 py-5 flex flex-col gap-4 bg-(--jexity-assistant-bg-chat-container)",
         className
       )}
     >

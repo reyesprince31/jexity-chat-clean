@@ -89,13 +89,26 @@ import { initChatWidget } from "chat-widget";
 initChatWidget({
   apiUrl: "https://your-api.com",
   theme: {
-    bg: { chatMessageUser: "#ff0000" },
-    text: { chatMessageUser: "#ffffff" },
+    bg: {
+      chatMessageUser: "#ff0000",
+      chatHeader: "#111827",
+      chatSendButton: "#c026d3",
+    },
+    text: {
+      chatMessageUser: "#ffffff",
+      chatHeader: "#ffffff",
+    },
+    border: {
+      chatMessageUser: "#be123c",
+    },
+    icon: {
+      chatHeader: "#fde68a",
+    },
   },
 });
 ```
 
-- Runtime theme hooks currently exposed: `theme.bg.chatMessageUser` and `theme.text.chatMessageUser`. Manage any additional styling hooks directly in your host stylesheet.
+- See `apps/chat-widget/THEMING.md` for the full list of theme tokens and CSS variables the widget understands.
 - The widget does not ship with defaults for host-level custom properties; declare the ones you use to avoid unresolved values.
 
 ### Method 2: CSS Variables
@@ -108,6 +121,12 @@ Override CSS custom properties from the host page. This works because CSS variab
   #chat-widget-container {
     --jexity-assistant-bg-chat-message-user: #ff0000;
     --jexity-assistant-text-chat-message-user: #ffffff;
+    --jexity-assistant-bg-chat-header: #111827;
+    --jexity-assistant-text-color-chat-header: #ffffff;
+    --jexity-assistant-icon-color-chat-header: #fde68a;
+    --jexity-assistant-bg-chat-container: #050816;
+    --jexity-assistant-bg-chat-send-button: #c026d3;
+    --jexity-assistant-icon-color-chat-send-button: #fff7ed;
   }
 </style>
 
@@ -122,9 +141,7 @@ Override CSS custom properties from the host page. This works because CSS variab
 </script>
 ```
 
-### Available CSS Variables
-
-The widget ships without default values for host-facing CSS variables. Declare the ones you need (for example, colors, typography, etc.) inside your application styles and the widget will inherit them through the shadow boundary.
+Refer to `apps/chat-widget/THEMING.md` for the inventory of CSS variables you can override.
 
 ## API Reference
 
@@ -145,15 +162,6 @@ Initializes and mounts the chat widget.
 
 **Returns:** \`() => void\` - Cleanup function to unmount the widget
 
-### \`ChatWidgetTheme\` Interface
-
-```typescript
-interface ChatWidgetTheme {
-  bg?: { chatMessageUser?: string };
-  text?: { chatMessageUser?: string };
-}
-```
-
 ## Examples
 
 ### Custom Brand Colors
@@ -162,8 +170,9 @@ interface ChatWidgetTheme {
 initChatWidget({
   apiUrl: "https://api.example.com",
   theme: {
-    bg: { chatMessageUser: "#7c3aed" },
-    text: { chatMessageUser: "#f8fafc" },
+    bg: { chatMessageUser: "#7c3aed", chatHeader: "#111827" },
+    text: { chatMessageUser: "#f8fafc", chatHeader: "#f1f5f9" },
+    border: { chatHeader: "#312e81" },
   },
 });
 ```
