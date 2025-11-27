@@ -21,8 +21,18 @@ Each theme key is optional—provide only the values you want to customize. Any 
 
 ## Theme Properties
 
-- **theme.bg.chatMessageUser** → `--jexity-assistant-bg-chat-message-user`
-- **theme.text.chatMessageUser** → `--jexity-assistant-text-chat-message-user`
+The complete set of keys lives alongside the source in
+`apps/chat-widget/src/types/theme.ts` (and is mirrored in
+`apps/chat-widget/THEMING.md`). Every property maps 1:1 to a CSS
+variable with the prefix `--jexity-assistant-…`.
+
+Common examples:
+
+- `theme.bg.chatMessageUser` → `--jexity-assistant-bg-chat-message-user`
+- `theme.bg.chatContainer` → `--jexity-assistant-bg-chat-container`
+- `theme.border.chatMessageUser` → `--jexity-assistant-border-chat-message-user`
+- `theme.text.chatInputPlaceholder` → `--jexity-assistant-placeholder-chat-input`
+- `theme.icon.chatSendButton` → `--jexity-assistant-icon-color-chat-send-button`
 
 ## Shadow DOM Cascade
 

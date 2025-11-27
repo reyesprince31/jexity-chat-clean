@@ -1,10 +1,3 @@
-/**
- * InlineCitation Component
- *
- * Renders an inline citation with optional popover showing source details.
- * Citations are colored and become clickable when source data is available.
- */
-
 import { useState } from "preact/hooks";
 import * as Popover from "@radix-ui/react-popover";
 import type { Source } from "../types/api";
@@ -57,7 +50,7 @@ export function InlineCitation({
 
   const fallbackPrimaryLabel = primaryEntry?.source?.filename
     ? primaryEntry.source.filename
-    : (primaryEntry?.filename ?? citationText);
+    : primaryEntry?.filename ?? citationText;
 
   const shouldShowExtraCount = extraSourceCount > 0 && hasAnySource;
 
@@ -82,14 +75,15 @@ export function InlineCitation({
   const pillTitle =
     titleParts.length > 0 ? titleParts.join(" | ") : citationText;
 
-  // If no source data available, render as colored text (not clickable)
   if (!hasAnySource) {
     return (
       <span
         className={cn(
           "citation-marker",
           "inline-flex items-center justify-center rounded-full",
-          "bg-gray-100 text-gray-700 border border-gray-200",
+          "bg-(--jexity-assistant-bg-citation-pill-muted)",
+          "text-(--jexity-assistant-text-citation-pill-muted)",
+          "border border-(--jexity-assistant-border-citation-pill-muted)",
           "px-2 py-0.5 text-xs font-medium mx-1",
           "max-w-32 min-w-11",
           className
@@ -108,7 +102,6 @@ export function InlineCitation({
     );
   }
 
-  // With source data, render with interactive popover
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
       <Popover.Trigger asChild>
@@ -116,16 +109,20 @@ export function InlineCitation({
           className={cn(
             "citation-marker citation-marker--clickable",
             "inline-flex items-center justify-center rounded-full border",
-            "bg-white text-gray-700 border-gray-300",
+            "bg-(--jexity-assistant-bg-citation-pill)",
+            "text-(--jexity-assistant-text-citation-pill)",
+            "border-(--jexity-assistant-border-citation-pill)",
             "px-2 py-0.5 text-xs font-medium mx-1",
-            "hover:bg-gray-100 hover:border-gray-400 hover:text-gray-900",
+            "hover:bg-(--jexity-assistant-bg-citation-pill-hover)",
+            "hover:border-(--jexity-assistant-border-citation-pill-hover)",
+            "hover:text-(--jexity-assistant-text-citation-pill-hover)",
             "transition-colors duration-150 cursor-pointer",
             "max-w-32 min-w-11",
             className
           )}
-          onClick={(e) => {
-            e.preventDefault();
-            setOpen(!open);
+          onClick={(event) => {
+            event.preventDefault();
+            setOpen((current) => !current);
           }}
           aria-label={`View citation for ${pillTitle}`}
         >
@@ -153,10 +150,7 @@ export function InlineCitation({
             {sourceEntries.map((entry, idx) => (
               <div
                 key={`${entry.citationIndex}-${idx}`}
-                className={cn(
-                  "pt-0",
-                  idx > 0 && "border-t border-gray-200 pt-3"
-                )}
+                className={cn("pt-0", idx > 0 && "border-t border-gray-200 pt-3")}
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
@@ -200,7 +194,6 @@ export function InlineCitation({
             ))}
           </div>
 
-          {/* Arrow pointing to citation */}
           <Popover.Arrow className="fill-white" />
         </Popover.Content>
       </Popover.Portal>

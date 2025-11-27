@@ -479,7 +479,7 @@ interface ChunkMetadata {
 | `apps/api/src/routes/chat.ts`                         | Returns page numbers in streaming SSE responses                               |
 | `packages/dto/src/source.ts`                          | TypeScript types for Source with pageNumber/pageEnd                           |
 | `apps/chat-widget/src/components/ChatWidget.tsx`      | Displays page numbers in UI                                                   |
-| `apps/chat-widget/src/components/InlineCitation.tsx`  | Shows page numbers in citation popovers                                       |
+| `packages/ui/src/content.ts`                          | Shared tokenizer that keeps widget/helpdesk content parsing identical        |
 
 ---
 

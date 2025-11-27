@@ -5,8 +5,12 @@ import {
   useCallback,
   useMemo,
 } from "preact/hooks";
-import type { ComponentChildren, FunctionalComponent } from "preact";
-import type { JSX } from "preact";
+import type {
+  ComponentChildren,
+  FunctionalComponent,
+  JSX,
+  Ref,
+} from "preact";
 import * as PopoverPrimitive from "@radix-ui/react-popover";
 import { ApiClient, apiClient } from "../lib/api-client";
 import type {
@@ -19,7 +23,7 @@ import type {
 import type { ChatWidgetTheme } from "../types/theme";
 import { cn } from "../lib/utils";
 import { Content } from "./Content";
-import { JexityLogo } from "../../public/JexityLogo";
+import { JexityLogo } from "./JexityLogo";
 import "../styles.css";
 import type { IconProps } from "./icons/types";
 import { ChatbotIcon } from "./icons/ChatbotIcon";
@@ -28,6 +32,8 @@ import { ExpandIcon } from "./icons/ExpandIcon";
 import { CollapseIcon } from "./icons/CollapseIcon";
 import { CloseIcon } from "./icons/CloseIcon";
 import { ArrowUpIcon } from "./icons/ArrowUpIcon";
+
+const MAX_MESSAGE_LENGTH = 2000;
 
 /**
  * Floating button that summons the chat widget when it is closed.
@@ -45,8 +51,9 @@ function ChatBoxTrigger({
       className={cn(
         "fixed bottom-5 right-5 z-50",
         "w-14 h-14 rounded-full",
-        "bg-black hover:bg-slate-900",
-        "text-white border-0 cursor-pointer",
+        "bg-(--jexity-assistant-bg-chat-trigger)",
+        "hover:bg-(--jexity-assistant-bg-chat-trigger-hover)",
+        "text-(--jexity-assistant-icon-color-chat-trigger) border-0 cursor-pointer",
         "shadow-lg hover:shadow-xl",
         "flex items-center justify-center",
         className
@@ -88,7 +95,7 @@ function ChatBoxHeaderMenu({ options }: { options: HeaderMenuOption[] }) {
     <PopoverPrimitive.Root open={open} onOpenChange={setOpen}>
       <PopoverPrimitive.Trigger asChild>
         <button
-          className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gray-300 disabled:pointer-events-none disabled:opacity-50 h-9 w-9 p-0 text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+          className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gray-300 disabled:pointer-events-none disabled:opacity-50 h-9 w-9 p-0 text-(--jexity-assistant-icon-color-chat-header) hover:bg-(--jexity-assistant-bg-chat-header-icon-hover) hover:text-(--jexity-assistant-text-color-chat-header)"
           aria-label="Options"
         >
           <OptionsVerticalIcon size={20} />
@@ -143,8 +150,9 @@ function ChatBoxHeader({
   return (
     <div
       className={cn(
-        "bg-white text-black px-5 py-3",
-        "border-b border-gray-200",
+        "px-5 py-3",
+        "bg-(--jexity-assistant-bg-chat-header) text-(--jexity-assistant-text-color-chat-header)",
+        "border-b border-(--jexity-assistant-border-color-chat-header)",
         "flex items-center justify-between",
         className
       )}
@@ -158,7 +166,7 @@ function ChatBoxHeader({
 
         <button
           onClick={onCloseClick}
-          className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gray-300 disabled:pointer-events-none disabled:opacity-50 h-9 w-9 p-0 text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+          className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gray-300 disabled:pointer-events-none disabled:opacity-50 h-9 w-9 p-0 text-(--jexity-assistant-icon-color-chat-header) hover:bg-(--jexity-assistant-bg-chat-header-icon-hover) hover:text-(--jexity-assistant-text-color-chat-header)"
           aria-label="Close"
         >
           <CloseIcon size={20} />
@@ -180,7 +188,7 @@ function ChatBoxMessageUser({
 }) {
   return (
     <div className={cn("flex flex-col max-w-[80%] self-end", className)}>
-      <div className="px-4 py-3 rounded-[20px] wrap-break-word leading-relaxed text-(--jexity-assistant-text-chat-message-user) rounded-br-md text-sm bg-(--jexity-assistant-bg-chat-message-user) hover:opacity-90 transition-opacity">
+      <div className="px-4 py-3 rounded-[20px] wrap-break-word leading-relaxed text-(--jexity-assistant-text-chat-message-user) rounded-br-md text-sm bg-(--jexity-assistant-bg-chat-message-user) border border-(--jexity-assistant-border-chat-message-user) hover:opacity-90 transition-opacity">
         {content}
       </div>
     </div>
@@ -218,7 +226,7 @@ function ChatBoxMessageAgent({
 
   return (
     <div className={cn("flex flex-col max-w-[80%] self-start", className)}>
-      <div className="px-4 py-3 rounded-[20px] wrap-break-word leading-relaxed bg-gray-100 text-gray-900 border border-gray-200 rounded-bl-md">
+      <div className="px-4 py-3 rounded-[20px] wrap-break-word leading-relaxed rounded-bl-md border bg-(--jexity-assistant-bg-chat-message-agent) text-(--jexity-assistant-text-chat-message-agent) border-(--jexity-assistant-border-chat-message-agent)">
         <div className="mb-2 flex items-center">
           <JexityLogo />
 
@@ -254,13 +262,19 @@ function ChatBoxMessageAgent({
 function ChatBoxMessageLoading({
   content,
   className,
+  isEscalated,
 }: {
   content?: string;
   className?: string;
+  isEscalated?: boolean;
 }) {
   const hasContent = Boolean(content && content.trim().length > 0);
 
   if (!hasContent) {
+    if (isEscalated) {
+      return null;
+    }
+
     return (
       <div
         className={cn(
@@ -297,13 +311,45 @@ function ChatBoxMessageLoading({
 }
 
 /**
+ * Visual indicator rendered while a human agent is composing a reply.
+ */
+function ChatBoxTypingIndicator({
+  label = "Agent is typing...",
+  className,
+}: {
+  label?: string;
+  className?: string;
+}) {
+  return (
+    <div className={cn("flex flex-col max-w-[80%] self-start", className)}>
+      <div className="px-4 py-3 rounded-[20px] wrap-break-word leading-relaxed bg-gray-100 text-gray-900 border border-gray-200 rounded-bl-md">
+        <div className="flex items-center gap-2">
+          {[0, 1, 2].map((index) => (
+            <span
+              key={index}
+              className="h-2 w-2 rounded-full bg-gray-500 animate-typing"
+              style={{ animationDelay: `${index * 120}ms` }}
+            />
+          ))}
+          <span className="text-xs font-medium uppercase tracking-wide text-gray-500">
+            {label}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
  * Lightweight inline error banner shown beneath the transcript.
  */
 function ChatBoxError({
   error,
+  onRetry,
   className,
 }: {
   error?: string | null;
+  onRetry?: (() => void) | null;
   className?: string;
 }) {
   if (!error) return null;
@@ -315,7 +361,16 @@ function ChatBoxError({
         className
       )}
     >
-      {error}
+      <div>{error}</div>
+      {onRetry && (
+        <button
+          type="button"
+          onClick={onRetry}
+          className="mt-2 inline-flex items-center justify-center rounded-full border border-gray-400 px-3 py-1 text-xs font-medium text-gray-800 hover:bg-gray-200 transition-colors"
+        >
+          Retry
+        </button>
+      )}
     </div>
   );
 }
@@ -337,7 +392,7 @@ function ChatBoxEscalationBanner({
         className
       )}
     >
-      <p className="m-0 font-semibold">We're connecting you with a human agent.</p>
+      <p className="m-0 font-semibold">Connecting you with a human agent.</p>
       <p className="m-0 mt-1 text-amber-900/90">
         {reason || "Hang tight - someone will reply shortly."}
       </p>
@@ -362,9 +417,40 @@ function ChatBoxAgentBanner({
         className
       )}
     >
-      <p className="m-0 font-semibold">
-        {agentName} has joined the chat. You're now connected to a human teammate.
-      </p>
+      <p className="m-0 font-semibold">{agentName} has joined the chat.</p>
+    </div>
+  );
+}
+
+/** Informs the user that a teammate closed the conversation. */
+function ChatBoxResolvedBanner({
+  resolvedBy,
+  resolvedAt,
+  className,
+}: {
+  resolvedBy?: string | null;
+  resolvedAt?: string;
+  className?: string;
+}) {
+  const displayName = resolvedBy || "our support team";
+  const timestamp = resolvedAt
+    ? new Intl.DateTimeFormat("en", {
+        dateStyle: "medium",
+        timeStyle: "short",
+      }).format(new Date(resolvedAt))
+    : undefined;
+
+  return (
+    <div
+      className={cn(
+        "mx-4 mb-3 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-800",
+        className
+      )}
+    >
+      <p className="m-0 font-semibold">Conversation closed by {displayName}.</p>
+      {timestamp && (
+        <p className="m-0 mt-1 text-gray-600">Resolved on {timestamp}.</p>
+      )}
     </div>
   );
 }
@@ -378,6 +464,9 @@ function ChatBoxInput({
   onKeyDown,
   onSend,
   disabled,
+  isSendDisabled,
+  textareaRef,
+  maxLength = MAX_MESSAGE_LENGTH,
   className,
 }: {
   value: string;
@@ -385,31 +474,44 @@ function ChatBoxInput({
   onKeyDown: (e: JSX.TargetedKeyboardEvent<HTMLTextAreaElement>) => void;
   onSend: () => void;
   disabled?: boolean;
+  isSendDisabled?: boolean;
+  textareaRef?: Ref<HTMLTextAreaElement>;
+  maxLength?: number;
   className?: string;
 }) {
   return (
-    <div className={cn("px-4 py-3 bg-white", className)}>
-      <div className="flex items-center gap-2 bg-white border border-gray-300 rounded-full pl-5 pr-2 py-2">
+    <div
+      className={cn(
+        "px-4 py-3 bg-(--jexity-assistant-bg-chat-container)",
+        className
+      )}
+    >
+      <div className="flex items-center gap-2 bg-(--jexity-assistant-bg-chat-input) border border-(--jexity-assistant-border-chat-input) rounded-full pl-5 pr-2 py-2">
         <textarea
-          className="flex-1 bg-transparent text-[15px] resize-none outline-none placeholder:text-gray-400 disabled:bg-transparent disabled:cursor-not-allowed max-h-24 leading-5 py-1.5"
+          className="flex-1 bg-transparent text-(--jexity-assistant-text-chat-input) placeholder:text-(--jexity-assistant-placeholder-chat-input) text-[15px] resize-none outline-none disabled:bg-transparent disabled:cursor-not-allowed max-h-24 leading-5 py-1.5"
           value={value}
           onChange={onChange}
           onKeyDown={onKeyDown}
           placeholder="Message..."
           disabled={disabled}
+          maxLength={maxLength}
           rows={1}
+          ref={textareaRef}
           style={{
             scrollbarWidth: "none",
           }}
         />
         <button
           onClick={onSend}
-          disabled={!value.trim() || disabled}
-          className="shrink-0 inline-flex items-center justify-center rounded-full w-[30px] h-[30px] transition-all disabled:bg-gray-300 disabled:text-white bg-black text-white hover:bg-gray-800 disabled:cursor-not-allowed"
+          disabled={!value.trim() || disabled || isSendDisabled}
+          className="shrink-0 inline-flex items-center justify-center rounded-full w-[30px] h-[30px] transition-all bg-(--jexity-assistant-bg-chat-send-button) text-(--jexity-assistant-icon-color-chat-send-button) hover:bg-(--jexity-assistant-bg-chat-send-button-hover) disabled:bg-(--jexity-assistant-bg-chat-send-button-disabled) disabled:text-(--jexity-assistant-icon-color-chat-send-button-disabled) disabled:cursor-not-allowed"
           aria-label="Send message"
         >
           <ArrowUpIcon size={16} />
         </button>
+      </div>
+      <div className="mt-1 text-right text-xs text-(--jexity-assistant-text-chat-input-counter)">
+        {value.length}/{maxLength}
       </div>
     </div>
   );
@@ -428,7 +530,7 @@ function ChatBoxMessages({
   return (
     <div
       className={cn(
-        "flex-1 overflow-y-auto px-5 py-5 flex flex-col gap-4 bg-white",
+        "flex-1 overflow-y-auto px-5 py-5 flex flex-col gap-4 bg-(--jexity-assistant-bg-chat-container)",
         className
       )}
     >
@@ -482,12 +584,17 @@ interface EscalationState {
   escalatedAt?: string;
   agentName?: string;
   agentJoinedAt?: string;
+  isResolved?: boolean;
+  resolvedAt?: string;
+  resolvedBy?: string | null;
 }
 
 /**
  * Normalizes conversation metadata from the API into a widget-friendly structure.
  */
-function extractEscalationState(conversation?: Conversation | null): EscalationState {
+function extractEscalationState(
+  conversation?: Conversation | null
+): EscalationState {
   if (!conversation) {
     return { isEscalated: false };
   }
@@ -498,6 +605,9 @@ function extractEscalationState(conversation?: Conversation | null): EscalationS
     escalatedAt: conversation.escalatedAt ?? undefined,
     agentName: conversation.agentName ?? undefined,
     agentJoinedAt: conversation.agentJoinedAt ?? undefined,
+    isResolved: conversation.isResolved,
+    resolvedAt: conversation.resolvedAt ?? undefined,
+    resolvedBy: conversation.resolvedBy ?? undefined,
   };
 }
 
@@ -519,18 +629,116 @@ export function ChatWidget({
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingContent, setStreamingContent] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [pendingRetryMessage, setPendingRetryMessage] = useState<string | null>(
+    null
+  );
   const [isExpanded, setIsExpanded] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  const [isAgentTyping, setIsAgentTyping] = useState(false);
   const [escalationState, setEscalationState] = useState<EscalationState>({
     isEscalated: false,
   });
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const agentTypingTimeoutRef = useRef<number | undefined>(undefined);
+  const userTypingTimeoutRef = useRef<number | undefined>(undefined);
+  const userTypingStateRef = useRef(false);
+  const focusInput = useCallback(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (agentTypingTimeoutRef.current) {
+        window.clearTimeout(agentTypingTimeoutRef.current);
+      }
+      if (userTypingTimeoutRef.current) {
+        window.clearTimeout(userTypingTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Initialize API client with custom URL if provided
   const client = useMemo(
     () => (apiUrl ? new ApiClient(apiUrl) : apiClient),
     [apiUrl]
   );
+
+  /**
+   * Locks the widget once the backend signals that a human agent resolved the
+   * chat. Keeps the transcript but prevents further input.
+   */
+  const handleResolution = useCallback(
+    (payload: { resolvedAt: string; resolvedBy?: string | null }) => {
+      setEscalationState((prev) => ({
+        ...prev,
+        isEscalated: true,
+        isResolved: true,
+        resolvedAt: payload.resolvedAt,
+        resolvedBy:
+          payload.resolvedBy ?? prev.resolvedBy ?? prev.agentName ?? null,
+      }));
+      setInput("");
+      setStreamingContent("");
+      setIsStreaming(false);
+      setError(
+        "This conversation was resolved by our team. Start a new chat if you need more help."
+      );
+    },
+    []
+  );
+
+  const emitUserTypingState = useCallback(
+    (nextState: boolean) => {
+      if (
+        !conversationId ||
+        !escalationState.isEscalated ||
+        escalationState.isResolved
+      ) {
+        return;
+      }
+
+      if (userTypingStateRef.current === nextState) {
+        return;
+      }
+
+      userTypingStateRef.current = nextState;
+      client
+        .sendTypingIndicator(conversationId, nextState)
+        .catch((error) => {
+          console.error("Failed to send typing indicator", error);
+        });
+    },
+    [
+      client,
+      conversationId,
+      escalationState.isEscalated,
+      escalationState.isResolved,
+    ]
+  );
+
+  const scheduleUserTypingReset = useCallback(() => {
+    if (
+      !conversationId ||
+      !escalationState.isEscalated ||
+      escalationState.isResolved
+    ) {
+      return;
+    }
+
+    emitUserTypingState(true);
+    if (userTypingTimeoutRef.current) {
+      window.clearTimeout(userTypingTimeoutRef.current);
+    }
+    userTypingTimeoutRef.current = window.setTimeout(() => {
+      emitUserTypingState(false);
+    }, 3000);
+  }, [
+    conversationId,
+    escalationState.isEscalated,
+    escalationState.isResolved,
+    emitUserTypingState,
+  ]);
 
   // Instant scroll to bottom when chat is opened
   useEffect(() => {
@@ -569,6 +777,31 @@ export function ChatWidget({
   }, [conversationId, createConversation]);
 
   useEffect(() => {
+    userTypingStateRef.current = false;
+    if (userTypingTimeoutRef.current) {
+      window.clearTimeout(userTypingTimeoutRef.current);
+    }
+  }, [conversationId]);
+
+  useEffect(() => {
+    if (!escalationState.isEscalated || escalationState.isResolved) {
+      userTypingStateRef.current = false;
+      if (userTypingTimeoutRef.current) {
+        window.clearTimeout(userTypingTimeoutRef.current);
+      }
+    }
+  }, [escalationState.isEscalated, escalationState.isResolved]);
+
+  useEffect(() => {
+    if (!escalationState.isEscalated || escalationState.isResolved) {
+      setIsAgentTyping(false);
+      if (agentTypingTimeoutRef.current) {
+        window.clearTimeout(agentTypingTimeoutRef.current);
+      }
+    }
+  }, [escalationState.isEscalated, escalationState.isResolved]);
+
+  useEffect(() => {
     if (!conversationId) {
       return undefined;
     }
@@ -583,6 +816,43 @@ export function ChatWidget({
             agentJoinedAt: event.joinedAt,
             isEscalated: true,
           }));
+          return;
+        }
+
+        if (event.type === "agent_message") {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: event.message.id,
+              conversationId: event.conversationId,
+              role: event.message.role,
+              content: event.message.content,
+              createdAt: event.message.createdAt,
+            },
+          ]);
+          return;
+        }
+
+        if (event.type === "typing") {
+          if (event.actor === "human_agent") {
+            setIsAgentTyping(event.isTyping);
+            if (agentTypingTimeoutRef.current) {
+              window.clearTimeout(agentTypingTimeoutRef.current);
+            }
+            if (event.isTyping) {
+              agentTypingTimeoutRef.current = window.setTimeout(() => {
+                setIsAgentTyping(false);
+              }, 4000);
+            }
+          }
+          return;
+        }
+
+        if (event.type === "resolved") {
+          handleResolution({
+            resolvedAt: event.resolvedAt,
+            resolvedBy: event.resolvedBy,
+          });
         }
       }
     );
@@ -590,26 +860,53 @@ export function ChatWidget({
     return () => {
       unsubscribe();
     };
-  }, [conversationId, client]);
+  }, [conversationId, client, handleResolution]);
 
-  const sendMessage = async () => {
-    if (!input.trim() || !conversationId || isStreaming) return;
+  /**
+   * Sends the current draft unless the transcript is already locked. Users are
+   * nudged to open a new chat instead of replying to resolved threads.
+   */
+  const sendMessage = async (messageOverride?: string) => {
+    const draft = messageOverride ?? input;
+    const userMessage = draft.trim();
 
-    const userMessage = input.trim();
-    setInput("");
+    if (!userMessage || !conversationId || isStreaming) {
+      focusInput();
+      return;
+    }
+
+    if (escalationState.isResolved) {
+      setError(
+        "This conversation has been resolved. Start a new chat to continue."
+      );
+      focusInput();
+      return;
+    }
+
+    if (!messageOverride) {
+      setInput("");
+    }
+    if (userTypingTimeoutRef.current) {
+      window.clearTimeout(userTypingTimeoutRef.current);
+    }
+    emitUserTypingState(false);
+
+    setPendingRetryMessage(null);
     setError(null);
     setIsStreaming(true);
     setStreamingContent("");
+    focusInput();
 
-    // Add user message optimistically
-    const userMsg: Message = {
-      id: `temp-${Date.now()}`,
-      conversationId: conversationId,
-      role: "user",
-      content: userMessage,
-      createdAt: new Date().toISOString(),
-    };
-    setMessages((prev) => [...prev, userMsg]);
+    if (!messageOverride) {
+      const userMsg: Message = {
+        id: `temp-${Date.now()}`,
+        conversationId: conversationId,
+        role: "user",
+        content: userMessage,
+        createdAt: new Date().toISOString(),
+      };
+      setMessages((prev) => [...prev, userMsg]);
+    }
 
     try {
       let fullResponse = "";
@@ -651,23 +948,49 @@ export function ChatWidget({
           setIsStreaming(false);
           setStreamingContent("");
           break;
+        } else if (event.type === "resolved") {
+          handleResolution({
+            resolvedAt: event.resolvedAt,
+            resolvedBy: event.resolvedBy,
+          });
+          break;
         } else if (event.type === "error") {
-          setError(event.message || "An error occurred");
+          setError(event.message || "Failed to send message. Please try again.");
+          setPendingRetryMessage(userMessage);
+          setStreamingContent("");
           setIsStreaming(false);
+          break;
         }
       }
     } catch (err) {
-      setError("Failed to send message");
+      setPendingRetryMessage(userMessage);
+      setStreamingContent("");
+      setError("Failed to send message. Please try again.");
       console.error(err);
     } finally {
       setIsStreaming(false);
     }
   };
 
+  const handleInputChange = (
+    e: JSX.TargetedEvent<HTMLTextAreaElement, Event>
+  ) => {
+    const nextValue = e.currentTarget.value;
+    const safeValue =
+      nextValue.length > MAX_MESSAGE_LENGTH
+        ? nextValue.slice(0, MAX_MESSAGE_LENGTH)
+        : nextValue;
+    setInput(safeValue);
+    if (pendingRetryMessage) {
+      setPendingRetryMessage(null);
+    }
+    scheduleUserTypingReset();
+  };
+
   const handleKeyDown = (e: JSX.TargetedKeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      sendMessage();
+      void sendMessage();
     }
   };
 
@@ -710,9 +1033,28 @@ export function ChatWidget({
         )}
 
         {isStreaming && (
-          <ChatBoxMessageLoading content={streamingContent || undefined} />
+          <ChatBoxMessageLoading
+            content={streamingContent || undefined}
+            isEscalated={escalationState.isEscalated}
+          />
         )}
-        <ChatBoxError error={error} />
+        <ChatBoxError
+          error={error}
+          onRetry={
+            pendingRetryMessage
+              ? () => {
+                  void sendMessage(pendingRetryMessage);
+                }
+              : null
+          }
+        />
+        {isAgentTyping && !escalationState.isResolved && (
+          <ChatBoxTypingIndicator
+            label={`${
+              escalationState.agentName?.trim() || "Agent"
+            } is typing...`}
+          />
+        )}
 
         <div ref={messagesEndRef} />
       </ChatBoxMessages>
@@ -723,13 +1065,24 @@ export function ChatWidget({
       {escalationState.agentName && (
         <ChatBoxAgentBanner agentName={escalationState.agentName} />
       )}
+      {escalationState.isResolved && (
+        <ChatBoxResolvedBanner
+          resolvedBy={escalationState.resolvedBy}
+          resolvedAt={escalationState.resolvedAt}
+        />
+      )}
 
       <ChatBoxInput
         value={input}
-        onChange={(e) => setInput(e.currentTarget.value)}
+        onChange={handleInputChange}
         onKeyDown={handleKeyDown}
-        onSend={sendMessage}
-        disabled={isStreaming}
+        onSend={() => {
+          void sendMessage();
+        }}
+        disabled={escalationState.isResolved}
+        isSendDisabled={isStreaming || escalationState.isResolved}
+        textareaRef={inputRef}
+        maxLength={MAX_MESSAGE_LENGTH}
       />
     </ChatBoxContainer>
   );
