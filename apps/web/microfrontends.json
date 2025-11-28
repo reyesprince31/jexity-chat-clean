@@ -1,0 +1,25 @@
+{
+  "$schema": "https://openapi.vercel.sh/microfrontends.json",
+  "applications": {
+    "web": {
+      "development": {
+        "local": 3003,
+        "fallback": "http://localhost:3000"
+      }
+    },
+    "helpdesk": {
+      "development": {
+        "local": 3004
+      },
+      "routing": [
+        {
+          "group": "helpdesk",
+          "paths": ["/helpdesk/:path*"]
+        }
+      ]
+    }
+  },
+  "options": {
+    "localProxyPort": 3002
+  }
+}
