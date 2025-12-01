@@ -15,10 +15,7 @@ import { realtimeGateway } from "./lib/realtime.js";
 dotenv.config();
 
 const PORT = process.env.PORT || 3001;
-const allowedOrigins = (
-  process.env.CORS_ORIGINS ||
-  "http://localhost:3000,http://localhost:3003,http://localhost:5173,http://localhost:4173,http://localhost:3002"
-)
+const allowedOrigins = (process.env.CORS_ORIGINS ?? "")
   .split(",")
   .map((origin) => origin.trim())
   .filter(Boolean);
