@@ -5,13 +5,11 @@ import { CloseIcon } from "../components/icons/CloseIcon";
 
 interface HomeScreen {
   onStart: () => void;
-  isStarting?: boolean;
   onClose?: () => void;
 }
 
 export const HomeScreen: FunctionalComponent<HomeScreen> = ({
   onStart,
-  isStarting = false,
   onClose,
 }) => {
   return (
@@ -40,15 +38,13 @@ export const HomeScreen: FunctionalComponent<HomeScreen> = ({
         <button
           type="button"
           onClick={onStart}
-          disabled={isStarting}
           className={cn(
             "cursor-pointer mt-6 flex w-full items-center justify-between rounded-2xl px-5 py-4 text-base font-semibold transition",
             "bg-(--jexity-assistant-bg-landing-cta) text-(--jexity-assistant-text-landing-cta)",
-            "focus-visible:outline focus-visible:outline-offset-2 focus-visible:outline-white",
-            isStarting && "pointer-events-none opacity-70"
+            "focus-visible:outline focus-visible:outline-offset-2 focus-visible:outline-white"
           )}
         >
-          <span>{isStarting ? "Preparing..." : "Start a Conversation"}</span>
+          <span>Start a Conversation</span>
           <span className="inline-flex h-9 w-9 items-center justify-center rounded-full text-white bg-(--jexity-assistant-bg-landing-cta-icon)">
             <svg
               width="16"

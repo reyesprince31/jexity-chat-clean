@@ -44,7 +44,6 @@ export function ChatWidget({
   );
   const [messages, setMessages] = useState<MessageWithSources[]>([]);
   const [input, setInput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingContent, setStreamingContent] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -53,7 +52,6 @@ export function ChatWidget({
   );
   const [isExpanded, setIsExpanded] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
-  const [hasStarted, setHasStarted] = useState(false);
   const [isOnHomeScreen, setIsOnHomeScreen] = useState(true);
   const [isAgentTyping, setIsAgentTyping] = useState(false);
   const [escalationState, setEscalationState] = useState<EscalationState>({
@@ -175,25 +173,17 @@ export function ChatWidget({
 
   const createConversation = useCallback(async () => {
     try {
-      setIsLoading(true);
       const response = await client.createConversation();
-      setConversationId(response.conversation.id);
+      const newConversationId = response.conversation.id;
+      setConversationId(newConversationId);
       setEscalationState(extractEscalationState(response.conversation));
-      onConversationCreate?.(response.conversation.id);
+      onConversationCreate?.(newConversationId);
+      return newConversationId;
     } catch (err) {
-      setError("Failed to create conversation");
       console.error(err);
-    } finally {
-      setIsLoading(false);
+      throw err;
     }
   }, [client, onConversationCreate]);
-
-  // Create conversation on mount if none provided
-  useEffect(() => {
-    if (hasStarted && !conversationId) {
-      createConversation();
-    }
-  }, [conversationId, createConversation, hasStarted]);
 
   useEffect(() => {
     userTypingStateRef.current = false;
@@ -289,7 +279,7 @@ export function ChatWidget({
     const draft = messageOverride ?? input;
     const userMessage = draft.trim();
 
-    if (!userMessage || !conversationId || isStreaming) {
+    if (!userMessage || isStreaming) {
       focusInput();
       return;
     }
@@ -305,6 +295,7 @@ export function ChatWidget({
     if (!messageOverride) {
       setInput("");
     }
+
     if (userTypingTimeoutRef.current) {
       window.clearTimeout(userTypingTimeoutRef.current);
     }
@@ -312,14 +303,14 @@ export function ChatWidget({
 
     setPendingRetryMessage(null);
     setError(null);
-    setIsStreaming(true);
-    setStreamingContent("");
-    focusInput();
+
+    let optimisticMessageId: string | null = null;
 
     if (!messageOverride) {
+      optimisticMessageId = `temp-${Date.now()}`;
       const userMsg: Message = {
-        id: `temp-${Date.now()}`,
-        conversationId: conversationId,
+        id: optimisticMessageId,
+        conversationId: conversationId ?? "pending",
         role: "user",
         content: userMessage,
         createdAt: new Date().toISOString(),
@@ -327,10 +318,44 @@ export function ChatWidget({
       setMessages((prev) => [...prev, userMsg]);
     }
 
+    let activeConversationId = conversationId;
+
+    if (!activeConversationId) {
+      try {
+        activeConversationId = await createConversation();
+        if (optimisticMessageId) {
+          const finalizedConversationId = activeConversationId;
+          setMessages((prev) =>
+            prev.map((message) =>
+              message.id === optimisticMessageId
+                ? { ...message, conversationId: finalizedConversationId }
+                : message
+            )
+          );
+        }
+      } catch (err) {
+        if (optimisticMessageId) {
+          const failedMessageId = optimisticMessageId;
+          setMessages((prev) =>
+            prev.filter((message) => message.id !== failedMessageId)
+          );
+        }
+        setPendingRetryMessage(userMessage);
+        setError("Failed to start conversation. Please try again.");
+        console.error(err);
+        focusInput();
+        return;
+      }
+    }
+
+    setIsStreaming(true);
+    setStreamingContent("");
+    focusInput();
+
     try {
       let fullResponse = "";
 
-      for await (const event of client.streamMessage(conversationId, {
+      for await (const event of client.streamMessage(activeConversationId, {
         message: userMessage,
         useRAG: true,
       })) {
@@ -346,7 +371,7 @@ export function ChatWidget({
           );
           const assistantMsg: MessageWithSources = {
             id: `temp-${Date.now()}`,
-            conversationId: conversationId,
+            conversationId: activeConversationId,
             role: "assistant",
             content: fullResponse,
             createdAt: new Date().toISOString(),
@@ -416,9 +441,15 @@ export function ChatWidget({
   };
 
   const handleStartConversation = useCallback(() => {
-    setHasStarted(true);
     setIsOnHomeScreen(false);
-  }, []);
+    if (typeof window !== "undefined") {
+      window.requestAnimationFrame(() => {
+        focusInput();
+      });
+    } else {
+      focusInput();
+    }
+  }, [focusInput]);
 
   const handleBackToHome = useCallback(() => {
     setIsOnHomeScreen(true);
@@ -434,20 +465,8 @@ export function ChatWidget({
       <ChatBoxContainer isExpanded={isExpanded}>
         <HomeScreen
           onStart={handleStartConversation}
-          isStarting={isLoading}
           onClose={() => setIsOpen(false)}
         />
-      </ChatBoxContainer>
-    );
-  }
-
-  // Show loading state
-  if (isLoading) {
-    return (
-      <ChatBoxContainer isExpanded={isExpanded}>
-        <div className="flex items-center justify-center h-full text-gray-600 text-base">
-          Initializing chat...
-        </div>
       </ChatBoxContainer>
     );
   }
