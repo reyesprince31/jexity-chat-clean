@@ -35,6 +35,12 @@
   --jexity-assistant-bg-chat-send-button-disabled: #d1d5db;
   --jexity-assistant-icon-color-chat-send-button: #ffffff;
   --jexity-assistant-icon-color-chat-send-button-disabled: #f8fafc;
+  --jexity-assistant-bg-landing-hero: #111111;
+  --jexity-assistant-text-landing-hero: #ffffff;
+  --jexity-assistant-text-landing-body: #111111;
+  --jexity-assistant-bg-landing-cta: #ffffff;
+  --jexity-assistant-text-landing-cta: #000000;
+  --jexity-assistant-bg-landing-cta-icon: #000000;
 }
 
 /* Custom animations */

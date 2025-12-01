@@ -1,10 +1,11 @@
-import './styles.css';
-import { useEffect, useState } from 'preact/hooks';
-import type { ComponentChildren, ComponentType } from 'preact';
-import { render } from 'preact';
-import root from 'react-shadow';
-import { ChatWidget, type ChatWidgetProps } from './components/ChatWidget';
-import { themeToCSSVars } from './types/theme';
+import "./styles.css";
+import { useEffect, useState } from "preact/hooks";
+import type { ComponentChildren, ComponentType } from "preact";
+import { render } from "preact";
+import root from "react-shadow";
+import { ChatWidget } from "./screens/ConversationScreen";
+import { themeToCSSVars } from "./types/theme";
+import { ChatWidgetProps } from "src/components/ChatBox";
 
 // Create a typed Shadow DOM wrapper component
 type ThemeStyles = Record<string, string>;
@@ -12,21 +13,23 @@ type ThemeStyles = Record<string, string>;
 const ShadowRoot = root.div as ComponentType<
   {
     style?: ThemeStyles;
-    mode?: 'open' | 'closed';
+    mode?: "open" | "closed";
     children?: ComponentChildren;
   } & Record<string, unknown>
 >;
 
 // Shadow DOM wrapper that loads CSS
-function ShadowWidgetWrapper(props: ChatWidgetProps & { themeStyles: ThemeStyles }) {
+function ShadowWidgetWrapper(
+  props: ChatWidgetProps & { themeStyles: ThemeStyles }
+) {
   const { themeStyles, ...widgetProps } = props;
-  const [cssContent, setCssContent] = useState<string>('');
+  const [cssContent, setCssContent] = useState<string>("");
   const [stylesLoaded, setStylesLoaded] = useState(false);
 
   useEffect(() => {
     // Extract CSS from document stylesheets
     const extractCSS = () => {
-      let css = '';
+      let css = "";
 
       // Look for style tags and link tags that might contain our CSS
       Array.from(document.styleSheets).forEach((stylesheet) => {
@@ -34,21 +37,21 @@ function ShadowWidgetWrapper(props: ChatWidgetProps & { themeStyles: ThemeStyles
           // Try to read the CSS rules
           if (stylesheet.cssRules) {
             Array.from(stylesheet.cssRules).forEach((rule) => {
-              css += rule.cssText + '\n';
+              css += rule.cssText + "\n";
             });
           }
         } catch {
           // CORS or other error - check if it's a link tag with our styles
-          if (stylesheet.href && stylesheet.href.includes('styles')) {
+          if (stylesheet.href && stylesheet.href.includes("styles")) {
             // Fetch the stylesheet
             fetch(stylesheet.href)
-              .then(res => res.text())
-              .then(text => {
-                setCssContent(prev => prev + text);
+              .then((res) => res.text())
+              .then((text) => {
+                setCssContent((prev) => prev + text);
                 setStylesLoaded(true);
               })
-              .catch(err => {
-                console.warn('Could not fetch stylesheet:', err);
+              .catch((err) => {
+                console.warn("Could not fetch stylesheet:", err);
                 setStylesLoaded(true); // Continue anyway
               });
           }
@@ -67,18 +70,18 @@ function ShadowWidgetWrapper(props: ChatWidgetProps & { themeStyles: ThemeStyles
       setStylesLoaded(true);
     };
 
-    if (document.readyState === 'complete') {
+    if (document.readyState === "complete") {
       // DOM is already ready
       handleLoad();
     } else {
       // Wait for window load event
-      window.addEventListener('load', handleLoad);
-      return () => window.removeEventListener('load', handleLoad);
+      window.addEventListener("load", handleLoad);
+      return () => window.removeEventListener("load", handleLoad);
     }
   }, []);
 
   return (
-    <div style={{ visibility: stylesLoaded ? 'visible' : 'hidden' }}>
+    <div style={{ visibility: stylesLoaded ? "visible" : "hidden" }}>
       <ShadowRoot style={themeStyles}>
         <style>{cssContent}</style>
         <ChatWidget {...widgetProps} />
@@ -97,7 +100,9 @@ export interface InitChatWidgetOptions extends ChatWidgetProps {
  * @param options Configuration options for the widget
  * @returns Cleanup function to unmount the widget
  */
-export function initChatWidget(options: InitChatWidgetOptions = {}): () => void {
+export function initChatWidget(
+  options: InitChatWidgetOptions = {}
+): () => void {
   const { containerId, containerElement, ...widgetProps } = options;
 
   // Get the container element
@@ -112,8 +117,8 @@ export function initChatWidget(options: InitChatWidgetOptions = {}): () => void 
     }
   } else {
     // Create a default container
-    container = document.createElement('div');
-    container.id = 'chat-widget-container';
+    container = document.createElement("div");
+    container.id = "chat-widget-container";
     document.body.appendChild(container);
   }
 
@@ -121,7 +126,10 @@ export function initChatWidget(options: InitChatWidgetOptions = {}): () => void 
   const themeStyles = options.theme ? themeToCSSVars(options.theme) : {};
 
   // Mount the Preact component with Shadow DOM
-  render(<ShadowWidgetWrapper {...widgetProps} themeStyles={themeStyles} />, container);
+  render(
+    <ShadowWidgetWrapper {...widgetProps} themeStyles={themeStyles} />,
+    container
+  );
 
   // Return cleanup function
   return () => {
@@ -130,31 +138,31 @@ export function initChatWidget(options: InitChatWidgetOptions = {}): () => void 
 }
 
 // Export the component for direct use
-export { ChatWidget } from './components/ChatWidget';
-export type { ChatWidgetProps } from './components/ChatWidget';
+export { ChatWidget } from "./screens/ConversationScreen";
+export type { ChatWidgetProps } from "./components/ChatBox";
 
 // Export theme types
-export type { ChatWidgetTheme } from './types/theme';
+export type { ChatWidgetTheme } from "./types/theme";
 
 // Export API client for advanced usage
-export { ApiClient, apiClient } from './lib/api-client';
-export * from './types/api';
+export { ApiClient, apiClient } from "./lib/api-client";
+export * from "./types/api";
 
 // Auto-initialize if data-chat-widget attribute is present
-if (typeof window !== 'undefined') {
-  window.addEventListener('DOMContentLoaded', () => {
-    document.querySelectorAll('[data-chat-widget]').forEach((element) => {
+if (typeof window !== "undefined") {
+  window.addEventListener("DOMContentLoaded", () => {
+    document.querySelectorAll("[data-chat-widget]").forEach((element) => {
       if (!(element instanceof HTMLElement)) {
         return;
       }
 
-      if (element.getAttribute('data-auto-init') === 'false') {
+      if (element.getAttribute("data-auto-init") === "false") {
         return;
       }
 
-      const apiUrl = element.getAttribute('data-api-url') || undefined;
+      const apiUrl = element.getAttribute("data-api-url") || undefined;
       const conversationId =
-        element.getAttribute('data-conversation-id') || undefined;
+        element.getAttribute("data-conversation-id") || undefined;
 
       initChatWidget({
         containerElement: element,
@@ -166,6 +174,9 @@ if (typeof window !== 'undefined') {
 }
 
 // Make initChatWidget available globally for UMD builds
-if (typeof window !== 'undefined') {
-  (window as Window & typeof globalThis & { initChatWidget: typeof initChatWidget }).initChatWidget = initChatWidget;
+if (typeof window !== "undefined") {
+  (
+    window as Window &
+      typeof globalThis & { initChatWidget: typeof initChatWidget }
+  ).initChatWidget = initChatWidget;
 }
