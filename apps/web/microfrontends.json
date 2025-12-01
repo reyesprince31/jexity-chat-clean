@@ -3,13 +3,13 @@
   "applications": {
     "web": {
       "development": {
-        "local": 3003,
+        "local": 3002,
         "fallback": "http://localhost:3000"
       }
     },
     "helpdesk": {
       "development": {
-        "local": 3004
+        "local": 3003
       },
       "routing": [
         {
@@ -20,6 +20,6 @@
     }
   },
   "options": {
-    "localProxyPort": 3002
+    "localProxyPort": 3000
   }
 }

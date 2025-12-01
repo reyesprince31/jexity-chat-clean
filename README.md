@@ -9,11 +9,23 @@ This repo now includes a GPT-5 powered chat API (`apps/api`) and a shareable wid
 - **Model selection**: `apps/api/src/config/rag.config.ts` targets `gpt-5`, so every conversation automatically benefits from the latest reasoning-capable model.
 - **Streaming events**: The API streams `token` events for incremental UI updates and a final `done` event that carries citation metadata. See `packages/dto/src/stream.ts` for the shared SSE shape.
 
+## Port Configuration
+
+The applications run on the following ports in development:
+
+- **API Server**: 3001 - Fastify backend API
+- **Local Proxy**: 3000 - Main entry point for microfrontend routing
+- **Web App**: 3002 - Next.js web application (microfrontend dev)
+- **Helpdesk**: 3003 - Helpdesk dashboard application
+- **Chat Widget**: 3004 - Vite development server for widget
+
+Access the main application via `http://localhost:3000` (proxy) or individual apps via their respective ports.
+
 ## Using this example
 
 Run the following command:
 
-```sh
+```bash
 npx create-turbo@latest
 ```
 
@@ -43,7 +55,7 @@ This Turborepo has some additional tools already setup for you:
 
 To build all apps and packages, run the following command:
 
-```
+```bash
 cd my-turborepo
 
 # With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
@@ -57,7 +69,7 @@ pnpm exec turbo build
 
 You can build a specific package by using a [filter](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters):
 
-```
+```bash
 # With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
 turbo build --filter=docs
 
@@ -71,7 +83,7 @@ pnpm exec turbo build --filter=docs
 
 To develop all apps and packages, run the following command:
 
-```
+```bash
 cd my-turborepo
 
 # With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
@@ -85,7 +97,7 @@ pnpm exec turbo dev
 
 You can develop a specific package by using a [filter](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters):
 
-```
+```bash
 # With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
 turbo dev --filter=web
 
@@ -104,7 +116,7 @@ Turborepo can use a technique known as [Remote Caching](https://turborepo.com/do
 
 By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
 
-```
+```bash
 cd my-turborepo
 
 # With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
@@ -120,7 +132,7 @@ This will authenticate the Turborepo CLI with your [Vercel account](https://verc
 
 Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
 
-```
+```bash
 # With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
 turbo link
 
@@ -140,3 +152,7 @@ Learn more about the power of Turborepo:
 - [Filtering](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters)
 - [Configuration Options](https://turborepo.com/docs/reference/configuration)
 - [CLI Usage](https://turborepo.com/docs/reference/command-line-reference)
+
+```
+
+```

@@ -17,7 +17,7 @@
     "dist"
   ],
   "scripts": {
-    "dev": "vite --port 3000",
+    "dev": "vite --port 3004",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "lint": "eslint . --max-warnings 0",
