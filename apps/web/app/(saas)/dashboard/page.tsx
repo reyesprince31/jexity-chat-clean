@@ -3,12 +3,8 @@ import { getServerSession, getUserOrganizations } from "@/lib/auth-server";
 import { AppSidebar } from "@/components/saas/app-sidebar";
 import { ImpersonationBanner } from "@/components/admin/impersonation-banner";
 import { CreateOrganizationPrompt } from "@/components/organization/create-organization-prompt";
-import {
-  SidebarInset,
-  SidebarProvider,
-  SidebarTrigger,
-} from "@repo/ui/components/sidebar";
-import { Separator } from "@repo/ui/components/separator";
+import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/ui/sidebar";
+import { Separator } from "@/ui/separator";
 
 export default async function DashboardPage() {
   const session = await getServerSession();
@@ -21,7 +17,7 @@ export default async function DashboardPage() {
   const organizations = await getUserOrganizations();
 
   // If user has organizations, redirect to the first one
-  if (organizations && organizations.length > 0) {
+  if (organizations && organizations.length > 0 && organizations[0]?.slug) {
     redirect(`/dashboard/${organizations[0].slug}`);
   }
 

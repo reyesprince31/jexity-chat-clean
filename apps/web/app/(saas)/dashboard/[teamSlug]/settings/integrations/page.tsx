@@ -6,8 +6,8 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@repo/ui/components/card";
-import { Button } from "@repo/ui/components/button";
+} from "@/ui/card";
+import { Button } from "@/ui/button";
 
 interface IntegrationsPageProps {
   params: Promise<{ teamSlug: string }>;

@@ -7,15 +7,15 @@ import { z } from "zod";
 import Link from "next/link";
 
 
-import { Button } from "@repo/ui/components/button";
+import { Button } from "@/ui/button";
 import {
   Field,
   FieldDescription,
   FieldGroup,
   FieldLabel,
-} from "@repo/ui/components/field";
-import { Input } from "@repo/ui/components/input";
-import { cn } from "@repo/ui/lib/utils";
+} from "@/ui/field";
+import { Input } from "@/ui/input";
+import { cn } from "@/lib/utils";
 
 const forgotPasswordSchema = z.object({
   email: z.email("Please enter a valid email"),

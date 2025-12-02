@@ -6,8 +6,8 @@ import Link from "next/link";
 import { Building2, Check, X, LogIn, UserPlus } from "lucide-react";
 
 import { authClient } from "@/lib/auth-client";
-import { Button } from "@repo/ui/components/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@repo/ui/components/card";
+import { Button } from "@/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/ui/card";
 
 interface InvitationData {
   id: string;

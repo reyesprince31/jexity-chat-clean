@@ -6,20 +6,20 @@ import { format } from "date-fns";
 import Image from "next/image";
 
 import { authClient } from "@/lib/auth-client";
-import { Button } from "@repo/ui/components/button";
+import { Button } from "@/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@repo/ui/components/dropdown-menu";
+} from "@/ui/dropdown-menu";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@repo/ui/components/select";
+} from "@/ui/select";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,8 +29,8 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@repo/ui/components/alert-dialog";
-import { Badge } from "@repo/ui/components/badge";
+} from "@/ui/alert-dialog";
+import { Badge } from "@/ui/badge";
 
 interface Member {
   id: string;

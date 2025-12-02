@@ -6,11 +6,11 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@repo/ui/components/card";
-import { Input } from "@repo/ui/components/input";
-import { Label } from "@repo/ui/components/label";
-import { Button } from "@repo/ui/components/button";
-import { Badge } from "@repo/ui/components/badge";
+} from "@/ui/card";
+import { Input } from "@/ui/input";
+import { Label } from "@/ui/label";
+import { Button } from "@/ui/button";
+import { Badge } from "@/ui/badge";
 import { mockCurrentPlanId, mockPlans } from "@/lib/mock-data";
 
 interface SettingsPageProps {

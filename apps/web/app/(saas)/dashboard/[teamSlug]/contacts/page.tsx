@@ -13,23 +13,23 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from "@repo/ui/components/breadcrumb";
-import { Separator } from "@repo/ui/components/separator";
+} from "@/ui/breadcrumb";
+import { Separator } from "@/ui/separator";
 import {
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
-} from "@repo/ui/components/sidebar";
+} from "@/ui/sidebar";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@repo/ui/components/card";
-import { Input } from "@repo/ui/components/input";
-import { Button } from "@repo/ui/components/button";
-import { Badge } from "@repo/ui/components/badge";
+} from "@/ui/card";
+import { Input } from "@/ui/input";
+import { Button } from "@/ui/button";
+import { Badge } from "@/ui/badge";
 import {
   Table,
   TableBody,
@@ -37,8 +37,8 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@repo/ui/components/table";
-import { cn } from "@repo/ui/lib/utils";
+} from "@/ui/table";
+import { cn } from "@/lib/utils";
 import { mockContacts } from "@/lib/mock-data";
 
 interface ContactsPageProps {

@@ -6,7 +6,7 @@ import {
   TooltipContent,
   TooltipTrigger,
   TooltipProvider,
-} from "@repo/ui/components/tooltip";
+} from "@/ui/tooltip";
 
 export function ProBadge() {
   return (

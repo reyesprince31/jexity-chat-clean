@@ -9,8 +9,9 @@ This document outlines the plan to create mock UI pages for the AI Chatbot Dashb
 ## Current State Analysis
 
 ### Existing Structure
+
 - **Framework:** Next.js 15+ with App Router
-- **Styling:** TailwindCSS + shadcn/ui (new-york style) via `@repo/ui`
+- **Styling:** TailwindCSS + shadcn/ui (new-york style)
 - **Icons:** Lucide React
 - **Auth:** Better-Auth with organization multi-tenancy
 - **Multi-tenancy:** Team-based via `[teamSlug]` dynamic routing
@@ -21,6 +22,7 @@ This document outlines the plan to create mock UI pages for the AI Chatbot Dashb
   - `/dashboard/[teamSlug]/settings/members` - Team members
 
 ### Existing Components
+
 - `AppSidebar` with team switcher, nav-main, nav-projects, nav-user
 - Settings layout with nested navigation pattern
 - Breadcrumbs, separators, sidebar provider
@@ -31,23 +33,24 @@ This document outlines the plan to create mock UI pages for the AI Chatbot Dashb
 
 ### Primary Navigation (Sidebar - `app-sidebar.tsx`)
 
-| Icon | Label | Route | Tier |
-|------|-------|-------|------|
-| LayoutDashboard | Overview | `/dashboard/[teamSlug]` | All |
-| MessageSquare | Conversations | `/dashboard/[teamSlug]/conversations` | All |
-| Palette | Widget | `/dashboard/[teamSlug]/widget` | All |
-| BookOpen | Knowledge Base | `/dashboard/[teamSlug]/knowledge` | 🔒 **Pro** |
-| BarChart3 | Analytics | `/dashboard/[teamSlug]/analytics` | All |
-| Settings2 | Settings | `/dashboard/[teamSlug]/settings` | All |
+| Icon            | Label          | Route                                 | Tier       |
+| --------------- | -------------- | ------------------------------------- | ---------- |
+| LayoutDashboard | Overview       | `/dashboard/[teamSlug]`               | All        |
+| MessageSquare   | Conversations  | `/dashboard/[teamSlug]/conversations` | All        |
+| Palette         | Widget         | `/dashboard/[teamSlug]/widget`        | All        |
+| BookOpen        | Knowledge Base | `/dashboard/[teamSlug]/knowledge`     | 🔒 **Pro** |
+| BarChart3       | Analytics      | `/dashboard/[teamSlug]/analytics`     | All        |
+| Settings2       | Settings       | `/dashboard/[teamSlug]/settings`      | All        |
 
 ### Feature Tiers
 
-| Tier | Features |
-|------|----------|
-| **Free** | Chat Widget with human CSR/TSR support, Widget Customizer, Basic Analytics |
-| **Pro** | Everything in Free + Knowledge Base (Website Scraping, RAG Upload, Workflows), AI-powered responses |
+| Tier     | Features                                                                                            |
+| -------- | --------------------------------------------------------------------------------------------------- |
+| **Free** | Chat Widget with human CSR/TSR support, Widget Customizer, Basic Analytics                          |
+| **Pro**  | Everything in Free + Knowledge Base (Website Scraping, RAG Upload, Workflows), AI-powered responses |
 
 ### Pro Feature Badge Design
+
 - **Icon:** `Crown` or `Sparkles` from Lucide
 - **Badge:** Small amber/gold badge next to nav item
 - **Tooltip:** "Upgrade to Pro to unlock this feature"
@@ -66,6 +69,7 @@ This document outlines the plan to create mock UI pages for the AI Chatbot Dashb
 **Note:** This is a new mock UI in `apps/web`. The existing `apps/helpdesk` implementation can be referenced for patterns but this will be built fresh with team context.
 
 #### Layout Structure
+
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │  Conversations                              [Filter ▼]      │
@@ -90,6 +94,7 @@ This document outlines the plan to create mock UI pages for the AI Chatbot Dashb
 ```
 
 #### Features
+
 - Conversation list with status indicators (open, waiting, resolved)
 - Click conversation to view chat history
 - Real-time message updates (mock with state)
@@ -105,6 +110,7 @@ This document outlines the plan to create mock UI pages for the AI Chatbot Dashb
 **Purpose:** Allow users to customize the chat widget appearance that gets embedded on their websites.
 
 #### Layout Structure
+
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │  Widget Customizer                                          │
@@ -136,6 +142,7 @@ This document outlines the plan to create mock UI pages for the AI Chatbot Dashb
 #### Configuration Sections
 
 **1. Appearance**
+
 - Theme: Light / Dark / Auto
 - Primary color (color picker)
 - Secondary/accent color
@@ -143,28 +150,33 @@ This document outlines the plan to create mock UI pages for the AI Chatbot Dashb
 - Border radius (slider: none → rounded → pill)
 
 **2. Typography**
+
 - Font family dropdown (Inter, System, Roboto, etc.)
 - Font size (Small, Medium, Large)
 - Message bubble style
 
 **3. Branding**
+
 - Bot avatar upload/URL
 - Bot name
 - Welcome message
 - Placeholder text
 
 **4. Position & Size**
+
 - Widget position: Bottom-right / Bottom-left
 - Widget size: Compact / Standard / Large
 - Chat button icon style
 
 **5. Behavior (toggles)**
+
 - Show powered by badge
 - Enable sound notifications
 - Auto-open on page load
 - Show typing indicators
 
 #### Components Needed
+
 - `ColorPicker` - For color selection
 - `ThemeToggle` - Light/Dark/Auto
 - `SliderInput` - For border radius, sizes
@@ -180,11 +192,13 @@ This document outlines the plan to create mock UI pages for the AI Chatbot Dashb
 **Purpose:** Manage knowledge sources for the AI chatbot (RAG context).
 
 **Pro Feature Indication:**
+
 - Nav item shows `Crown` icon badge
 - Tooltip: "Pro Feature - Upgrade to unlock AI-powered responses"
 - If Free user clicks, show upgrade modal or redirect to billing
 
 #### Layout Structure
+
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │  Knowledge Base                          [+ Add Source]     │
@@ -303,6 +317,7 @@ This document outlines the plan to create mock UI pages for the AI Chatbot Dashb
 ```
 
 **Workflow Editor (Full Page Modal/Route):**
+
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │  ← Back to Workflows    "Daily Knowledge Sync"    [Save]   │
@@ -336,6 +351,7 @@ This document outlines the plan to create mock UI pages for the AI Chatbot Dashb
 **Purpose:** Display chatbot performance metrics and insights.
 
 #### Layout Structure
+
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │  Analytics                         [Last 7 days ▼] [Export]│
@@ -371,6 +387,7 @@ This document outlines the plan to create mock UI pages for the AI Chatbot Dashb
 **Note:** General and Members settings already exist. We'll add more sections as needed.
 
 #### Layout Structure
+
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │  Settings                                                   │
@@ -394,12 +411,14 @@ This document outlines the plan to create mock UI pages for the AI Chatbot Dashb
 #### Settings Sections
 
 **General**
+
 - Chatbot name
 - Default language
 - Timezone
 - Operating hours
 
 **AI Model**
+
 - Model selection (GPT-4o, etc.)
 - Temperature slider
 - Max tokens
@@ -407,26 +426,31 @@ This document outlines the plan to create mock UI pages for the AI Chatbot Dashb
 - Fallback behavior
 
 **Integrations**
+
 - Slack integration
 - Email notifications
 - Webhook URLs
 - CRM connections
 
 **Team**
+
 - Team members list
 - Invite new members
 - Role management
 
 **Billing**
+
 - Current plan
 - Usage stats
 - Upgrade options
 
 **API Keys**
+
 - Generate/revoke keys
 - Key permissions
 
 **Embed Code**
+
 - Copy-paste snippet
 - Installation instructions
 
@@ -480,15 +504,18 @@ apps/web/
 ## Implementation Order
 
 ### Phase 1: Navigation & Structure
+
 1. Update `AppSidebar.tsx` with new navigation items
 2. Create route folders and placeholder pages
 
 ### Phase 2: Widget Customizer
+
 1. Create configuration panel with form controls
 2. Build live preview component
 3. Add color picker functionality
 
 ### Phase 3: Knowledge Base
+
 1. Build tabs layout
 2. Create Website Scraper tab UI
 3. Create File Upload tab with drag-drop zone
@@ -496,10 +523,12 @@ apps/web/
 5. Build simple workflow editor (visual node concept)
 
 ### Phase 4: Analytics Enhancement
+
 1. Add metric cards
 2. Create chart placeholders (using recharts or similar)
 
 ### Phase 5: Settings Page
+
 1. Create settings navigation
 2. Build out individual settings sections
 
@@ -510,11 +539,11 @@ apps/web/
 ```json
 {
   "dependencies": {
-    "@radix-ui/react-slider": "^1.x",      // For sliders
-    "@radix-ui/react-switch": "^1.x",      // For toggles
-    "recharts": "^2.x",                     // For analytics charts
-    "react-colorful": "^5.x",               // For color picker
-    "react-dropzone": "^14.x"               // For file upload
+    "@radix-ui/react-slider": "^1.x", // For sliders
+    "@radix-ui/react-switch": "^1.x", // For toggles
+    "recharts": "^2.x", // For analytics charts
+    "react-colorful": "^5.x", // For color picker
+    "react-dropzone": "^14.x" // For file upload
   }
 }
 ```
@@ -524,18 +553,21 @@ apps/web/
 ## Design Guidelines
 
 ### Color Palette (from existing)
+
 - Background: `bg-zinc-200` (page bg), `bg-card` / `bg-background` (panels)
 - Text: `text-foreground`, `text-muted-foreground`
 - Borders: `border-border/80`
 - Accent: Primary brand color (customizable)
 
 ### Component Patterns
+
 - Use shadcn/ui components (Card, Button, Input, Tabs, etc.)
 - Resizable panels for split views
 - Tooltips for icon-only navigation
 - Consistent border-radius (`rounded-2xl` for main panels)
 
 ### Responsive Behavior
+
 - Sidebar collapses to icons only (already implemented)
 - Main content uses resizable panels where appropriate
 - Mobile: Stack panels vertically
@@ -586,6 +618,7 @@ const mockWorkflows = [
 ## Next Steps
 
 After your approval:
+
 1. Update `app-sidebar.tsx` with new navigation structure + Pro badge
 2. Create route folders and placeholder pages
 3. Build each page with mock data and interactive state

@@ -6,7 +6,7 @@ import {
   getContentSegments,
   type ContentValue,
   type MessageSegment,
-} from "@repo/ui/content";
+} from "../lib/content";
 import { cn } from "../lib/utils";
 import { InlineCitation } from "./InlineCitation";
 

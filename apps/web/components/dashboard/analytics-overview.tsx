@@ -1,15 +1,15 @@
 "use client";
 
-import { Button } from "@repo/ui/components/button";
+import { Button } from "@/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@repo/ui/components/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@repo/ui/components/select";
-import { Badge } from "@repo/ui/components/badge";
+} from "@/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/ui/select";
+import { Badge } from "@/ui/badge";
 import {
   AnalyticsPoint,
   mockAnalyticsSummary,

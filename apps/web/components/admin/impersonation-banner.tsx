@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Eye, ArrowLeft } from "lucide-react";
-import { Button } from "@repo/ui/components/button";
+import { Button } from "@/ui/button";
 import { authClient } from "@/lib/auth-client";
 
 interface ImpersonationBannerProps {

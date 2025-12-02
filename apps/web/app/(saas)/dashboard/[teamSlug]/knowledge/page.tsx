@@ -14,13 +14,13 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from "@repo/ui/components/breadcrumb";
-import { Separator } from "@repo/ui/components/separator";
+} from "@/ui/breadcrumb";
+import { Separator } from "@/ui/separator";
 import {
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
-} from "@repo/ui/components/sidebar";
+} from "@/ui/sidebar";
 
 interface KnowledgePageProps {
   params: Promise<{ teamSlug: string }>;

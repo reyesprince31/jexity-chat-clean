@@ -4,7 +4,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@repo/ui/components/card";
+} from "@/ui/card";
 import {
   Table,
   TableBody,
@@ -12,8 +12,8 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@repo/ui/components/table";
-import { Badge } from "@repo/ui/components/badge";
+} from "@/ui/table";
+import { Badge } from "@/ui/badge";
 
 interface OrganizationsTableProps {
   organizations: {

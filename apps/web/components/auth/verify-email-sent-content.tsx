@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Mail, RefreshCw } from "lucide-react";
 
 import { authClient } from "@/lib/auth-client";
-import { Button } from "@repo/ui/components/button";
+import { Button } from "@/ui/button";
 
 const COOLDOWN_SECONDS = 60;
 

@@ -12,14 +12,14 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@repo/ui/components/dropdown-menu"
+} from "@/ui/dropdown-menu"
 import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   useSidebar,
-} from "@repo/ui/components/sidebar"
-import { Skeleton } from "@repo/ui/components/skeleton"
+} from "@/ui/sidebar"
+import { Skeleton } from "@/ui/skeleton"
 import { authClient } from "@/lib/auth-client"
 import { CreateOrganizationDialog } from "@/components/organization/create-organization-dialog"
 

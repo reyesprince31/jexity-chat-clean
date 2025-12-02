@@ -1,12 +1,11 @@
-import { prisma } from "@repo/db";
-import { formatDistanceToNow } from "date-fns";
+import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@repo/ui/components/card";
+} from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -14,8 +13,9 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@repo/ui/components/table";
-import { Badge } from "@repo/ui/components/badge";
+} from "@/components/ui/table";
+import { prisma } from "@repo/db";
+import { formatDistanceToNow } from "date-fns";
 import {
   UserPlus,
   UserMinus,
@@ -207,7 +207,8 @@ export default async function AuditLogsPage() {
                       <TableCell>
                         <Badge
                           variant="secondary"
-                          className={`${config.color} gap-1`}>
+                          className={`${config.color} gap-1`}
+                        >
                           <Icon className="h-3 w-3" />
                           {config.label}
                         </Badge>

@@ -1,36 +1,30 @@
-"use client"
+"use client";
 
-import { cn } from "@repo/ui/lib/utils"
-import { Button } from "@repo/ui/components/button"
-import { Card, CardContent } from "@repo/ui/components/card"
-import {
-  Field,
-  FieldDescription,
-  FieldGroup,
-  FieldLabel,
-} from "@repo/ui/components/field"
-import { Input } from "@repo/ui/components/input"
-import Link from "next/link"
-import Image from "next/image"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { z } from "zod"
-import { authClient } from "@/lib/auth-client"
-import { useState } from "react"
+import { cn } from "@/lib/utils";
+import { Button } from "@/ui/button";
+import { Card, CardContent } from "@/ui/card";
+import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/ui/field";
+import { Input } from "@/ui/input";
+import Link from "next/link";
+import Image from "next/image";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { useState } from "react";
 
 // Zod 4 validation schema
 const forgotPasswordSchema = z.object({
   email: z.email("Invalid email address"),
-})
+});
 
-type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>
+type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 
 export function ForgotPasswordForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
-  const [isLoading, setIsLoading] = useState(false)
-  const [success, setSuccess] = useState(false)
+  const [isLoading, setIsLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
 
   const {
     register,
@@ -38,27 +32,37 @@ export function ForgotPasswordForm({
     formState: { errors },
   } = useForm<ForgotPasswordInput>({
     resolver: zodResolver(forgotPasswordSchema),
-  })
+  });
 
   const onSubmit = async (data: ForgotPasswordInput) => {
     try {
-      setIsLoading(true)
+      setIsLoading(true);
 
-      await authClient.forgetPassword({
-        email: data.email,
-        redirectTo: "/auth/reset-password",
-      })
+      const response = await fetch("/api/auth/request-password-reset", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: data.email,
+          redirectTo: `${window.location.origin}/auth/reset-password`,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to send reset email");
+      }
 
       // Always show success message (security: don't reveal if email exists)
-      setSuccess(true)
+      setSuccess(true);
     } catch (err) {
-      console.error(err)
+      console.error(err);
       // Still show success to prevent email enumeration
-      setSuccess(true)
+      setSuccess(true);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
@@ -69,7 +73,9 @@ export function ForgotPasswordForm({
               {!success ? (
                 <>
                   <div className="flex flex-col items-center gap-2 text-center">
-                    <h1 className="text-2xl font-bold">Forgot your password?</h1>
+                    <h1 className="text-2xl font-bold">
+                      Forgot your password?
+                    </h1>
                     <p className="text-muted-foreground text-balance">
                       Enter your email address and we&apos;ll send you a link to
                       reset your password.
@@ -92,7 +98,11 @@ export function ForgotPasswordForm({
                   </Field>
 
                   <Field>
-                    <Button type="submit" disabled={isLoading} className="w-full">
+                    <Button
+                      type="submit"
+                      disabled={isLoading}
+                      className="w-full"
+                    >
                       {isLoading ? "Sending..." : "Send Reset Link"}
                     </Button>
                   </Field>
@@ -108,7 +118,9 @@ export function ForgotPasswordForm({
                 <div className="flex flex-col items-center gap-4 text-center">
                   <div className="bg-green-50 border border-green-200 text-green-700 px-6 py-8 rounded-lg">
                     <div className="text-4xl mb-4">✓</div>
-                    <h2 className="text-xl font-semibold mb-2">Check your email</h2>
+                    <h2 className="text-xl font-semibold mb-2">
+                      Check your email
+                    </h2>
                     <p className="text-sm">
                       If an account exists with that email address, you&apos;ll
                       receive a password reset link shortly.
@@ -149,5 +161,5 @@ export function ForgotPasswordForm({
         and <a href="#">Privacy Policy</a>.
       </FieldDescription>
     </div>
-  )
+  );
 }

@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { UserPlus, Users } from "lucide-react";
 
 import { authClient } from "@/lib/auth-client";
-import { Button } from "@repo/ui/components/button";
+import { Button } from "@/ui/button";
 import { InviteMemberDialog } from "@/components/organization/invite-member-dialog";
 import { MembersList } from "@/components/organization/members-list";
 import { InvitationsList } from "@/components/organization/pending-invitations";
