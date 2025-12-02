@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Settings, Users } from "lucide-react";
+import { Plug, Settings, Users } from "lucide-react";
 import { cn } from "@repo/ui/lib/utils";
 
 interface SettingsNavProps {
@@ -20,6 +20,11 @@ const navItems = [
     title: "Members",
     href: (slug: string) => `/dashboard/${slug}/settings/members`,
     icon: Users,
+  },
+  {
+    title: "Integrations",
+    href: (slug: string) => `/dashboard/${slug}/settings/integrations`,
+    icon: Plug,
   },
 ];
 

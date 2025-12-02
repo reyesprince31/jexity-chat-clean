@@ -3,19 +3,23 @@
 import * as React from "react";
 import { useParams } from "next/navigation";
 import {
-  BookOpen,
-  Bot,
-  Frame,
-  Map,
-  PieChart,
+  BarChart3,
+  FileText,
+  GitBranch,
+  Globe2,
+  LayoutDashboard,
+  MessageSquare,
+  Palette,
+  Plug,
   Settings2,
-  SquareTerminal,
+  UserCog,
+  Users,
 } from "lucide-react";
 
 import { NavMain } from "@/components/saas/nav-main";
-import { NavProjects } from "@/components/saas/nav-projects";
 import { NavUser } from "@/components/saas/nav-user";
 import { TeamSwitcher } from "@/components/saas/team-switcher";
+import { ProBadge } from "@/components/dashboard/pro-badge";
 import {
   Sidebar,
   SidebarContent,
@@ -38,62 +42,116 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
   const teamSlug = params?.teamSlug as string | undefined;
 
   // Generate navigation data with dynamic URLs based on team context
-  const navMain = React.useMemo(() => {
+  const navGroups = React.useMemo(() => {
+    const baseDashboardUrl = teamSlug ? `/dashboard/${teamSlug}` : "/dashboard";
     const settingsBaseUrl = teamSlug
       ? `/dashboard/${teamSlug}/settings`
       : "/settings";
 
     return [
       {
-        title: "Playground",
-        url: "#",
-        icon: SquareTerminal,
-        isActive: true,
+        label: "MAIN",
         items: [
-          { title: "History", url: "#" },
-          { title: "Starred", url: "#" },
-          { title: "Settings", url: "#" },
+          {
+            title: "Dashboard",
+            url: baseDashboardUrl,
+            icon: LayoutDashboard,
+          },
+          {
+            title: "Inbox",
+            url: teamSlug
+              ? `${baseDashboardUrl}/conversations`
+              : baseDashboardUrl,
+            icon: MessageSquare,
+          },
+          {
+            title: "Contacts",
+            url: teamSlug
+              ? `${baseDashboardUrl}/contacts`
+              : baseDashboardUrl,
+            icon: Users,
+          },
         ],
       },
       {
-        title: "Models",
-        url: "#",
-        icon: Bot,
+        label: "WIDGET",
         items: [
-          { title: "Genesis", url: "#" },
-          { title: "Explorer", url: "#" },
-          { title: "Quantum", url: "#" },
+          {
+            title: "Widget Customizer",
+            url: teamSlug
+              ? `${baseDashboardUrl}/widget`
+              : baseDashboardUrl,
+            icon: Palette,
+          },
         ],
       },
       {
-        title: "Documentation",
-        url: "#",
-        icon: BookOpen,
+        label: "KNOWLEDGE BASE",
         items: [
-          { title: "Introduction", url: "#" },
-          { title: "Get Started", url: "#" },
-          { title: "Tutorials", url: "#" },
-          { title: "Changelog", url: "#" },
+          {
+            title: "Website Scraper",
+            url: teamSlug
+              ? `${baseDashboardUrl}/knowledge/websites`
+              : baseDashboardUrl,
+            icon: Globe2,
+            badge: <ProBadge />,
+          },
+          {
+            title: "Documents",
+            url: teamSlug
+              ? `${baseDashboardUrl}/knowledge/documents`
+              : baseDashboardUrl,
+            icon: FileText,
+            badge: <ProBadge />,
+          },
+          {
+            title: "Workflows",
+            url: teamSlug
+              ? `${baseDashboardUrl}/knowledge/workflows`
+              : baseDashboardUrl,
+            icon: GitBranch,
+            badge: <ProBadge />,
+          },
         ],
       },
       {
-        title: "Settings",
-        url: settingsBaseUrl,
-        icon: Settings2,
+        label: "INSIGHTS",
         items: [
-          { title: "General", url: settingsBaseUrl },
-          { title: "Members", url: `${settingsBaseUrl}/members` },
-          { title: "Billing", url: "#" },
+          {
+            title: "Analytics",
+            url: teamSlug
+              ? `${baseDashboardUrl}/analytics`
+              : baseDashboardUrl,
+            icon: BarChart3,
+          },
+          {
+            title: "Integrations",
+            url: teamSlug
+              ? `${settingsBaseUrl}/integrations`
+              : "/settings/integrations",
+            icon: Plug,
+          },
+        ],
+      },
+      {
+        label: "SETTINGS",
+        items: [
+          {
+            title: "Team",
+            url: teamSlug
+              ? `/dashboard/${teamSlug}/team`
+              : "/dashboard",
+            icon: UserCog,
+          },
+          {
+            title: "Settings",
+            url: settingsBaseUrl,
+            icon: Settings2,
+          },
         ],
       },
     ];
   }, [teamSlug]);
-
-  const projects = [
-    { name: "Design Engineering", url: "#", icon: Frame },
-    { name: "Sales & Marketing", url: "#", icon: PieChart },
-    { name: "Travel", url: "#", icon: Map },
-  ];
 
   return (
     <Sidebar collapsible="icon" {...props}>
@@ -101,8 +159,9 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
         <TeamSwitcher />
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={navMain} />
-        <NavProjects projects={projects} />
+        {navGroups.map((group) => (
+          <NavMain key={group.label} label={group.label} items={group.items} />
+        ))}
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={user} />
