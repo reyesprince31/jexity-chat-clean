@@ -11,12 +11,12 @@ import {
   BreadcrumbItem,
   BreadcrumbLink,
   BreadcrumbList,
-  BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/ui/breadcrumb";
 import { Separator } from "@/ui/separator";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/ui/sidebar";
 import { ConversationsContent } from "@/components/conversations/ConversationContent";
+import { InboxBreadcrumbToggle } from "@/components/conversations/InboxBreadcrumbToggle";
 
 interface ConversationsPageProps {
   params: Promise<{ teamSlug: string }>;
@@ -72,7 +72,7 @@ export default async function ConversationsPage({
                 </BreadcrumbItem>
                 <BreadcrumbSeparator className="hidden md:block" />
                 <BreadcrumbItem>
-                  <BreadcrumbPage>Inbox</BreadcrumbPage>
+                  <InboxBreadcrumbToggle />
                 </BreadcrumbItem>
               </BreadcrumbList>
             </Breadcrumb>

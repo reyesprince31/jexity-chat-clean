@@ -19,6 +19,7 @@ import type {
   ConversationMessage,
   ConversationRecord,
 } from "@/components/conversations/types";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   claimConversation,
   fetchEscalatedConversations,
@@ -39,12 +40,17 @@ const ROLE_TO_SENDER: Record<Message["role"], ConversationMessage["sender"]> = {
   human_agent: "human_agent",
 };
 
+export const CONVERSATIONS_SHOW_LIST_EVENT = "conversations:showList";
+export const CONVERSATIONS_DETAIL_VISIBILITY_EVENT =
+  "conversations:detailVisibility";
+
 const sortConversations = (items: ConversationRecord[]) =>
   [...items].sort(
     (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
   );
 
 export function ConversationsContent() {
+  const isMobile = useIsMobile();
   const [conversations, setConversations] = React.useState<
     ConversationRecord[]
   >([]);
@@ -61,6 +67,8 @@ export function ConversationsContent() {
   const [resolvingConversationId, setResolvingConversationId] = React.useState<
     string | null
   >(null);
+  const [isMobileDetailVisible, setIsMobileDetailVisible] =
+    React.useState(false);
   const customerTypingResetTimers = React.useRef<Record<string, number>>({});
   const agentTypingDispatchTimers = React.useRef<Record<string, number>>({});
   const agentTypingResetTimers = React.useRef<Record<string, number>>({});
@@ -103,10 +111,6 @@ export function ConversationsContent() {
     []
   );
 
-  /**
-   * Inserts a freshly streamed message (widget/user/agent) into the cached
-   * transcript while keeping derived fields like snippet/updatedAt in sync.
-   */
   const appendMessageToConversation = React.useCallback(
     (conversationId: string, message: Message) => {
       setConversations((prev) => {
@@ -409,10 +413,6 @@ export function ConversationsContent() {
     [appendMessageToConversation, stopAgentTypingIndicator]
   );
 
-  /**
-   * Marks a conversation as resolved via the API so every client instantly
-   * locks the UI. Errors are logged but left unobtrusive for MVP.
-   */
   const handleResolveConversation = React.useCallback(
     async (conversationId: string) => {
       try {
@@ -438,6 +438,107 @@ export function ConversationsContent() {
     [activeConversationId, conversations]
   );
 
+  React.useEffect(() => {
+    if (!isMobile) {
+      setIsMobileDetailVisible(false);
+      return;
+    }
+    if (!selectedConversation) {
+      setIsMobileDetailVisible(false);
+    }
+  }, [isMobile, selectedConversation]);
+
+  React.useEffect(() => {
+    const handler = () => {
+      setIsMobileDetailVisible(false);
+    };
+
+    if (typeof window !== "undefined") {
+      window.addEventListener(
+        CONVERSATIONS_SHOW_LIST_EVENT,
+        handler as EventListener
+      );
+    }
+
+    return () => {
+      if (typeof window !== "undefined") {
+        window.removeEventListener(
+          CONVERSATIONS_SHOW_LIST_EVENT,
+          handler as EventListener
+        );
+      }
+    };
+  }, []);
+
+  React.useEffect(() => {
+    if (isMobile) {
+      return;
+    }
+    setActiveConversationId((current) => {
+      if (
+        current &&
+        conversations.some((conversation) => conversation.id === current)
+      ) {
+        return current;
+      }
+      return conversations[0]?.id;
+    });
+  }, [isMobile, conversations]);
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    window.dispatchEvent(
+      new CustomEvent(CONVERSATIONS_DETAIL_VISIBILITY_EVENT, {
+        detail: {
+          isDetailVisible: Boolean(
+            isMobile && isMobileDetailVisible && selectedConversation
+          ),
+        },
+      })
+    );
+  }, [isMobile, isMobileDetailVisible, selectedConversation]);
+
+  const handleSelectConversation = React.useCallback(
+    (conversationId: string) => {
+      setActiveConversationId(conversationId);
+      if (isMobile) {
+        setIsMobileDetailVisible(true);
+      }
+    },
+    [isMobile]
+  );
+
+  if (isMobile) {
+    return (
+      <div className="h-full rounded-2xl bg-background">
+        {isMobileDetailVisible && selectedConversation ? (
+          <ConversationPanel
+            conversation={selectedConversation}
+            currentAgentName={AGENT_NAME}
+            onJoinConversation={handleJoinConversation}
+            joiningConversationId={joiningConversationId}
+            draft={selectedConversation ? drafts[selectedConversation.id] : ""}
+            onDraftChange={handleDraftChange}
+            onSendMessage={handleSendAgentMessage}
+            sendingConversationId={sendingConversationId}
+            onResolveConversation={handleResolveConversation}
+            resolvingConversationId={resolvingConversationId}
+          />
+        ) : (
+          <ConversationsPanel
+            conversations={conversations}
+            activeConversationId={activeConversationId}
+            onSelectConversation={handleSelectConversation}
+            isLoading={isLoading}
+          />
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="h-full rounded-2xl">
       <ResizablePanelGroup direction="horizontal" className="h-full">
@@ -449,7 +550,7 @@ export function ConversationsContent() {
           <ConversationsPanel
             conversations={conversations}
             activeConversationId={activeConversationId}
-            onSelectConversation={setActiveConversationId}
+            onSelectConversation={handleSelectConversation}
             isLoading={isLoading}
           />
         </ResizablePanel>
