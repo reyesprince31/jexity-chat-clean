@@ -11,9 +11,8 @@ This is a **Turborepo monorepo** managing multiple Next.js applications and shar
 ```text
 apps/
   api/       - Fastify API server running on port 3001 (configurable via .env)
-  web/       - Next.js app running on port 3002 (microfrontend dev)
-  helpdesk/  - Next.js helpdesk dashboard running on port 3003
-  chat-widget/ - Vite widget development server on port 3004
+  web/       - Next.js app running on port 3000
+  chat-widget/ - Vite widget development server on port 3002
 packages/
   ui/                  - Shared React component library (@repo/ui)
   eslint-config/       - Shared ESLint configurations (@repo/eslint-config)
@@ -28,15 +27,14 @@ packages/
 # Run all apps in development mode (with Turbopack)
 pnpm dev
 
-# Run microfrontend setup (recommended for web)
-# Access web app via proxy at http://localhost:3000
+# Run web app
+# Access web app at http://localhost:3000
 turbo dev --filter=web
 
 # Run individual apps
-turbo dev --filter=web         # web app on port 3002 (microfrontend dev)
+turbo dev --filter=web         # web app on port 3000
 turbo dev --filter=api         # API server on port 3001 (or PORT from .env)
-turbo dev --filter=helpdesk    # helpdesk on port 3003
-turbo dev --filter=chat-widget # widget on port 3004
+turbo dev --filter=chat-widget # widget on port 3002
 ```
 
 ### Building
@@ -109,11 +107,9 @@ pnpm generate:component
 
 ### Microfrontend Setup
 
-- Web application uses microfrontend architecture via `@vercel/microfrontends`
-- **Local proxy port**: 3000 - Main entry point for microfrontend routing
-- **Web dev server**: 3002 - Individual web app development server
-- **Helpdesk dev server**: 3003 - Helpdesk application server
-- Configuration managed in `apps/web/microfrontends.json`
+- Web application runs as standalone Next.js app on port 3000
+- **Web app port**: 3000 - Main web application
+- **Chat widget port**: 3002 - Vite development server for widget
 
 ### API Server (Fastify)
 
@@ -141,7 +137,7 @@ The API implements a document chunking and vector search system for semantic sea
 
 ### Architecture Overview
 
-```
+```text
 User uploads file (PDF/text)
   ↓
 POST /upload - Validates, deduplicates, uploads to Supabase Storage
@@ -195,7 +191,7 @@ Inngest Function (async):
 
 Example: A 5000 char document produces ~5 overlapping chunks
 
-```
+```text
 Chunk 0: chars 0-1000
 Chunk 1: chars 800-1800    (200 char overlap with chunk 0)
 Chunk 2: chars 1600-2600   (200 char overlap with chunk 1)
@@ -214,13 +210,12 @@ Chunk 2: chars 1600-2600   (200 char overlap with chunk 1)
    - Concatenates all page texts to create full document text
 
 2. **Character-to-Page Mapping** (`chunking.ts`):
-   - `buildPageMapping()` creates a map of character positions to page numbers
-   - Example for a 3-page PDF:
-     ```
-     Page 1: chars 0-5000
-     Page 2: chars 5000-12000
-     Page 3: chars 12000-15000
-     ```
+
+```text
+Page 1: chars 0-5000
+Page 2: chars 5000-12000
+Page 3: chars 12000-15000
+```
 
 3. **Chunk Page Calculation**:
    - When chunking text, `calculatePageForPosition()` determines which page each character belongs to
@@ -311,7 +306,7 @@ Functions:
 
 ### File Upload Endpoint
 
-**POST /upload**
+#### POST /upload
 
 - **Content-Type:** `multipart/form-data`
 - **Field name:** `file`
@@ -361,7 +356,7 @@ Steps:
 
 Required in `apps/api/.env`:
 
-```
+```env
 OPENAI_API_KEY=sk-...
 SUPABASE_URL=https://...
 SUPABASE_ANON_KEY=...
@@ -438,7 +433,7 @@ The API implements a conversational AI system using LangChain and OpenAI GPT-4o,
 
 ### Architecture Overview
 
-```
+```text
 User sends message to conversation
   ↓
 POST /conversations/:id/messages
@@ -789,7 +784,7 @@ All chat operations follow the same patterns as document operations:
 - `getMessages(conversationId, limit?)` - Get messages (ordered by created_at ASC)
 - `getMessageWithSources(messageId)` - Get message with full source details
 
-### File Organization
+### Chat File Organization
 
 - **`src/lib/rag.ts`** - LangChain RAG service (retriever, prompts, document formatting)
 - **`src/lib/retriever.ts`** - Custom PrismaRetriever extending LangChain BaseRetriever

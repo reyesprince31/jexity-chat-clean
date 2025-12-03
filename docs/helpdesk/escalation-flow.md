@@ -88,7 +88,7 @@ For real-time agent presence, the widget also opens `GET /conversations/:id/even
 ### Typing Indicators
 
 - Widget: Calls `POST /conversations/:id/typing` while a user is actively composing. The API validates that the chat is escalated and rebroadcasts `helpdesk.typing`.
-- Helpdesk: Calls `POST /helpdesk/conversations/:id/typing` while an assigned agent is composing. The API fans out a `typing` event to the widget plus `helpdesk.typing` to every dashboard.
+- Dashboard: Calls `POST /helpdesk/conversations/:id/typing` while an assigned agent is composing. The API fans out a `typing` event to the widget plus `helpdesk.typing` to every dashboard.
 - Receivers debounce UI state with short expiry timers so a missing "stop typing" heartbeat does not leave a stuck indicator.
 
 ## Testing Tips

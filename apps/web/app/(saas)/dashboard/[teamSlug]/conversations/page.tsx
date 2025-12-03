@@ -6,7 +6,6 @@ import {
 } from "@/lib/auth-server";
 import { AppSidebar } from "@/components/saas/app-sidebar";
 import { ImpersonationBanner } from "@/components/admin/impersonation-banner";
-import { ConversationsContent } from "./conversations-content";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -17,6 +16,7 @@ import {
 } from "@/ui/breadcrumb";
 import { Separator } from "@/ui/separator";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/ui/sidebar";
+import { ConversationsContent } from "@/components/conversations/ConversationContent";
 
 interface ConversationsPageProps {
   params: Promise<{ teamSlug: string }>;
@@ -52,7 +52,7 @@ export default async function ConversationsPage({
   return (
     <SidebarProvider>
       <AppSidebar user={user} />
-      <SidebarInset>
+      <SidebarInset className="flex h-screen flex-col min-h-0">
         {isImpersonating && (
           <ImpersonationBanner user={{ name: user.name, email: user.email }} />
         )}
@@ -78,7 +78,7 @@ export default async function ConversationsPage({
             </Breadcrumb>
           </div>
         </header>
-        <div className="flex flex-1 flex-col">
+        <div className="flex flex-1 min-h-0 flex-col">
           <ConversationsContent />
         </div>
       </SidebarInset>

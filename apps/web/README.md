@@ -1,6 +1,6 @@
-# Web Application & Helpdesk Dashboard
+# Web Application
 
-The `apps/web` Next.js project now serves both the main SaaS experience (marketing, onboarding, admin, and team dashboards) and the consolidated helpdesk dashboard that previously lived in `apps/helpdesk`. Running this app locally gives access to:
+The `apps/web` Next.js project serves the main SaaS experience including marketing, onboarding, admin, and team dashboards. Running this app locally gives access to:
 
 - **Public/SaaS surfaces** under `/` and `/dashboard/*`.
 - **Helpdesk Dashboard** under `/helpdesk`, which surfaces escalated widget conversations for human agents.

@@ -66,7 +66,7 @@ This document outlines the plan to create mock UI pages for the AI Chatbot Dashb
 
 **Purpose:** View and respond to customer chat messages from the widget. For Free tier users, all chats are handled by human CSR/TSR agents.
 
-**Note:** This is a new mock UI in `apps/web`. The existing `apps/helpdesk` implementation can be referenced for patterns but this will be built fresh with team context.
+**Note:** This is a new UI in `apps/web` built fresh with team context.
 
 #### Layout Structure
 

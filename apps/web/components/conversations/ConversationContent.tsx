@@ -439,7 +439,7 @@ export function ConversationsContent() {
   );
 
   return (
-    <div className="flex-1 rounded-2xl">
+    <div className="h-full rounded-2xl">
       <ResizablePanelGroup direction="horizontal" className="h-full">
         <ResizablePanel
           defaultSize={28}

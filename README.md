@@ -14,12 +14,10 @@ This repo now includes a GPT-5 powered chat API (`apps/api`) and a shareable wid
 The applications run on the following ports in development:
 
 - **API Server**: 3001 - Fastify backend API
-- **Local Proxy**: 3000 - Main entry point for microfrontend routing
-- **Web App**: 3002 - Next.js web application (microfrontend dev)
-- **Helpdesk**: 3003 - Helpdesk dashboard application
-- **Chat Widget**: 3004 - Vite development server for widget
+- **Web App**: 3000 - Next.js web application
+- **Chat Widget**: 3002 - Vite development server for widget
 
-Access the main application via `http://localhost:3000` (proxy) or individual apps via their respective ports.
+Access the main application via `http://localhost:3000` or individual apps via their respective ports.
 
 ## Using this example
 
