@@ -26,7 +26,7 @@ import {
   SidebarFooter,
   SidebarHeader,
   SidebarRail,
-} from "@repo/ui/components/sidebar";
+} from "@/ui/sidebar";
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
   user: {
@@ -66,9 +66,7 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
           },
           {
             title: "Contacts",
-            url: teamSlug
-              ? `${baseDashboardUrl}/contacts`
-              : baseDashboardUrl,
+            url: teamSlug ? `${baseDashboardUrl}/contacts` : baseDashboardUrl,
             icon: Users,
           },
         ],
@@ -78,9 +76,7 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
         items: [
           {
             title: "Widget Customizer",
-            url: teamSlug
-              ? `${baseDashboardUrl}/widget`
-              : baseDashboardUrl,
+            url: teamSlug ? `${baseDashboardUrl}/widget` : baseDashboardUrl,
             icon: Palette,
           },
         ],
@@ -119,9 +115,7 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
         items: [
           {
             title: "Analytics",
-            url: teamSlug
-              ? `${baseDashboardUrl}/analytics`
-              : baseDashboardUrl,
+            url: teamSlug ? `${baseDashboardUrl}/analytics` : baseDashboardUrl,
             icon: BarChart3,
           },
           {
@@ -138,9 +132,7 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
         items: [
           {
             title: "Team",
-            url: teamSlug
-              ? `/dashboard/${teamSlug}/team`
-              : "/dashboard",
+            url: teamSlug ? `/dashboard/${teamSlug}/team` : "/dashboard",
             icon: UserCog,
           },
           {

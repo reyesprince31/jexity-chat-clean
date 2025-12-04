@@ -1,19 +1,19 @@
+import { Badge } from "@/components/ui/badge";
 import {
   Card,
-  CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
-} from "@repo/ui/components/card";
+  CardDescription,
+  CardContent,
+} from "@/components/ui/card";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
   TableHeader,
   TableRow,
-} from "@repo/ui/components/table";
-import { Badge } from "@repo/ui/components/badge";
+  TableHead,
+  TableBody,
+  TableCell,
+  Table,
+} from "@/components/ui/table";
 
 interface OrganizationsDetailsProps {
   organizations: {

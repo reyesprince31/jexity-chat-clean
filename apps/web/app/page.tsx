@@ -1,4 +1,4 @@
-import { Button } from "@repo/ui/components/button"
+import { Button } from "@/ui/button"
 import Link from "next/link"
 
 export default async function Page() {  

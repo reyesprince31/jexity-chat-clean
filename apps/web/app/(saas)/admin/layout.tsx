@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation";
 import { getServerSession } from "@/lib/auth-server";
 import { Shield, ArrowLeft } from "lucide-react";
-import { Button } from "@repo/ui/components/button";
 import Link from "next/link";
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
+import { Button } from "@/components/ui/button";
 
 export default async function AdminLayout({
   children,

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, Users, Building2, ScrollText } from "lucide-react";
-import { cn } from "@repo/ui/lib/utils";
+import { cn } from "@/lib/utils";
 
 const navItems = [
   {

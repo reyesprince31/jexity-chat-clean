@@ -1,16 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { Button } from "@repo/ui/components/button";
+import { Button } from "@/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@repo/ui/components/card";
-import { Badge } from "@repo/ui/components/badge";
-import { cn } from "@repo/ui/lib/utils";
+} from "@/ui/card";
+import { Badge } from "@/ui/badge";
+import { cn } from "@/lib/utils";
 import { ProBadge } from "@/components/dashboard/pro-badge";
 import { Workflow, mockWorkflows } from "@/lib/mock-data";
 

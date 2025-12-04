@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Plug, Settings, Users } from "lucide-react";
-import { cn } from "@repo/ui/lib/utils";
+import { cn } from "@/lib/utils";
 
 interface SettingsNavProps {
   teamSlug: string;

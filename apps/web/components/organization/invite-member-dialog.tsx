@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 
 import { authClient } from "@/lib/auth-client";
-import { Button } from "@repo/ui/components/button";
+import { Button } from "@/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -14,21 +14,21 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@repo/ui/components/dialog";
+} from "@/ui/dialog";
 import {
   Field,
   FieldDescription,
   FieldGroup,
   FieldLabel,
-} from "@repo/ui/components/field";
-import { Input } from "@repo/ui/components/input";
+} from "@/ui/field";
+import { Input } from "@/ui/input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@repo/ui/components/select";
+} from "@/ui/select";
 
 const inviteSchema = z.object({
   email: z.email("Please enter a valid email address"),

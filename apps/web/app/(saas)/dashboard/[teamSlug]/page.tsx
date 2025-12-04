@@ -13,22 +13,22 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from "@repo/ui/components/breadcrumb";
-import { Separator } from "@repo/ui/components/separator";
+} from "@/ui/breadcrumb";
+import { Separator } from "@/ui/separator";
 import {
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
-} from "@repo/ui/components/sidebar";
+} from "@/ui/sidebar";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@repo/ui/components/card";
-import { Badge } from "@repo/ui/components/badge";
-import { Button } from "@repo/ui/components/button";
+} from "@/ui/card";
+import { Badge } from "@/ui/badge";
+import { Button } from "@/ui/button";
 import { mockAnalyticsSummary, mockCurrentPlanId, mockPlans } from "@/lib/mock-data";
 
 interface DashboardPageProps {

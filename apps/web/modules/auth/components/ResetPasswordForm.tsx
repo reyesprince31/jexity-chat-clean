@@ -1,15 +1,15 @@
 "use client"
 
-import { cn } from "@repo/ui/lib/utils"
-import { Button } from "@repo/ui/components/button"
-import { Card, CardContent } from "@repo/ui/components/card"
+import { cn } from "@/lib/utils"
+import { Button } from "@/ui/button"
+import { Card, CardContent } from "@/ui/card"
 import {
   Field,
   FieldDescription,
   FieldGroup,
   FieldLabel,
-} from "@repo/ui/components/field"
-import { Input } from "@repo/ui/components/input"
+} from "@/ui/field"
+import { Input } from "@/ui/input"
 import Link from "next/link"
 import Image from "next/image"
 import { useForm } from "react-hook-form"

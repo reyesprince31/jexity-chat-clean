@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Building2 } from "lucide-react";
 
-import { Button } from "@repo/ui/components/button";
+import { Button } from "@/ui/button";
 import { CreateOrganizationDialog } from "./create-organization-dialog";
 
 export function CreateOrganizationPrompt() {

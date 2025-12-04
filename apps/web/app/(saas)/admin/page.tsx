@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { Users, Shield, Building2, ScrollText } from "lucide-react";
-import { Button } from "@repo/ui/components/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@repo/ui/components/card";
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 export default function AdminDashboard() {
   return (

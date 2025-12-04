@@ -45,6 +45,14 @@ export interface ChatWidgetTheme {
     chatSendButton?: string;
     chatSendButtonDisabled?: string;
   };
+  landing?: {
+    heroBg?: string;
+    heroText?: string;
+    bodyText?: string;
+    ctaBackground?: string;
+    ctaText?: string;
+    ctaIconBackground?: string;
+  };
 }
 
 /**
@@ -81,8 +89,7 @@ export const themeToCSSVars = (
     cssVars["--jexity-assistant-bg-chat-input"] = theme.bg.chatInput;
   }
   if (theme.bg?.chatSendButton) {
-    cssVars["--jexity-assistant-bg-chat-send-button"] =
-      theme.bg.chatSendButton;
+    cssVars["--jexity-assistant-bg-chat-send-button"] = theme.bg.chatSendButton;
   }
   if (theme.bg?.chatSendButtonHover) {
     cssVars["--jexity-assistant-bg-chat-send-button-hover"] =
@@ -93,12 +100,10 @@ export const themeToCSSVars = (
       theme.bg.chatSendButtonDisabled;
   }
   if (theme.bg?.chatContainer) {
-    cssVars["--jexity-assistant-bg-chat-container"] =
-      theme.bg.chatContainer;
+    cssVars["--jexity-assistant-bg-chat-container"] = theme.bg.chatContainer;
   }
   if (theme.bg?.citationPill) {
-    cssVars["--jexity-assistant-bg-citation-pill"] =
-      theme.bg.citationPill;
+    cssVars["--jexity-assistant-bg-citation-pill"] = theme.bg.citationPill;
   }
   if (theme.bg?.citationPillHover) {
     cssVars["--jexity-assistant-bg-citation-pill-hover"] =
@@ -132,8 +137,7 @@ export const themeToCSSVars = (
       theme.text.chatInputCounter;
   }
   if (theme.text?.citationPill) {
-    cssVars["--jexity-assistant-text-citation-pill"] =
-      theme.text.citationPill;
+    cssVars["--jexity-assistant-text-citation-pill"] = theme.text.citationPill;
   }
   if (theme.text?.citationPillHover) {
     cssVars["--jexity-assistant-text-citation-pill-hover"] =
@@ -185,6 +189,26 @@ export const themeToCSSVars = (
   if (theme.icon?.chatSendButtonDisabled) {
     cssVars["--jexity-assistant-icon-color-chat-send-button-disabled"] =
       theme.icon.chatSendButtonDisabled;
+  }
+
+  if (theme.landing?.heroBg) {
+    cssVars["--jexity-assistant-bg-landing-hero"] = theme.landing.heroBg;
+  }
+  if (theme.landing?.heroText) {
+    cssVars["--jexity-assistant-text-landing-hero"] = theme.landing.heroText;
+  }
+  if (theme.landing?.bodyText) {
+    cssVars["--jexity-assistant-text-landing-body"] = theme.landing.bodyText;
+  }
+  if (theme.landing?.ctaBackground) {
+    cssVars["--jexity-assistant-bg-landing-cta"] = theme.landing.ctaBackground;
+  }
+  if (theme.landing?.ctaText) {
+    cssVars["--jexity-assistant-text-landing-cta"] = theme.landing.ctaText;
+  }
+  if (theme.landing?.ctaIconBackground) {
+    cssVars["--jexity-assistant-bg-landing-cta-icon"] =
+      theme.landing.ctaIconBackground;
   }
 
   return cssVars;

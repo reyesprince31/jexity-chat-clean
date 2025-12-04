@@ -75,6 +75,20 @@ function App() {
 
 > The ES module build bundles Preact internally, so you can drop the widget into React, Vue, or vanilla SPA tooling without configuring `preact/compat` aliases. Treat the component as an isolated subtree: it will not share hooks or context with a surrounding React tree.
 
+### TypeScript Helpers
+
+The package re-exports its core types so you can get compile-time safety without reaching into internal paths:
+
+```ts
+import type { ChatWidgetProps, ChatWidgetTheme } from "chat-widget";
+
+const defaultProps: ChatWidgetProps = {
+  apiUrl: "https://your-api.com",
+};
+```
+
+`ChatWidgetProps` now lives alongside the reusable UI exported from `src/components/ChatBox.tsx`, so editing those building blocks automatically keeps the embeddable API contract in sync.
+
 ## Theming & Customization
 
 The widget uses Shadow DOM for style isolation, but provides two ways to customize its appearance:
@@ -208,6 +222,16 @@ pnpm lint
 - **TypeScript**: Full type safety
 - **Vite**: Fast build tool and dev server
 - **react-shadow**: Shadow DOM integration powered by `preact/compat`
+
+### Component Breakdown
+
+- `src/components/ChatBox.tsx` bundles every reusable chat surface (trigger button, header, message bubbles, banners, composer, etc.) plus shared types such as `ChatWidgetProps`, `EscalationState`, and `extractEscalationState`. This keeps styling and layout in one place for easy reuse.
+- `src/screens/ConversationScreen.tsx` owns data fetching, streaming state, escalation handling, and composes the ChatBox primitives into the full widget experience.
+- `src/screens/HomeScreen.tsx` renders the landing "Start a Conversation" surface that now shows before a chat begins and is reachable via the in-chat back button.
+
+> The `src/screens` directory is treated like an app-level "screens/pages" folder: each file orchestrates data + behavior for a full view while delegating shared UI to `components/`.
+
+When updating the UI, prefer editing the relevant ChatBox subcomponent so both the landing screen and conversation view inherit the change automatically.
 
 ## Realtime Lifecycle
 

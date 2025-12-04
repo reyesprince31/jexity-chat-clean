@@ -8,10 +8,11 @@ This is a **Turborepo monorepo** managing multiple Next.js applications and shar
 
 ## Monorepo Structure
 
-```
+```text
 apps/
   api/       - Fastify API server running on port 3001 (configurable via .env)
   web/       - Next.js app running on port 3000
+  chat-widget/ - Vite widget development server on port 3002
 packages/
   ui/                  - Shared React component library (@repo/ui)
   eslint-config/       - Shared ESLint configurations (@repo/eslint-config)
@@ -26,9 +27,14 @@ packages/
 # Run all apps in development mode (with Turbopack)
 pnpm dev
 
-# Run a specific app
-turbo dev --filter=web    # web app on port 3000
-turbo dev --filter=api    # API server on port 3001 (or PORT from .env)
+# Run web app
+# Access web app at http://localhost:3000
+turbo dev --filter=web
+
+# Run individual apps
+turbo dev --filter=web         # web app on port 3000
+turbo dev --filter=api         # API server on port 3001 (or PORT from .env)
+turbo dev --filter=chat-widget # widget on port 3002
 ```
 
 ### Building
@@ -99,6 +105,12 @@ pnpm generate:component
 - Uses the App Router (`app/` directory)
 - Linting requires zero warnings (`--max-warnings 0`)
 
+### Microfrontend Setup
+
+- Web application runs as standalone Next.js app on port 3000
+- **Web app port**: 3000 - Main web application
+- **Chat widget port**: 3002 - Vite development server for widget
+
 ### API Server (Fastify)
 
 - Uses Fastify framework for REST API
@@ -125,7 +137,7 @@ The API implements a document chunking and vector search system for semantic sea
 
 ### Architecture Overview
 
-```
+```text
 User uploads file (PDF/text)
   ↓
 POST /upload - Validates, deduplicates, uploads to Supabase Storage
@@ -179,7 +191,7 @@ Inngest Function (async):
 
 Example: A 5000 char document produces ~5 overlapping chunks
 
-```
+```text
 Chunk 0: chars 0-1000
 Chunk 1: chars 800-1800    (200 char overlap with chunk 0)
 Chunk 2: chars 1600-2600   (200 char overlap with chunk 1)
@@ -198,13 +210,12 @@ Chunk 2: chars 1600-2600   (200 char overlap with chunk 1)
    - Concatenates all page texts to create full document text
 
 2. **Character-to-Page Mapping** (`chunking.ts`):
-   - `buildPageMapping()` creates a map of character positions to page numbers
-   - Example for a 3-page PDF:
-     ```
-     Page 1: chars 0-5000
-     Page 2: chars 5000-12000
-     Page 3: chars 12000-15000
-     ```
+
+```text
+Page 1: chars 0-5000
+Page 2: chars 5000-12000
+Page 3: chars 12000-15000
+```
 
 3. **Chunk Page Calculation**:
    - When chunking text, `calculatePageForPosition()` determines which page each character belongs to
@@ -273,6 +284,7 @@ ORDER BY embedding <=> query_embedding
 ```
 
 **Return format:** All search results are returned as LangChain `Document` objects with metadata:
+
 - `pageContent` - The chunk text content
 - `metadata.id` - Chunk ID
 - `metadata.documentId` - Parent document ID
@@ -294,7 +306,7 @@ Functions:
 
 ### File Upload Endpoint
 
-**POST /upload**
+#### POST /upload
 
 - **Content-Type:** `multipart/form-data`
 - **Field name:** `file`
@@ -344,7 +356,7 @@ Steps:
 
 Required in `apps/api/.env`:
 
-```
+```env
 OPENAI_API_KEY=sk-...
 SUPABASE_URL=https://...
 SUPABASE_ANON_KEY=...
@@ -421,7 +433,7 @@ The API implements a conversational AI system using LangChain and OpenAI GPT-4o,
 
 ### Architecture Overview
 
-```
+```text
 User sends message to conversation
   ↓
 POST /conversations/:id/messages
@@ -513,6 +525,7 @@ The RAG (Retrieval Augmented Generation) service uses **LangChain abstractions**
 Uses **LangChain** with **OpenAI GPT-4o** for conversational AI with streaming.
 
 **Configuration:**
+
 - Model: `gpt-4o`
 - Temperature: 0.7 (configurable)
 - Max tokens: 2000 (configurable)
@@ -521,6 +534,7 @@ Uses **LangChain** with **OpenAI GPT-4o** for conversational AI with streaming.
 #### streamChatWithRAG(params)
 
 Main streaming function that:
+
 1. Retrieves RAG context using LangChain retriever if enabled (useRAG: true)
 2. Builds conversation history from database
 3. Constructs message array (system + history + user query)
@@ -528,6 +542,7 @@ Main streaming function that:
 5. Returns: `{ stream: AsyncIterable<string>, sourceDocuments: Document[] }`
 
 **Parameters:**
+
 - `userQuery` - Current user message
 - `conversationHistory` - Array of prior messages: `{ role, content }[]`
 - `useRAG` - Enable/disable RAG context retrieval (default: true)
@@ -536,6 +551,7 @@ Main streaming function that:
   - `similarityThreshold?` - Minimum similarity score (default: 0.6)
 
 **Return value:**
+
 - `stream` - AsyncIterable of response tokens for streaming
 - `sourceDocuments` - Array of LangChain Documents used as context (includes similarity in metadata)
 
@@ -563,11 +579,13 @@ All endpoints follow RESTful conventions with JSON responses.
 Create a new conversation.
 
 **Request body:**
+
 ```json
 { "title": "Optional title" }
 ```
 
 **Response:** 201 Created
+
 ```json
 {
   "success": true,
@@ -585,6 +603,7 @@ Create a new conversation.
 Send a message and receive streaming AI response with RAG context.
 
 **Request body:**
+
 ```json
 {
   "message": "What is machine learning?",
@@ -606,17 +625,19 @@ Send a message and receive streaming AI response with RAG context.
 **Response:** Server-Sent Events (SSE) stream
 
 Event types:
+
 - `{ type: "token", content: "..." }` - Individual response tokens (includes citations inline)
 - `{ type: "done", sources: [...] }` - Completion with source metadata
 - `{ type: "title", title: "..." }` - Auto-generated title (first message only)
 - `{ type: "error", message: "..." }` - Error during streaming
 
 **Example client (JavaScript):**
+
 ```javascript
 const response = await fetch(`/conversations/${id}/messages`, {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ message: 'Your question?' })
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ message: "Your question?" }),
 });
 
 const reader = response.body.getReader();
@@ -627,16 +648,16 @@ while (true) {
   if (done) break;
 
   const text = decoder.decode(value);
-  const lines = text.split('\n\n');
+  const lines = text.split("\n\n");
 
   for (const line of lines) {
-    if (line.startsWith('data: ')) {
+    if (line.startsWith("data: ")) {
       const event = JSON.parse(line.slice(6));
 
-      if (event.type === 'token') {
+      if (event.type === "token") {
         console.log(event.content); // Display token
-      } else if (event.type === 'done') {
-        console.log('Sources:', event.sources); // Show citations
+      } else if (event.type === "done") {
+        console.log("Sources:", event.sources); // Show citations
       }
     }
   }
@@ -648,10 +669,12 @@ while (true) {
 List all conversations with pagination.
 
 **Query params:**
+
 - `limit` (default: 20) - Max conversations to return
 - `offset` (default: 0) - Skip N conversations
 
 **Response:** 200 OK
+
 ```json
 {
   "success": true,
@@ -667,6 +690,7 @@ List all conversations with pagination.
 Get a conversation with all its messages.
 
 **Response:** 200 OK
+
 ```json
 {
   "success": true,
@@ -675,7 +699,12 @@ Get a conversation with all its messages.
     "title": "Machine Learning Discussion",
     "messages": [
       { "id": "uuid", "role": "user", "content": "...", "createdAt": "..." },
-      { "id": "uuid", "role": "assistant", "content": "...", "createdAt": "..." }
+      {
+        "id": "uuid",
+        "role": "assistant",
+        "content": "...",
+        "createdAt": "..."
+      }
     ]
   }
 }
@@ -692,6 +721,7 @@ Get only the messages for a conversation (lightweight endpoint).
 Delete a conversation and all its messages (cascading).
 
 **Response:** 200 OK
+
 ```json
 { "success": true, "message": "Conversation deleted successfully" }
 ```
@@ -701,6 +731,7 @@ Delete a conversation and all its messages (cascading).
 Get a message with its source document chunks (for displaying citations).
 
 **Response:** 200 OK
+
 ```json
 {
   "success": true,
@@ -731,11 +762,13 @@ Get a message with its source document chunks (for displaying citations).
 **Implementation:** `apps/api/src/lib/database.ts` (extended)
 
 All chat operations follow the same patterns as document operations:
+
 - Proper TypeScript types
 - Try-catch error handling
 - Descriptive error messages
 
 **Conversation operations:**
+
 - `createConversation(title?)` - Create new conversation
 - `getConversation(id)` - Get conversation by ID
 - `getConversationWithMessages(id)` - Get with messages (includes relation)
@@ -744,13 +777,14 @@ All chat operations follow the same patterns as document operations:
 - `deleteConversation(id)` - Delete (cascades to messages/sources)
 
 **Message operations:**
+
 - `createMessage(input)` - Create message with optional sources
   - Input: `{ conversation_id, role, content, sources?: [{ chunk_id, similarity_score }] }`
   - Auto-updates conversation's `updated_at` timestamp
 - `getMessages(conversationId, limit?)` - Get messages (ordered by created_at ASC)
 - `getMessageWithSources(messageId)` - Get message with full source details
 
-### File Organization
+### Chat File Organization
 
 - **`src/lib/rag.ts`** - LangChain RAG service (retriever, prompts, document formatting)
 - **`src/lib/retriever.ts`** - Custom PrismaRetriever extending LangChain BaseRetriever
@@ -772,6 +806,7 @@ All chat operations follow the same patterns as document operations:
 ### Environment Variables
 
 Same as document processing (no additional variables required):
+
 - `OPENAI_API_KEY` - Used for both embeddings and chat completions
 
 ### Usage Flow Example
@@ -785,11 +820,11 @@ const { stream, sourceDocuments } = await streamChatWithRAG({
   userQuery: "What is machine learning?",
   conversationHistory: [],
   useRAG: true,
-  ragOptions: { limit: 5, similarityThreshold: 0.6 }
+  ragOptions: { limit: 5, similarityThreshold: 0.6 },
 });
 
 // 3. Collect response
-let fullResponse = '';
+let fullResponse = "";
 for await (const token of stream) {
   fullResponse += token;
   // Display token in real-time
@@ -799,18 +834,18 @@ for await (const token of stream) {
 // sourceDocuments are LangChain Documents with metadata
 await createMessage({
   conversation_id: conv.id,
-  role: 'user',
-  content: "What is machine learning?"
+  role: "user",
+  content: "What is machine learning?",
 });
 
 await createMessage({
   conversation_id: conv.id,
-  role: 'assistant',
+  role: "assistant",
   content: fullResponse,
-  sources: sourceDocuments.map(doc => ({
+  sources: sourceDocuments.map((doc) => ({
     chunk_id: doc.metadata.id,
-    similarity_score: doc.metadata.similarity
-  }))
+    similarity_score: doc.metadata.similarity,
+  })),
 });
 ```
 
@@ -837,15 +872,15 @@ Responses include inline citation blocks like `{{cite:0, text:"[rewritten chunk]
 ```typescript
 // 1. Send message with inline citations enabled
 const response = await fetch(`/conversations/${conversationId}/messages`, {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
   body: JSON.stringify({
-    message: 'What is machine learning?',
-  })
+    message: "What is machine learning?",
+  }),
 });
 
 // 2. Collect response and sources
-let fullResponse = '';
+let fullResponse = "";
 let sources = [];
 
 const reader = response.body.getReader();
@@ -856,15 +891,15 @@ while (true) {
   if (done) break;
 
   const text = decoder.decode(value);
-  const lines = text.split('\n\n');
+  const lines = text.split("\n\n");
 
   for (const line of lines) {
-    if (line.startsWith('data: ')) {
+    if (line.startsWith("data: ")) {
       const event = JSON.parse(line.slice(6));
 
-      if (event.type === 'token') {
+      if (event.type === "token") {
         fullResponse += event.content;
-      } else if (event.type === 'done') {
+      } else if (event.type === "done") {
         sources = event.sources; // Array of source metadata
       }
     }
@@ -880,37 +915,40 @@ function renderWithCitations(text: string, sources: Source[]) {
   const segments = parseCitationsInText(text);
   return segments
     .map((segment) => {
-      if (segment.type === 'text') {
+      if (segment.type === "text") {
         return segment.content;
       }
       const citation = segment.indices[0];
       const source = sources[citation];
-      return `<sup><a href="#source-${citation}" title="${source?.filename ?? 'Source unavailable'}">[${citation}]</a></sup>`;
+      return `<sup><a href="#source-${citation}" title="${source?.filename ?? "Source unavailable"}">[${citation}]</a></sup>`;
     })
-    .join('');
+    .join("");
 }
 
 // 4. Display sources separately
 function renderSources(sources: Source[]) {
-  return sources.map((source, index) => {
-    const pageRef = source.pageNumber
-      ? (source.pageEnd && source.pageEnd !== source.pageNumber
+  return sources
+    .map((source, index) => {
+      const pageRef = source.pageNumber
+        ? source.pageEnd && source.pageEnd !== source.pageNumber
           ? ` (pages ${source.pageNumber}-${source.pageEnd})`
-          : ` (page ${source.pageNumber})`)
-      : '';
+          : ` (page ${source.pageNumber})`
+        : "";
 
-    return `
+      return `
       <div id="source-${index}">
         <strong>[${index}] ${source.filename}${pageRef}</strong>
         <p>${source.content}</p>
         <small>Relevance: ${(source.similarity * 100).toFixed(1)}%</small>
       </div>
     `;
-  }).join('');
+    })
+    .join("");
 }
 ```
 
 **Key points:**
+
 - Citation numbers are **0-indexed** to match JavaScript array indexing
 - `[0]` references `sources[0]`, `[1]` references `sources[1]`, etc.
 - Sources array is provided in the `{ type: 'done', sources: [...] }` event

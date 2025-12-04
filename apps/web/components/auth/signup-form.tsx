@@ -7,17 +7,17 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import Link from "next/link";
 
-import { cn } from "@repo/ui/lib/utils";
+import { cn } from "@/lib/utils";
 import { authClient } from "@/lib/auth-client";
-import { Button } from "@repo/ui/components/button";
+import { Button } from "@/ui/button";
 import {
   Field,
   FieldDescription,
   FieldGroup,
   FieldLabel,
   FieldSeparator,
-} from "@repo/ui/components/field";
-import { Input } from "@repo/ui/components/input";
+} from "@/ui/field";
+import { Input } from "@/ui/input";
 
 const signupSchema = z
   .object({

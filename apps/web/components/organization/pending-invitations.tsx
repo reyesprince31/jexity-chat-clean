@@ -5,8 +5,8 @@ import { X, Mail, Clock, RefreshCw } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 
 import { authClient } from "@/lib/auth-client";
-import { Button } from "@repo/ui/components/button";
-import { Badge } from "@repo/ui/components/badge";
+import { Button } from "@/ui/button";
+import { Badge } from "@/ui/badge";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,7 +16,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@repo/ui/components/alert-dialog";
+} from "@/ui/alert-dialog";
 
 interface Invitation {
   id: string;

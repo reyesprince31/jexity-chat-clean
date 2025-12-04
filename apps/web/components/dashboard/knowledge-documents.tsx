@@ -1,16 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@repo/ui/components/button";
+import { Button } from "@/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@repo/ui/components/card";
-import { Input } from "@repo/ui/components/input";
-import { Badge } from "@repo/ui/components/badge";
+} from "@/ui/card";
+import { Input } from "@/ui/input";
+import { Badge } from "@/ui/badge";
 import {
   Table,
   TableBody,
@@ -18,8 +18,8 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@repo/ui/components/table";
-import { cn } from "@repo/ui/lib/utils";
+} from "@/ui/table";
+import { cn } from "@/lib/utils";
 import { ProBadge } from "@/components/dashboard/pro-badge";
 import { DocumentSource, mockDocuments } from "@/lib/mock-data";
 

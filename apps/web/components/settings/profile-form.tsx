@@ -7,21 +7,21 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 
 import { authClient } from "@/lib/auth-client";
-import { Button } from "@repo/ui/components/button";
+import { Button } from "@/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@repo/ui/components/card";
+} from "@/ui/card";
 import {
   Field,
   FieldDescription,
   FieldGroup,
   FieldLabel,
-} from "@repo/ui/components/field";
-import { Input } from "@repo/ui/components/input";
+} from "@/ui/field";
+import { Input } from "@/ui/input";
 
 const profileSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),

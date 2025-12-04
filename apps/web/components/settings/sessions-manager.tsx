@@ -4,14 +4,14 @@ import { useState, useEffect } from "react";
 import { Monitor, Smartphone, Globe, Loader2, Trash2 } from "lucide-react";
 
 import { authClient } from "@/lib/auth-client";
-import { Button } from "@repo/ui/components/button";
+import { Button } from "@/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@repo/ui/components/card";
+} from "@/ui/card";
 
 interface Session {
   id: string;

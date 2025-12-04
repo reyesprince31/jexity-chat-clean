@@ -1,26 +1,22 @@
 import { redirect, notFound } from "next/navigation";
 import {
-  getOrganizationBySlug,
   getServerSession,
+  getOrganizationBySlug,
   setActiveOrganization,
 } from "@/lib/auth-server";
 import { AppSidebar } from "@/components/saas/app-sidebar";
 import { ImpersonationBanner } from "@/components/admin/impersonation-banner";
-import { ConversationsPanel } from "@/components/dashboard/conversations-panel";
 import {
   Breadcrumb,
   BreadcrumbItem,
   BreadcrumbLink,
   BreadcrumbList,
-  BreadcrumbPage,
   BreadcrumbSeparator,
-} from "@repo/ui/components/breadcrumb";
-import { Separator } from "@repo/ui/components/separator";
-import {
-  SidebarInset,
-  SidebarProvider,
-  SidebarTrigger,
-} from "@repo/ui/components/sidebar";
+} from "@/ui/breadcrumb";
+import { Separator } from "@/ui/separator";
+import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/ui/sidebar";
+import { ConversationsContent } from "@/components/conversations/ConversationContent";
+import { InboxBreadcrumbToggle } from "@/components/conversations/InboxBreadcrumbToggle";
 
 interface ConversationsPageProps {
   params: Promise<{ teamSlug: string }>;
@@ -56,7 +52,7 @@ export default async function ConversationsPage({
   return (
     <SidebarProvider>
       <AppSidebar user={user} />
-      <SidebarInset>
+      <SidebarInset className="flex h-screen flex-col min-h-0">
         {isImpersonating && (
           <ImpersonationBanner user={{ name: user.name, email: user.email }} />
         )}
@@ -76,22 +72,14 @@ export default async function ConversationsPage({
                 </BreadcrumbItem>
                 <BreadcrumbSeparator className="hidden md:block" />
                 <BreadcrumbItem>
-                  <BreadcrumbPage>Conversations</BreadcrumbPage>
+                  <InboxBreadcrumbToggle />
                 </BreadcrumbItem>
               </BreadcrumbList>
             </Breadcrumb>
           </div>
         </header>
-        <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-          <div className="space-y-1">
-            <h1 className="text-2xl font-bold">Conversations</h1>
-            <p className="text-sm text-muted-foreground">
-              View and respond to customer chats coming from your website widget.
-            </p>
-          </div>
-          <div className="flex-1 rounded-xl bg-muted/50 p-4">
-            <ConversationsPanel />
-          </div>
+        <div className="flex flex-1 min-h-0 flex-col">
+          <ConversationsContent user={user} />
         </div>
       </SidebarInset>
     </SidebarProvider>

@@ -1,6 +1,6 @@
 "use client";
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/components/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/tabs";
 import { ProfileForm } from "./profile-form";
 import { SecurityForm } from "./security-form";
 import { SessionsManager } from "./sessions-manager";
