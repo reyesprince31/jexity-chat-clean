@@ -29,7 +29,16 @@ import {
   resolveConversation,
 } from "@/lib/api";
 
-const AGENT_NAME = "John Doe";
+interface ConversationsContentProps {
+  user: {
+    name?: string | null;
+    email?: string | null;
+    avatar?: string | null;
+    role?: string | null;
+  };
+}
+
+const DEFAULT_AGENT_NAME = "Agent";
 const CUSTOMER_TYPING_RESET_MS = 4500;
 const AGENT_TYPING_RESET_MS = 3200;
 
@@ -49,7 +58,7 @@ const sortConversations = (items: ConversationRecord[]) =>
     (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
   );
 
-export function ConversationsContent() {
+export function ConversationsContent({ user }: ConversationsContentProps) {
   const isMobile = useIsMobile();
   const [conversations, setConversations] = React.useState<
     ConversationRecord[]
@@ -73,6 +82,7 @@ export function ConversationsContent() {
   const agentTypingDispatchTimers = React.useRef<Record<string, number>>({});
   const agentTypingResetTimers = React.useRef<Record<string, number>>({});
   const agentTypingState = React.useRef<Record<string, boolean>>({});
+  const agentName = user?.name ?? DEFAULT_AGENT_NAME;
 
   const upsertConversation = React.useCallback((record: ConversationRecord) => {
     setConversations((prev) => {
@@ -174,7 +184,7 @@ export function ConversationsContent() {
 
       if (!agentTypingState.current[conversationId]) {
         agentTypingState.current[conversationId] = true;
-        sendAgentTypingIndicator(conversationId, AGENT_NAME, true).catch(
+        sendAgentTypingIndicator(conversationId, agentName, true).catch(
           (error) => {
             console.error("Failed to start typing indicator", error);
             agentTypingState.current[conversationId] = false;
@@ -189,7 +199,7 @@ export function ConversationsContent() {
       agentTypingDispatchTimers.current[conversationId] = window.setTimeout(
         () => {
           agentTypingState.current[conversationId] = false;
-          sendAgentTypingIndicator(conversationId, AGENT_NAME, false).catch(
+          sendAgentTypingIndicator(conversationId, agentName, false).catch(
             (error) => {
               console.error("Failed to stop typing indicator", error);
             }
@@ -200,7 +210,7 @@ export function ConversationsContent() {
         AGENT_TYPING_RESET_MS
       );
     },
-    []
+    [agentName]
   );
 
   const stopAgentTypingIndicator = React.useCallback(
@@ -220,13 +230,13 @@ export function ConversationsContent() {
 
       agentTypingState.current[conversationId] = false;
       delete agentTypingState.current[conversationId];
-      sendAgentTypingIndicator(conversationId, AGENT_NAME, false).catch(
+      sendAgentTypingIndicator(conversationId, agentName, false).catch(
         (error) => {
           console.error("Failed to stop typing indicator", error);
         }
       );
     },
-    []
+    [agentName]
   );
 
   React.useEffect(() => {
@@ -363,9 +373,9 @@ export function ConversationsContent() {
     async (conversationId: string) => {
       try {
         setJoiningConversationId(conversationId);
-        const updated = await claimConversation(conversationId, AGENT_NAME);
+        const updated = await claimConversation(conversationId, agentName);
         updateConversationMetadata(conversationId, {
-          agentName: updated.agentName ?? AGENT_NAME,
+          agentName: updated.agentName ?? agentName,
           agentJoinedAt: updated.agentJoinedAt ?? new Date().toISOString(),
           status: "waiting",
         });
@@ -375,7 +385,7 @@ export function ConversationsContent() {
         setJoiningConversationId(null);
       }
     },
-    [updateConversationMetadata]
+    [agentName, updateConversationMetadata]
   );
 
   const handleDraftChange = React.useCallback(
@@ -394,11 +404,7 @@ export function ConversationsContent() {
     async (conversationId: string, body: string) => {
       try {
         setSendingConversationId(conversationId);
-        const message = await sendAgentMessage(
-          conversationId,
-          AGENT_NAME,
-          body
-        );
+        const message = await sendAgentMessage(conversationId, agentName, body);
         appendMessageToConversation(conversationId, message);
         setDrafts((prev) => ({ ...prev, [conversationId]: "" }));
         stopAgentTypingIndicator(conversationId);
@@ -410,14 +416,14 @@ export function ConversationsContent() {
         );
       }
     },
-    [appendMessageToConversation, stopAgentTypingIndicator]
+    [agentName, appendMessageToConversation, stopAgentTypingIndicator]
   );
 
   const handleResolveConversation = React.useCallback(
     async (conversationId: string) => {
       try {
         setResolvingConversationId(conversationId);
-        await resolveConversation(conversationId, AGENT_NAME);
+        await resolveConversation(conversationId, agentName);
         stopAgentTypingIndicator(conversationId);
       } catch (error) {
         console.error("Failed to resolve conversation", error);
@@ -427,7 +433,7 @@ export function ConversationsContent() {
         );
       }
     },
-    [stopAgentTypingIndicator]
+    [agentName, stopAgentTypingIndicator]
   );
 
   const selectedConversation = React.useMemo(
@@ -517,7 +523,7 @@ export function ConversationsContent() {
         {isMobileDetailVisible && selectedConversation ? (
           <ConversationPanel
             conversation={selectedConversation}
-            currentAgentName={AGENT_NAME}
+            currentAgentName={agentName}
             onJoinConversation={handleJoinConversation}
             joiningConversationId={joiningConversationId}
             draft={selectedConversation ? drafts[selectedConversation.id] : ""}
@@ -558,7 +564,7 @@ export function ConversationsContent() {
         <ResizablePanel defaultSize={72} className="min-w-0 bg-background">
           <ConversationPanel
             conversation={selectedConversation}
-            currentAgentName={AGENT_NAME}
+            currentAgentName={agentName}
             onJoinConversation={handleJoinConversation}
             joiningConversationId={joiningConversationId}
             draft={selectedConversation ? drafts[selectedConversation.id] : ""}

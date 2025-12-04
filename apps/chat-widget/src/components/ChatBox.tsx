@@ -200,6 +200,7 @@ export function ChatBoxMessageAgent({
   footer,
   className,
   hideIncompleteCitations = false,
+  agentName,
 }: {
   content?: string;
   sources?: Source[];
@@ -207,6 +208,7 @@ export function ChatBoxMessageAgent({
   footer?: ComponentChildren;
   className?: string;
   hideIncompleteCitations?: boolean;
+  agentName?: string;
 }) {
   const bodyContent =
     children ??
@@ -226,22 +228,26 @@ export function ChatBoxMessageAgent({
           <JexityLogo />
 
           <p className="inline font-medium text-sm">
-            Jexity
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="8"
-              height="8"
-              viewBox="0 0 48 48"
-              className="inline mx-1"
-            >
-              <path
-                fill="currentColor"
-                stroke="currentColor"
-                strokeWidth="4"
-                d="M24 33a9 9 0 1 0 0-18a9 9 0 0 0 0 18Z"
-              />
-            </svg>
-            AI Agent
+            {agentName?.trim() || "Jexity"}
+            {!agentName && (
+              <>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="8"
+                  height="8"
+                  viewBox="0 0 48 48"
+                  className="inline mx-1"
+                >
+                  <path
+                    fill="currentColor"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                    d="M24 33a9 9 0 1 0 0-18a9 9 0 0 0 0 18Z"
+                  />
+                </svg>
+                AI Agent
+              </>
+            )}
           </p>
         </div>
         {bodyContent}

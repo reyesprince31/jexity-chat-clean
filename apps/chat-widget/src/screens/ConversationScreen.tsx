@@ -482,17 +482,25 @@ export function ChatWidget({
       />
 
       <ChatBoxMessages>
-        {messages.map((message) =>
-          message.role === "user" ? (
-            <ChatBoxMessageUser key={message.id} content={message.content} />
-          ) : (
+        {messages.map((message) => {
+          if (message.role === "user") {
+            return (
+              <ChatBoxMessageUser key={message.id} content={message.content} />
+            );
+          }
+
+          const isHumanAgent = message.role === "human_agent";
+          const agentLabel = escalationState.agentName?.trim() || "Agent";
+
+          return (
             <ChatBoxMessageAgent
               key={message.id}
               content={message.content}
               sources={message.sources}
+              agentName={isHumanAgent ? agentLabel : undefined}
             />
-          )
-        )}
+          );
+        })}
 
         {isStreaming && (
           <ChatBoxMessageLoading
