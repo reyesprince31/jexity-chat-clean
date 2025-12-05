@@ -15,7 +15,9 @@
     "db:start": "turbo -F @repo/db db:start",
     "db:watch": "turbo -F @repo/db db:watch",
     "db:stop": "turbo -F @repo/db db:stop",
-    "db:down": "turbo -F @repo/db db:down"
+    "db:down": "turbo -F @repo/db db:down",
+    "cli:create-user": "pnpm --filter @repo/cli create-user",
+    "cli:seed": "pnpm --filter @repo/cli seed"
   },
   "devDependencies": {
     "prettier": "^3.6.2",
