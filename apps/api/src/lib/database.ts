@@ -1,12 +1,10 @@
-import { PrismaClient } from "../generated/prisma/client";
+import { prisma } from "@repo/db";
 import type {
   CreateMessageRecordInput,
   MessageRecord,
   MessageRole,
   MessageWithSourcesRecord,
 } from "@repo/dto";
-
-const prisma = new PrismaClient();
 
 // Database types
 export interface Document {

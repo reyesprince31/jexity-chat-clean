@@ -74,6 +74,9 @@ importers:
       dotenv:
         specifier: 'catalog:'
         version: 17.2.2
+      dotenv-cli:
+        specifier: 'catalog:'
+        version: 10.0.0
       fastify:
         specifier: 5.2.0
         version: 5.2.0

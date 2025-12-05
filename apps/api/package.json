@@ -4,7 +4,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "concurrently \"tsx watch src/index.ts\" \"pnpm dlx inngest-cli@latest dev --no-discovery -u http://localhost:3001/api/inngest\" --names \"api,inngest\" --prefix-colors \"blue,magenta\"",
+    "dev": "concurrently \"dotenv -e .env -- tsx watch src/index.ts\" \"pnpm dlx inngest-cli@latest dev --no-discovery -u http://localhost:3001/api/inngest\" --names \"api,inngest\" --prefix-colors \"blue,magenta\"",
     "build": "tsup",
     "start": "node dist/index.js",
     "lint": "eslint . --max-warnings 0",
@@ -26,7 +26,8 @@
     "@repo/dto": "workspace:*",
     "@supabase/supabase-js": "2.76.1",
     "better-auth": "catalog:",
-    "dotenv": "16.4.7",
+    "dotenv": "catalog:",
+    "dotenv-cli": "catalog:",
     "fastify": "5.2.0",
     "inngest": "3.44.3",
     "langchain": "1.0.2",

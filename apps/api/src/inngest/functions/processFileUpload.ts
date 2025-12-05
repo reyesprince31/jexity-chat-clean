@@ -4,10 +4,7 @@ import { PDFParse } from "pdf-parse";
 import { downloadFileFromStorage } from "../../lib/storage";
 import { getDocumentById } from "../../lib/database";
 import { chunkText, estimateTokenCount, buildPageMapping } from "../../lib/chunking";
-import { PrismaClient } from "../../generated/prisma/client";
-
-// Reuse single Prisma instance to avoid connection pool issues
-const prisma = new PrismaClient();
+import { prisma } from "@repo/db";
 
 export const processFileUpload = inngest.createFunction(
   {
