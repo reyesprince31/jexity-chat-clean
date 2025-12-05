@@ -1,156 +1,186 @@
-# Turborepo starter
+# Jexity Chatbot
 
-This Turborepo starter is maintained by the Turborepo core team.
+A GPT-powered AI chat application with RAG (Retrieval-Augmented Generation) capabilities, built as a Turborepo monorepo.
 
-## AI Chat Customizations
+## Features
 
-This repo now includes a GPT-5 powered chat API (`apps/api`) and a shareable widget (`apps/chat-widget`) with incremental streaming responses:
+- **AI Chat API** (`apps/api`) - Fastify backend with streaming responses
+- **Web App** (`apps/web`) - Next.js admin dashboard
+- **Chat Widget** (`apps/chat-widget`) - Embeddable Vite-based chat widget
+- **RAG Pipeline** - Document chunking, vector embeddings, and semantic search using pgvector
 
-- **Model selection**: `apps/api/src/config/rag.config.ts` targets `gpt-5`, so every conversation automatically benefits from the latest reasoning-capable model.
-- **Streaming events**: The API streams `token` events for incremental UI updates and a final `done` event that carries citation metadata. See `packages/dto/src/stream.ts` for the shared SSE shape.
+## Tech Stack
+
+- **Database**: PostgreSQL with [pgvector](https://github.com/pgvector/pgvector) extension (via Docker)
+- **ORM**: Prisma with multi-schema file approach
+- **Package Manager**: pnpm
+- **Monorepo**: Turborepo
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js >= 18
+- pnpm 10.24.0+
+- Docker & Docker Compose
+
+### 1. Install Dependencies
+
+```bash
+pnpm install
+```
+
+### 2. Start the Database
+
+```bash
+pnpm db:start
+```
+
+This starts a PostgreSQL container with pgvector extension using the Docker Compose file at `packages/db/docker-compose.yml`.
+
+### 3. Setup Environment Variables
+
+Copy the example env files and configure them:
+
+```bash
+cp apps/web/.env.example apps/web/.env
+cp apps/api/.env.example apps/api/.env
+```
+
+### 4. Generate Prisma Client & Push Schema
+
+```bash
+pnpm db:generate
+pnpm db:push
+```
+
+### 5. Start Development
+
+```bash
+pnpm dev
+```
 
 ## Port Configuration
 
-The applications run on the following ports in development:
+- **Web App**: http://localhost:3000 - Next.js web application
+- **API Server**: http://localhost:3001 - Fastify backend API
+- **Chat Widget**: http://localhost:3002 - Vite development server
 
-- **API Server**: 3001 - Fastify backend API
-- **Web App**: 3000 - Next.js web application
-- **Chat Widget**: 3002 - Vite development server for widget
+## Database
 
-Access the main application via `http://localhost:3000` or individual apps via their respective ports.
+### Docker Compose Setup
 
-## Using this example
+We use a self-hosted PostgreSQL with pgvector instead of Supabase. The database runs via Docker Compose at `packages/db/docker-compose.yml`:
 
-Run the following command:
-
-```bash
-npx create-turbo@latest
+```yaml
+image: pgvector/pgvector:pg18-trixie
 ```
 
-## What's inside?
+This provides PostgreSQL 18 with the pgvector extension pre-installed for vector similarity search.
 
-This Turborepo includes the following packages/apps:
+### Root-Level Database Commands
 
-### Apps and Packages
+All database commands can be run from the **root directory** using Turbo's catalog feature:
 
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
+| Command | Description |
+|---------|-------------|
+| `pnpm db:start` | Start PostgreSQL container (detached) |
+| `pnpm db:watch` | Start PostgreSQL container (with logs) |
+| `pnpm db:stop` | Stop the container (preserves data) |
+| `pnpm db:down` | Stop and remove the container |
+| `pnpm db:generate` | Generate Prisma client |
+| `pnpm db:push` | Push schema changes to database |
+| `pnpm db:migrate` | Run Prisma migrations |
+| `pnpm db:studio` | Open Prisma Studio GUI |
 
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
+These commands are defined in the root `package.json` and use Turbo's `-F` (filter) flag to target the `@repo/db` package:
 
-### Utilities
-
-This Turborepo has some additional tools already setup for you:
-
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
-
-### Build
-
-To build all apps and packages, run the following command:
-
-```bash
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build
-yarn dlx turbo build
-pnpm exec turbo build
+```json
+"db:start": "turbo -F @repo/db db:start"
 ```
 
-You can build a specific package by using a [filter](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters):
+### Turbo Task Configuration
 
-```bash
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build --filter=docs
+The `turbo.json` defines database tasks that can be triggered from the root:
 
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build --filter=docs
-yarn exec turbo build --filter=docs
-pnpm exec turbo build --filter=docs
+```json
+{
+  "tasks": {
+    "db:start": { "cache": false, "persistent": true },
+    "db:stop": { "cache": false, "persistent": true },
+    "db:generate": { "cache": false },
+    "db:push": { "cache": false, "persistent": true },
+    "db:migrate": { "cache": false, "persistent": true },
+    "db:studio": { "cache": false, "persistent": true }
+  }
+}
 ```
 
-### Develop
+The `dev` and `build` tasks depend on `db:generate` to ensure the Prisma client is always up-to-date.
 
-To develop all apps and packages, run the following command:
+## Prisma Multi-Schema File Approach
 
-```bash
-cd my-turborepo
+The Prisma schema is split into multiple files under `packages/db/prisma/schema/`:
 
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev
-yarn exec turbo dev
-pnpm exec turbo dev
+```
+packages/db/prisma/schema/
+├── schema.prisma   # Generator & datasource config (pgvector extension)
+├── auth.prisma     # User, Session, Account, Organization models
+└── chat.prisma     # Documents, Conversations, Messages models
 ```
 
-You can develop a specific package by using a [filter](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters):
+### How It Works
+
+Prisma's `prismaSchemaFolder` preview feature allows splitting the schema across multiple `.prisma` files. This provides:
+
+- **Better organization** - Group related models together
+- **Easier collaboration** - Reduce merge conflicts
+- **Cleaner diffs** - Changes are isolated to relevant files
+
+### Schema Files
+
+- **`schema.prisma`** - Contains the generator and datasource configuration, including the `vector` extension for pgvector
+- **`auth.prisma`** - Authentication models: `User`, `Session`, `Account`, `Verification`, `Organization`, `Member`, `Invitation`, `AuditLog`
+- **`chat.prisma`** - Chat/RAG models: `documents`, `document_chunks`, `conversations`, `messages`, `message_sources`
+
+## Apps and Packages
+
+### Apps
+
+- `apps/api` - Fastify API server with RAG pipeline
+- `apps/web` - Next.js admin dashboard
+- `apps/chat-widget` - Embeddable chat widget (Vite)
+
+### Packages
+
+- `@repo/db` - Prisma database client and schema
+- `@repo/dto` - Shared TypeScript types and DTOs
+- `@repo/ui` - Shared React component library
+- `@repo/eslint-config` - ESLint configurations
+- `@repo/typescript-config` - Shared TypeScript configs
+
+## Development Commands
 
 ```bash
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev --filter=web
+# Start all apps
+pnpm dev
 
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev --filter=web
-yarn exec turbo dev --filter=web
-pnpm exec turbo dev --filter=web
-```
+# Start specific app
+pnpm dev --filter=web
+pnpm dev --filter=api
 
-### Remote Caching
+# Build all
+pnpm build
 
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
+# Lint
+pnpm lint
 
-Turborepo can use a technique known as [Remote Caching](https://turborepo.com/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
-
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
-
-```bash
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo login
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo login
-yarn exec turbo login
-pnpm exec turbo login
-```
-
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
-
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
-
-```bash
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo link
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo link
-yarn exec turbo link
-pnpm exec turbo link
+# Type check
+pnpm check-types
 ```
 
 ## Useful Links
 
-Learn more about the power of Turborepo:
-
-- [Tasks](https://turborepo.com/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.com/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.com/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.com/docs/reference/configuration)
-- [CLI Usage](https://turborepo.com/docs/reference/command-line-reference)
-
-```
-
-```
+- [Turborepo Docs](https://turborepo.com/docs)
+- [Prisma Docs](https://www.prisma.io/docs)
+- [pgvector](https://github.com/pgvector/pgvector)
