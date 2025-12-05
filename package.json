@@ -16,8 +16,10 @@
     "db:watch": "turbo -F @repo/db db:watch",
     "db:stop": "turbo -F @repo/db db:stop",
     "db:down": "turbo -F @repo/db db:down",
-    "cli:create-user": "pnpm --filter @repo/cli create-user",
-    "cli:seed": "pnpm --filter @repo/cli seed"
+    "cli:create-user": "pnpm --filter @repo/scripts create-user",
+    "cli:seed": "pnpm --filter @repo/scripts seed",
+    "cli:seed:auth": "pnpm --filter @repo/scripts seed:auth",
+    "cli:seed:chat": "pnpm --filter @repo/scripts seed:chat"
   },
   "devDependencies": {
     "prettier": "^3.6.2",

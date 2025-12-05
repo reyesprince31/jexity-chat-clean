@@ -143,6 +143,66 @@ Prisma's `prismaSchemaFolder` preview feature allows splitting the schema across
 - **`auth.prisma`** - Authentication models: `User`, `Session`, `Account`, `Verification`, `Organization`, `Member`, `Invitation`, `AuditLog`
 - **`chat.prisma`** - Chat/RAG models: `documents`, `document_chunks`, `conversations`, `messages`, `message_sources`
 
+## CLI Tools
+
+The `tooling/script` package (`@repo/cli`) provides CLI commands for development tasks.
+
+### Create User
+
+Create a new user interactively with properly hashed password (compatible with better-auth):
+
+```bash
+pnpm cli:create-user
+```
+
+This will prompt for:
+- **Email** - User's email address
+- **Name** - User's display name  
+- **Admin role** - Whether the user should be an admin
+
+A random secure password is generated and displayed after creation.
+
+### Seed Database
+
+Seed the database with test users, organization, and sample chat data:
+
+```bash
+# Seed everything (users, organization, and chat data)
+pnpm cli:seed
+
+# Seed only auth data (users and organization)
+pnpm cli:seed:auth
+
+# Seed only chat data (conversations and messages)
+pnpm cli:seed:chat
+```
+
+#### Default Seed Data
+
+| User | Email | Role |
+|------|-------|------|
+| Admin | admin@example.com | Super admin (`role: admin`) |
+| Owner | owner@example.com | Organization owner |
+| Member | member@example.com | Organization member |
+
+**Organization:** Acme Corporation (`acme-corp`)  
+**Password:** `Password123!` (same for all users)
+
+**Chat Data:** Sample conversations with messages demonstrating the chatbot features.
+
+#### Environment Variables
+
+You can customize the seed data via environment variables:
+
+```env
+SEED_PASSWORD="Password123!"
+SEED_ADMIN_EMAIL="admin@example.com"
+SEED_OWNER_EMAIL="owner@example.com"
+SEED_MEMBER_EMAIL="member@example.com"
+SEED_ORG_NAME="Acme Corporation"
+SEED_ORG_SLUG="acme-corp"
+```
+
 ## Apps and Packages
 
 ### Apps
@@ -154,10 +214,16 @@ Prisma's `prismaSchemaFolder` preview feature allows splitting the schema across
 ### Packages
 
 - `@repo/db` - Prisma database client and schema
+- `@repo/auth` - Better-auth authentication configuration
+- `@repo/logs` - Logger abstraction (wraps consola for easy provider replacement)
 - `@repo/dto` - Shared TypeScript types and DTOs
 - `@repo/ui` - Shared React component library
 - `@repo/eslint-config` - ESLint configurations
 - `@repo/typescript-config` - Shared TypeScript configs
+
+### Tooling
+
+- `@repo/cli` - CLI tools for development (user creation, seeding, etc.)
 
 ## Development Commands
 
