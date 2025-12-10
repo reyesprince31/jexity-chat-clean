@@ -2,7 +2,7 @@ name: jexity-chatbot
 
 services:
   postgres:
-    image: pgvector/pgvector:pg18-trixie
+    image: pgvector/pgvector:pg17
     container_name: jexity-chatbot-postgres
     environment:
       POSTGRES_DB: jexity-chatbot

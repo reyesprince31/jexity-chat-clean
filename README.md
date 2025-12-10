@@ -73,7 +73,7 @@ pnpm dev
 We use a self-hosted PostgreSQL with pgvector instead of Supabase. The database runs via Docker Compose at `packages/db/docker-compose.yml`:
 
 ```yaml
-image: pgvector/pgvector:pg18-trixie
+image: pgvector/pgvector:pg17
 ```
 
 This provides PostgreSQL 18 with the pgvector extension pre-installed for vector similarity search.
@@ -82,16 +82,16 @@ This provides PostgreSQL 18 with the pgvector extension pre-installed for vector
 
 All database commands can be run from the **root directory** using Turbo's catalog feature:
 
-| Command | Description |
-|---------|-------------|
-| `pnpm db:start` | Start PostgreSQL container (detached) |
-| `pnpm db:watch` | Start PostgreSQL container (with logs) |
-| `pnpm db:stop` | Stop the container (preserves data) |
-| `pnpm db:down` | Stop and remove the container |
-| `pnpm db:generate` | Generate Prisma client |
-| `pnpm db:push` | Push schema changes to database |
-| `pnpm db:migrate` | Run Prisma migrations |
-| `pnpm db:studio` | Open Prisma Studio GUI |
+| Command            | Description                            |
+| ------------------ | -------------------------------------- |
+| `pnpm db:start`    | Start PostgreSQL container (detached)  |
+| `pnpm db:watch`    | Start PostgreSQL container (with logs) |
+| `pnpm db:stop`     | Stop the container (preserves data)    |
+| `pnpm db:down`     | Stop and remove the container          |
+| `pnpm db:generate` | Generate Prisma client                 |
+| `pnpm db:push`     | Push schema changes to database        |
+| `pnpm db:migrate`  | Run Prisma migrations                  |
+| `pnpm db:studio`   | Open Prisma Studio GUI                 |
 
 These commands are defined in the root `package.json` and use Turbo's `-F` (filter) flag to target the `@repo/db` package:
 
@@ -156,8 +156,9 @@ pnpm cli:create-user
 ```
 
 This will prompt for:
+
 - **Email** - User's email address
-- **Name** - User's display name  
+- **Name** - User's display name
 - **Admin role** - Whether the user should be an admin
 
 A random secure password is generated and displayed after creation.
@@ -179,11 +180,11 @@ pnpm cli:seed:chat
 
 #### Default Seed Data
 
-| User | Email | Role |
-|------|-------|------|
-| Admin | admin@example.com | Super admin (`role: admin`) |
-| Owner | owner@example.com | Organization owner |
-| Member | member@example.com | Organization member |
+| User   | Email              | Role                        |
+| ------ | ------------------ | --------------------------- |
+| Admin  | admin@example.com  | Super admin (`role: admin`) |
+| Owner  | owner@example.com  | Organization owner          |
+| Member | member@example.com | Organization member         |
 
 **Organization:** Acme Corporation (`acme-corp`)  
 **Password:** `Password123!` (same for all users)
