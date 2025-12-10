@@ -16,6 +16,7 @@ const SEED_OWNER_EMAIL = process.env.SEED_OWNER_EMAIL || "owner@example.com";
 const SEED_MEMBER_EMAIL = process.env.SEED_MEMBER_EMAIL || "member@example.com";
 const SEED_ORG_NAME = process.env.SEED_ORG_NAME || "Acme Corporation";
 const SEED_ORG_SLUG = process.env.SEED_ORG_SLUG || "acme-corp";
+const SEED_ORG_ID = "org_acme_corp_seed_001";
 
 interface CreatedUser {
   id: string;
@@ -84,7 +85,7 @@ async function createOrganization(
 
   const org = await prisma.organization.create({
     data: {
-      id: nanoid(),
+      id: SEED_ORG_ID,
       name,
       slug,
       createdAt: new Date(),
@@ -145,6 +146,7 @@ async function seedChatData(): Promise<void> {
       is_escalated: true,
       escalated_reason: "Customer requested human assistance",
       escalated_at: new Date(),
+      organization_id: SEED_ORG_ID,
     },
   });
 
@@ -188,6 +190,7 @@ async function seedChatData(): Promise<void> {
       is_escalated: true,
       escalated_reason: "Pricing question requires human review",
       escalated_at: new Date(),
+      organization_id: SEED_ORG_ID,
     },
   });
 
@@ -285,6 +288,23 @@ async function main() {
 
   // Seed chat data
   if (seedChat) {
+    // Ensure organization exists before creating conversations (for FK constraint)
+    const existingOrg = await prisma.organization.findUnique({
+      where: { id: SEED_ORG_ID },
+    });
+    if (!existingOrg) {
+      logger.info("\nCreating organization for chat data...");
+      await prisma.organization.create({
+        data: {
+          id: SEED_ORG_ID,
+          name: SEED_ORG_NAME,
+          slug: SEED_ORG_SLUG,
+          createdAt: new Date(),
+        },
+      });
+      logger.success(`Organization created: ${SEED_ORG_NAME}`);
+    }
+
     logger.info("\nSeeding chat data...");
     await seedChatData();
     logger.success("Chat data seeded");

@@ -79,7 +79,7 @@ export default async function ConversationsPage({
           </div>
         </header>
         <div className="flex flex-1 min-h-0 flex-col">
-          <ConversationsContent user={user} />
+          <ConversationsContent user={user} organizationId={organization.id} />
         </div>
       </SidebarInset>
     </SidebarProvider>
