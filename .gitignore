@@ -43,6 +43,7 @@ apps/chat-widget/dist-ssr/
 
 # Generated sources
 apps/api/src/generated/prisma
+packages/db/prisma/generated
 
 # Chat widget app artifacts
 apps/chat-widget/logs
