@@ -8,14 +8,25 @@
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "check-types": "turbo run check-types",
-    "db:migrate": "turbo run db:migrate"
+    "db:push": "turbo -F @repo/db db:push",
+    "db:studio": "turbo -F @repo/db db:studio",
+    "db:generate": "turbo -F @repo/db db:generate",
+    "db:migrate": "turbo -F @repo/db db:migrate",
+    "db:start": "turbo -F @repo/db db:start",
+    "db:watch": "turbo -F @repo/db db:watch",
+    "db:stop": "turbo -F @repo/db db:stop",
+    "db:down": "turbo -F @repo/db db:down",
+    "cli:create-user": "pnpm --filter @repo/scripts create-user",
+    "cli:seed": "pnpm --filter @repo/scripts seed",
+    "cli:seed:auth": "pnpm --filter @repo/scripts seed:auth",
+    "cli:seed:chat": "pnpm --filter @repo/scripts seed:chat"
   },
   "devDependencies": {
     "prettier": "^3.6.2",
     "turbo": "^2.5.8",
     "typescript": "5.9.2"
   },
-  "packageManager": "pnpm@10.22.0",
+  "packageManager": "pnpm@10.24.0",
   "engines": {
     "node": ">=18"
   }

@@ -90,7 +90,7 @@ export function UserActions({
       }
 
       // Use hard navigation to ensure fresh server-side render
-      window.location.href = "/dashboard";
+      window.location.href = "/home";
     } catch (error) {
       console.error("Error impersonating user:", error);
       alert(

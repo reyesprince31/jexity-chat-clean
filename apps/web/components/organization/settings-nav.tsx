@@ -12,18 +12,18 @@ interface SettingsNavProps {
 const navItems = [
   {
     title: "General",
-    href: (slug: string) => `/dashboard/${slug}/settings`,
+    href: (slug: string) => `/home/${slug}/settings`,
     icon: Settings,
     exact: true,
   },
   {
     title: "Members",
-    href: (slug: string) => `/dashboard/${slug}/settings/members`,
+    href: (slug: string) => `/home/${slug}/settings/members`,
     icon: Users,
   },
   {
     title: "Integrations",
-    href: (slug: string) => `/dashboard/${slug}/settings/integrations`,
+    href: (slug: string) => `/home/${slug}/settings/integrations`,
     icon: Plug,
   },
 ];

@@ -114,7 +114,7 @@ export function NavUser({
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuItem asChild>
-                <Link href="/settings">
+                <Link href="/home/settings">
                   <Settings />
                   Settings
                 </Link>

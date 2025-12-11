@@ -77,7 +77,7 @@ export default function AdminDashboard() {
               Access advanced administrative features
             </CardDescription>
             <Button asChild className="mt-4 w-full" variant="outline">
-              <Link href="/dashboard">Back to Dashboard</Link>
+              <Link href="/home">Back to Dashboard</Link>
             </Button>
           </CardContent>
         </Card>

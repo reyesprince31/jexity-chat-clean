@@ -36,6 +36,7 @@ interface ConversationsContentProps {
     avatar?: string | null;
     role?: string | null;
   };
+  organizationId: string;
 }
 
 const DEFAULT_AGENT_NAME = "Agent";
@@ -58,7 +59,10 @@ const sortConversations = (items: ConversationRecord[]) =>
     (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
   );
 
-export function ConversationsContent({ user }: ConversationsContentProps) {
+export function ConversationsContent({
+  user,
+  organizationId,
+}: ConversationsContentProps) {
   const isMobile = useIsMobile();
   const [conversations, setConversations] = React.useState<
     ConversationRecord[]
@@ -245,7 +249,7 @@ export function ConversationsContent({ user }: ConversationsContentProps) {
     async function loadEscalations() {
       try {
         setIsLoading(true);
-        const response = await fetchEscalatedConversations();
+        const response = await fetchEscalatedConversations(organizationId);
         if (cancelled) return;
         const normalized = response.map(normalizeConversation);
         setConversations(sortConversations(normalized));
@@ -264,7 +268,7 @@ export function ConversationsContent({ user }: ConversationsContentProps) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [organizationId]);
 
   React.useEffect(() => {
     const dispose = openHelpdeskSocket((event: HelpdeskSocketEvent) => {
@@ -551,8 +555,7 @@ export function ConversationsContent({ user }: ConversationsContentProps) {
         <ResizablePanel
           defaultSize={28}
           minSize={15}
-          className="min-w-[280px] border-border/80 border-r bg-card"
-        >
+          className="min-w-[280px] border-border/80 border-r bg-card">
           <ConversationsPanel
             conversations={conversations}
             activeConversationId={activeConversationId}

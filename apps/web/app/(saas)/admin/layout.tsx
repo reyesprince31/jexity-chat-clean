@@ -17,7 +17,7 @@ export default async function AdminLayout({
   }
 
   if (session.user.role !== "admin") {
-    redirect("/dashboard");
+    redirect("/home");
   }
 
   return (
@@ -30,7 +30,7 @@ export default async function AdminLayout({
             {session.user.name}
           </span>
           <Button asChild variant="outline" size="sm">
-            <Link href="/dashboard">
+            <Link href="/home">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to App
             </Link>

@@ -80,8 +80,8 @@ export function ResetPasswordForm({
         return
       }
 
-      // Success - redirect to dashboard (user is auto signed in)
-      router.push("/dashboard")
+      // Success - redirect to home (user is auto signed in)
+      router.push("/home")
     } catch (err) {
       setError("An unexpected error occurred")
       console.error(err)

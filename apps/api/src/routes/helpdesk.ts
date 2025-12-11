@@ -16,6 +16,7 @@ import { conversationEventHub } from "../lib/conversation-events.js";
 interface ListEscalationsRequest {
   Querystring: {
     limit?: string;
+    organizationId?: string;
   };
 }
 
@@ -59,7 +60,8 @@ export default async function helpdeskRoutes(
     ) => {
       try {
         const limit = parseInt(request.query.limit || "50", 10);
-        const conversations = await listEscalatedConversations(limit);
+        const { organizationId } = request.query;
+        const conversations = await listEscalatedConversations(limit, organizationId);
 
         return reply.send({
           success: true,

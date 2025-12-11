@@ -17,7 +17,7 @@ export async function proxy(request: NextRequest) {
 
   // If user is logged in and trying to access auth pages
   if (sessionToken && authRoutes.includes(pathname)) {
-    return NextResponse.redirect(new URL("/dashboard", request.url))
+    return NextResponse.redirect(new URL("/home", request.url))
   }
 
   return NextResponse.next()

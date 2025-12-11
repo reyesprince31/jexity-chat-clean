@@ -42,36 +42,37 @@ export function TeamSwitcher() {
   const { data: organizations, isPending: isLoadingOrgs, refetch } = authClient.useListOrganizations()
 
   // Get current team slug from URL
-  const currentSlug = params?.teamSlug as string | undefined
+  const currentSlug = params?.team as string | undefined
 
-  // Check if we're in a team context (has teamSlug in URL)
+  // Check if we're in a team context (has team in URL)
   const isTeamContext = !!currentSlug
 
   // Check if we're on personal account pages (settings, etc.)
   const isPersonalContext = !isTeamContext && (
-    pathname === "/settings" ||
-    pathname === "/dashboard" ||
-    pathname?.startsWith("/settings/")
+    pathname === "/home/settings" ||
+    pathname === "/home" ||
+    pathname?.startsWith("/home/settings/")
   )
 
   // Find active org based on URL slug
   const activeOrg = React.useMemo(() => {
-    if (!organizations || !currentSlug) return null
+    if (!currentSlug) return null
+    if (!organizations) return null
     return organizations.find((org) => org.slug === currentSlug) || null
   }, [organizations, currentSlug])
 
   const handleSwitchToPersonal = () => {
-    router.push("/settings")
+    router.push("/home/settings")
   }
 
   const handleSwitchOrg = (orgSlug: string) => {
-    router.push(`/dashboard/${orgSlug}`)
+    router.push(`/home/${orgSlug}`)
   }
 
   const handleCreateSuccess = (newOrgSlug?: string) => {
     refetch()
     if (newOrgSlug) {
-      router.push(`/dashboard/${newOrgSlug}`)
+      router.push(`/home/${newOrgSlug}`)
     }
   }
 
@@ -95,7 +96,8 @@ export function TeamSwitcher() {
   const orgs = organizations || []
 
   // Determine what to show in the button
-  const showPersonal = isPersonalContext || !activeOrg
+  // Show team context if we have a team slug in URL, even while loading
+  const showPersonal = !isTeamContext || isPersonalContext
 
   return (
     <>
@@ -118,15 +120,17 @@ export function TeamSwitcher() {
                       height={16}
                       className="rounded"
                     />
-                  ) : (
+                  ) : activeOrg ? (
                     <span className="text-xs font-semibold">
-                      {activeOrg ? getInitials(activeOrg.name) : <Building2 className="size-4" />}
+                      {getInitials(activeOrg.name)}
                     </span>
+                  ) : (
+                    <Building2 className="size-4" />
                   )}
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-medium">
-                    {showPersonal ? "Personal Account" : activeOrg?.name || "Select a team"}
+                    {showPersonal ? "Personal Account" : activeOrg?.name || currentSlug || "Loading..."}
                   </span>
                   <span className="truncate text-xs text-muted-foreground">
                     {showPersonal ? "Account" : "Team"}

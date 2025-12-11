@@ -1,12 +1,10 @@
-import { PrismaClient } from "../generated/prisma/client";
+import { prisma } from "@repo/db";
 import type {
   CreateMessageRecordInput,
   MessageRecord,
   MessageRole,
   MessageWithSourcesRecord,
 } from "@repo/dto";
-
-const prisma = new PrismaClient();
 
 // Database types
 export interface Document {
@@ -150,6 +148,7 @@ export interface Conversation {
   resolved_by: string | null;
   agent_name: string | null;
   agent_joined_at: Date | null;
+  organization_id: string | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -273,15 +272,19 @@ export async function listConversations(
 
 /**
  * List escalated conversations with their messages for the helpdesk dashboard.
+ * @param limit - Maximum number of conversations to return (default: 50)
+ * @param organizationId - Optional organization ID to filter by
  */
 export async function listEscalatedConversations(
-  limit: number = 50
+  limit: number = 50,
+  organizationId?: string
 ): Promise<ConversationWithMessages[]> {
   try {
     const conversations = await prisma.conversations.findMany({
       where: {
         is_escalated: true,
         is_resolved: false,
+        ...(organizationId && { organization_id: organizationId }),
       },
       orderBy: {
         escalated_at: "desc",
@@ -467,11 +470,11 @@ export async function createMessage(
         content: input.content,
         sources: input.sources
           ? {
-              create: input.sources.map((source) => ({
-                chunk_id: source.chunk_id,
-                similarity_score: source.similarity_score,
-              })),
-            }
+            create: input.sources.map((source) => ({
+              chunk_id: source.chunk_id,
+              similarity_score: source.similarity_score,
+            })),
+          }
           : undefined,
       },
     });

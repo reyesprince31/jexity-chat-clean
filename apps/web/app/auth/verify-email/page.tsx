@@ -9,7 +9,7 @@ import { useEffect, useState } from "react";
 
 export default function VerifyEmailPage() {
   const router = useRouter();
-  const [redirectUrl, setRedirectUrl] = useState<string>("/dashboard");
+  const [redirectUrl, setRedirectUrl] = useState<string>("/home");
   const [countdown, setCountdown] = useState(5);
 
   useEffect(() => {

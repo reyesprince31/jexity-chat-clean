@@ -71,8 +71,8 @@ export function LoginForm({
         return
       }
 
-      // Redirect to dashboard on success
-      router.push("/dashboard")
+      // Redirect to home on success
+      router.push("/home")
     } catch (err) {
       setError("An unexpected error occurred")
       console.error(err)
@@ -87,7 +87,7 @@ export function LoginForm({
       const email = getValues("email")
       const result = await authClient.sendVerificationEmail({
         email,
-        callbackURL: "/dashboard"
+        callbackURL: "/home"
       })
 
       if (result.error) {

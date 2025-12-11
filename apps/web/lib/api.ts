@@ -29,10 +29,14 @@ function buildWsUrl(path: string) {
 }
 
 /** Loads the current escalated queue that seeds the dashboard on page load. */
-export async function fetchEscalatedConversations(): Promise<
-  HelpdeskConversation[]
-> {
-  const response = await fetch(`${normalizedApiBase}/helpdesk/escalations`);
+export async function fetchEscalatedConversations(
+  organizationId?: string
+): Promise<HelpdeskConversation[]> {
+  const url = new URL(`${normalizedApiBase}/helpdesk/escalations`);
+  if (organizationId) {
+    url.searchParams.set("organizationId", organizationId);
+  }
+  const response = await fetch(url.toString());
   if (!response.ok) {
     throw new Error(`Failed to load escalations: ${response.statusText}`);
   }
@@ -50,13 +54,13 @@ export async function fetchEscalatedConversations(): Promise<
 
 type JoinConversationResponse =
   | {
-      success: true;
-      conversation: Conversation;
-    }
+    success: true;
+    conversation: Conversation;
+  }
   | {
-      success: false;
-      message?: string;
-    };
+    success: false;
+    message?: string;
+  };
 
 /**
  * Records that an agent claimed an escalated chat. The API responds with the
@@ -92,13 +96,13 @@ export async function claimConversation(
 
 type SendAgentMessageResponse =
   | {
-      success: true;
-      message: Message;
-    }
+    success: true;
+    message: Message;
+  }
   | {
-      success: false;
-      message?: string;
-    };
+    success: false;
+    message?: string;
+  };
 
 /** Persists a human-agent reply and returns the canonical message payload. */
 export async function sendAgentMessage(
@@ -169,13 +173,13 @@ export async function sendAgentTypingIndicator(
 
 type ResolveConversationResponse =
   | {
-      success: true;
-      conversation: Conversation;
-    }
+    success: true;
+    conversation: Conversation;
+  }
   | {
-      success: false;
-      message?: string;
-    };
+    success: false;
+    message?: string;
+  };
 
 /** Marks the escalation as resolved so every client immediately locks the UI. */
 export async function resolveConversation(

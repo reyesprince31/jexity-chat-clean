@@ -63,7 +63,7 @@ export function InvitationClient({ invitation, invitationId }: InvitationClientP
         return;
       }
 
-      router.push(`/dashboard/${invitation.organization.slug}`);
+      router.push(`/home/${invitation.organization.slug}`);
     } catch (err) {
       console.error("Error accepting invitation:", err);
       setError("An unexpected error occurred");
@@ -88,7 +88,7 @@ export function InvitationClient({ invitation, invitationId }: InvitationClientP
         return;
       }
 
-      router.push("/dashboard");
+      router.push("/home");
     } catch (err) {
       console.error("Error declining invitation:", err);
       setError("An unexpected error occurred");
@@ -130,7 +130,7 @@ export function InvitationClient({ invitation, invitationId }: InvitationClientP
           </CardHeader>
           <CardFooter className="justify-center">
             <Button asChild>
-              <Link href="/dashboard">Go to Dashboard</Link>
+              <Link href="/home">Go to Dashboard</Link>
             </Button>
           </CardFooter>
         </Card>
@@ -166,7 +166,7 @@ export function InvitationClient({ invitation, invitationId }: InvitationClientP
           </CardHeader>
           <CardFooter className="justify-center">
             <Button asChild>
-              <Link href="/dashboard">Go to Dashboard</Link>
+              <Link href="/home">Go to Dashboard</Link>
             </Button>
           </CardFooter>
         </Card>
@@ -242,7 +242,7 @@ export function InvitationClient({ invitation, invitationId }: InvitationClientP
           </CardContent>
           <CardFooter className="justify-center gap-2">
             <Button asChild variant="outline">
-              <Link href="/dashboard">Go to Dashboard</Link>
+              <Link href="/home">Go to Dashboard</Link>
             </Button>
             <Button asChild>
               <Link href={`/auth/login?redirect=/invite/${invitationId}`}>
