@@ -10,7 +10,7 @@ export default async function AdminOrganizationsPage() {
 
   // Double check admin access (middleware should handle this too)
   if (!session || session.user.role !== "admin") {
-    redirect("/dashboard");
+    redirect("/home");
   }
 
   // Fetch all organizations with member and invitation counts

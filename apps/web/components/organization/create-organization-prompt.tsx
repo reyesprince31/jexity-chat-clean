@@ -13,7 +13,7 @@ export function CreateOrganizationPrompt() {
 
   const handleSuccess = (slug?: string) => {
     if (slug) {
-      router.push(`/dashboard/${slug}`);
+      router.push(`/home/${slug}`);
     } else {
       router.refresh();
     }

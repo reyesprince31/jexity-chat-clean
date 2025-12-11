@@ -39,14 +39,14 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
 
 export function AppSidebar({ user, ...props }: AppSidebarProps) {
   const params = useParams();
-  const teamSlug = params?.teamSlug as string | undefined;
+  const team = params?.team as string | undefined;
 
   // Generate navigation data with dynamic URLs based on team context
   const navGroups = React.useMemo(() => {
-    const baseDashboardUrl = teamSlug ? `/dashboard/${teamSlug}` : "/dashboard";
-    const settingsBaseUrl = teamSlug
-      ? `/dashboard/${teamSlug}/settings`
-      : "/settings";
+    const baseUrl = team ? `/home/${team}` : "/home";
+    const settingsBaseUrl = team
+      ? `/home/${team}/settings`
+      : "/home/settings";
 
     return [
       {
@@ -54,19 +54,19 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
         items: [
           {
             title: "Dashboard",
-            url: baseDashboardUrl,
+            url: baseUrl,
             icon: LayoutDashboard,
           },
           {
             title: "Inbox",
-            url: teamSlug
-              ? `${baseDashboardUrl}/conversations`
-              : baseDashboardUrl,
+            url: team
+              ? `${baseUrl}/conversations`
+              : baseUrl,
             icon: MessageSquare,
           },
           {
             title: "Contacts",
-            url: teamSlug ? `${baseDashboardUrl}/contacts` : baseDashboardUrl,
+            url: team ? `${baseUrl}/contacts` : baseUrl,
             icon: Users,
           },
         ],
@@ -76,7 +76,7 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
         items: [
           {
             title: "Widget Customizer",
-            url: teamSlug ? `${baseDashboardUrl}/widget` : baseDashboardUrl,
+            url: team ? `${baseUrl}/widget` : baseUrl,
             icon: Palette,
           },
         ],
@@ -86,25 +86,25 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
         items: [
           {
             title: "Website Scraper",
-            url: teamSlug
-              ? `${baseDashboardUrl}/knowledge/websites`
-              : baseDashboardUrl,
+            url: team
+              ? `${baseUrl}/knowledge/websites`
+              : baseUrl,
             icon: Globe2,
             badge: <ProBadge />,
           },
           {
             title: "Documents",
-            url: teamSlug
-              ? `${baseDashboardUrl}/knowledge/documents`
-              : baseDashboardUrl,
+            url: team
+              ? `${baseUrl}/knowledge/documents`
+              : baseUrl,
             icon: FileText,
             badge: <ProBadge />,
           },
           {
             title: "Workflows",
-            url: teamSlug
-              ? `${baseDashboardUrl}/knowledge/workflows`
-              : baseDashboardUrl,
+            url: team
+              ? `${baseUrl}/knowledge/workflows`
+              : baseUrl,
             icon: GitBranch,
             badge: <ProBadge />,
           },
@@ -115,14 +115,14 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
         items: [
           {
             title: "Analytics",
-            url: teamSlug ? `${baseDashboardUrl}/analytics` : baseDashboardUrl,
+            url: team ? `${baseUrl}/analytics` : baseUrl,
             icon: BarChart3,
           },
           {
             title: "Integrations",
-            url: teamSlug
+            url: team
               ? `${settingsBaseUrl}/integrations`
-              : "/settings/integrations",
+              : "/home/settings/integrations",
             icon: Plug,
           },
         ],
@@ -132,7 +132,7 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
         items: [
           {
             title: "Team",
-            url: teamSlug ? `/dashboard/${teamSlug}/team` : "/dashboard",
+            url: team ? `/home/${team}/team` : "/home",
             icon: UserCog,
           },
           {
@@ -143,7 +143,7 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
         ],
       },
     ];
-  }, [teamSlug]);
+  }, [team]);
 
   return (
     <Sidebar collapsible="icon" {...props}>

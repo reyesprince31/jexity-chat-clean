@@ -40,7 +40,7 @@ export function LoginForm({
   const [resendSuccess, setResendSuccess] = useState(false);
 
   // Get redirect param from URL
-  const redirectUrl = searchParams.get("redirect") || "/dashboard";
+  const redirectUrl = searchParams.get("redirect") || "/home";
 
   const {
     register,

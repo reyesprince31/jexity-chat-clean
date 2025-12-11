@@ -85,7 +85,7 @@ export function KnowledgeWorkflows({ teamSlug }: KnowledgeWorkflowsProps) {
                   type="button"
                   className="h-7 px-2 text-[11px]">
                   <Link
-                    href={`/dashboard/${teamSlug}/knowledge/workflows/${workflow.id}`}>
+                    href={`/home/${teamSlug}/knowledge/workflows/${workflow.id}`}>
                     Edit
                   </Link>
                 </Button>
