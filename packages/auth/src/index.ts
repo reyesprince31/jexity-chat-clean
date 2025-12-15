@@ -1,6 +1,6 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
-
+import { logger } from "@repo/logs";
 import { prisma } from "@repo/db";
 import {
   sendPasswordResetEmail,
@@ -10,7 +10,22 @@ import {
 } from "@repo/mail";
 import { admin, organization } from "better-auth/plugins";
 
+const vercelEnv = process.env.VERCEL_ENV;
+const vercelUrl = process.env.VERCEL_URL;
+
+function getBaseURL(): string {
+  if (vercelEnv === "preview" && vercelUrl) {
+    return `https://${vercelUrl}`;
+  }
+
+  return process.env.BETTER_AUTH_URL || "http://localhost:3001";
+}
+
+const baseURL = getBaseURL();
+
 export const auth = betterAuth({
+  baseURL,
+  trustedOrigins: [baseURL],
   database: prismaAdapter(prisma, {
     provider: "postgresql",
   }),
@@ -76,4 +91,9 @@ export const auth = betterAuth({
       },
     }),
   ],
+  	onAPIError: {
+		onError(error, ctx) {
+			logger.error(error, { ctx });
+		},
+	},
 });

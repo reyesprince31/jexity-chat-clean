@@ -332,6 +332,9 @@ importers:
       '@repo/db':
         specifier: workspace:*
         version: link:../db
+      '@repo/logs':
+        specifier: workspace:*
+        version: link:../logs
       '@repo/mail':
         specifier: workspace:*
         version: link:../mail

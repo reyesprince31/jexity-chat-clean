@@ -1,15 +1,8 @@
 {
   "$schema": "https://turborepo.com/schema.json",
   "ui": "tui",
-  "globalEnv": [
-    "PORT",
-    "NODE_ENV",
-    "OPENAI_API_KEY",
-    "SUPABASE_URL",
-    "SUPABASE_SERVICE_ROLE_KEY",
-    "SUPABASE_STORAGE_BUCKET",
-    "CORS_ORIGINS"
-  ],
+  "globalDependencies": ["**/.env.*local"],
+  "globalEnv": ["*"],
   "tasks": {
     "build": {
       "dependsOn": [

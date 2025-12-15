@@ -16,7 +16,8 @@
     "better-auth": "^1.3.34",
     "dotenv": "catalog:",
     "@repo/db": "workspace:*",
-    "@repo/mail": "workspace:*"
+    "@repo/mail": "workspace:*",
+    "@repo/logs": "workspace:*"
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",
