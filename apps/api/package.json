@@ -4,9 +4,9 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "concurrently \"dotenv -e .env -- tsx watch src/index.ts\" \"pnpm dlx inngest-cli@latest dev --no-discovery -u http://localhost:3001/api/inngest\" --names \"api,inngest\" --prefix-colors \"blue,magenta\"",
-    "build": "tsup",
-    "start": "node dist/index.js",
+    "dev": "nitro dev",
+    "build": "nitro build",
+    "start": "node .output/server/index.mjs",
     "lint": "eslint . --max-warnings 0",
     "check-types": "tsc --noEmit",
     "db:migrate": "prisma migrate dev",
@@ -14,8 +14,6 @@
     "db:gen": "prisma generate"
   },
   "dependencies": {
-    "@repo/auth": "workspace:*",
-    "@repo/db": "workspace:*",
     "@fastify/cors": "11.1.0",
     "@fastify/multipart": "9.2.1",
     "@fastify/websocket": "11.2.0",
@@ -23,15 +21,19 @@
     "@langchain/openai": "1.0.0",
     "@langchain/textsplitters": "1.0.0",
     "@prisma/client": "6.18.0",
+    "@repo/auth": "workspace:*",
+    "@repo/db": "workspace:*",
     "@repo/dto": "workspace:*",
     "@supabase/supabase-js": "2.76.1",
     "better-auth": "catalog:",
     "dotenv": "catalog:",
     "dotenv-cli": "catalog:",
     "fastify": "5.2.0",
-    "inngest": "3.44.3",
     "langchain": "1.0.2",
+    "nitro": "3.0.1-alpha.1",
     "pdf-parse": "2.4.5",
+    "rollup": "4.53.4",
+    "workflow": "4.0.1-beta.29",
     "ws": "8.18.0"
   },
   "devDependencies": {
