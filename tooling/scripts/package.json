@@ -1,0 +1,30 @@
+{
+  "name": "@repo/scripts",
+  "version": "0.0.1",
+  "type": "module",
+  "bin": {
+    "cli": "./dist/index.js"
+  },
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "build": "tsup src/index.ts --format esm --dts",
+    "create-user": "dotenv -e ../../apps/web/.env -- tsx src/create-user.ts",
+    "seed": "dotenv -e ../../apps/web/.env -- tsx src/seed.ts",
+    "seed:auth": "dotenv -e ../../apps/web/.env -- tsx src/seed.ts --auth",
+    "seed:chat": "dotenv -e ../../apps/web/.env -- tsx src/seed.ts --chat"
+  },
+  "dependencies": {
+    "@repo/auth": "workspace:*",
+    "@repo/db": "workspace:*",
+    "@repo/logs": "workspace:*",
+    "dotenv-cli": "catalog:",
+    "nanoid": "^5.1.5"
+  },
+  "devDependencies": {
+    "@repo/typescript-config": "workspace:*",
+    "@types/node": "^22.15.32",
+    "tsup": "^8.5.0",
+    "tsx": "^4.19.2",
+    "typescript": "5.9.2"
+  }
+}

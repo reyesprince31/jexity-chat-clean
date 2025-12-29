@@ -5,7 +5,12 @@ import { SourceSchema } from "./source";
 /**
  * Message role enum
  */
-export const MessageRoleSchema = z.enum(["user", "assistant", "system"]);
+export const MessageRoleSchema = z.enum([
+  "user",
+  "assistant",
+  "system",
+  "human_agent",
+]);
 
 export type MessageRole = z.infer<typeof MessageRoleSchema>;
 
@@ -31,6 +36,40 @@ export const MessageWithSourcesSchema = MessageSchema.extend({
 });
 
 export type MessageWithSources = z.infer<typeof MessageWithSourcesSchema>;
+
+/**
+ * Database record shapes for messages and sources.
+ * These are useful on the API side where we work with Prisma rows directly.
+ */
+export interface MessageRecord {
+  id: string;
+  conversation_id: string;
+  role: MessageRole;
+  content: string;
+  created_at: Date;
+}
+
+export interface MessageSourceRecord {
+  id: string;
+  message_id: string;
+  chunk_id: string;
+  similarity_score: number;
+  created_at: Date;
+}
+
+export interface MessageWithSourcesRecord extends MessageRecord {
+  sources: MessageSourceRecord[];
+}
+
+export interface CreateMessageRecordInput {
+  conversation_id: string;
+  role: MessageRole;
+  content: string;
+  sources?: {
+    chunk_id: string;
+    similarity_score: number;
+  }[];
+}
 
 /**
  * Send message request schema

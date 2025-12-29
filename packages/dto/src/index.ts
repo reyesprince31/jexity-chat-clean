@@ -13,3 +13,4 @@ export * from "./message";
 export * from "./source";
 export * from "./stream";
 export * from "./upload";
+export * from "./helpdesk";

@@ -3,6 +3,44 @@
 :root {
   --jexity-assistant-bg-chat-message-user: #000000;
   --jexity-assistant-text-chat-message-user: #ffffff;
+  --jexity-assistant-border-chat-message-user: #000000;
+  --jexity-assistant-bg-chat-header: #ffffff;
+  --jexity-assistant-text-color-chat-header: #000000;
+  --jexity-assistant-border-color-chat-header: #e5e7eb;
+  --jexity-assistant-icon-color-chat-header: #4b5563;
+  --jexity-assistant-bg-chat-header-icon-hover: #f3f4f6;
+  --jexity-assistant-bg-chat-container: #ffffff;
+  --jexity-assistant-bg-chat-message-agent: #f3f4f6;
+  --jexity-assistant-text-chat-message-agent: #111827;
+  --jexity-assistant-border-chat-message-agent: #e5e7eb;
+  --jexity-assistant-bg-citation-pill: #ffffff;
+  --jexity-assistant-text-citation-pill: #374151;
+  --jexity-assistant-border-citation-pill: #d1d5db;
+  --jexity-assistant-bg-citation-pill-hover: #f3f4f6;
+  --jexity-assistant-text-citation-pill-hover: #111827;
+  --jexity-assistant-border-citation-pill-hover: #cbd5f5;
+  --jexity-assistant-bg-citation-pill-muted: #f3f4f6;
+  --jexity-assistant-text-citation-pill-muted: #4b5563;
+  --jexity-assistant-border-citation-pill-muted: #e5e7eb;
+  --jexity-assistant-bg-chat-trigger: #000000;
+  --jexity-assistant-bg-chat-trigger-hover: #0f172a;
+  --jexity-assistant-icon-color-chat-trigger: #ffffff;
+  --jexity-assistant-bg-chat-input: transparent;
+  --jexity-assistant-border-chat-input: #d1d5db;
+  --jexity-assistant-text-chat-input: #0f172a;
+  --jexity-assistant-placeholder-chat-input: #94a3b8;
+  --jexity-assistant-text-chat-input-counter: #94a3b8;
+  --jexity-assistant-bg-chat-send-button: #000000;
+  --jexity-assistant-bg-chat-send-button-hover: #0f172a;
+  --jexity-assistant-bg-chat-send-button-disabled: #d1d5db;
+  --jexity-assistant-icon-color-chat-send-button: #ffffff;
+  --jexity-assistant-icon-color-chat-send-button-disabled: #f8fafc;
+  --jexity-assistant-bg-landing-hero: #111111;
+  --jexity-assistant-text-landing-hero: #ffffff;
+  --jexity-assistant-text-landing-body: #111111;
+  --jexity-assistant-bg-landing-cta: #ffffff;
+  --jexity-assistant-text-landing-cta: #000000;
+  --jexity-assistant-bg-landing-cta-icon: #000000;
 }
 
 /* Custom animations */

@@ -1,36 +1,76 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/create-next-app).
+# Web Application
 
-## Getting Started
+The `apps/web` Next.js project serves the main SaaS experience including marketing, onboarding, admin, and team dashboards. Running this app locally gives access to:
 
-First, run the development server:
+- **Public/SaaS surfaces** under `/` and `/dashboard/*`.
+- **Helpdesk Dashboard** under `/helpdesk`, which surfaces escalated widget conversations for human agents.
+
+## Local Development
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
+pnpm dev --filter web
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Set the following environment variables (e.g., via `.env.local`) so both the SaaS flows and helpdesk websocket feeds can reach the API:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+NEXT_PUBLIC_API_URL=http://localhost:3001
+NEXT_PUBLIC_API_WS_URL=ws://localhost:3001
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load Inter, a custom Google Font.
+## Helpdesk Dashboard
 
-## Learn More
+Next.js dashboard that surfaces escalated widget conversations in real time so human agents can claim, reply, and resolve threads.
 
-To learn more about Next.js, take a look at the following resources:
+### Key Features
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- Live list of escalated conversations pulled from `GET /helpdesk/escalations`
+- Websocket feed (`/ws/helpdesk`) for new escalations, agent claims, messages, and resolutions
+- Claim/resolve workflow that locks the widget and displays system banners
+- Inline transcript viewer with system breadcrumbs (escalated, joined, resolved)
+- Real-time typing indicators for both the customer and the assigned agent after escalation
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Agent Workflow
 
-## Deploy on Vercel
+```mermaid
+sequenceDiagram
+    participant Widget
+    participant API
+    participant Helpdesk
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+    Widget->>API: POST /conversations/:id/messages (escalated)
+    Widget->>API: POST /conversations/:id/typing (customer typing)
+    API-->>Helpdesk: ws helpdesk.conversation_escalated
+    API-->>Helpdesk: ws helpdesk.typing (user)
+    Helpdesk->>API: POST /helpdesk/conversations/:id/agent/join
+    API-->>Widget: ws agent_joined
+    Helpdesk->>API: POST /helpdesk/conversations/:id/messages
+    API-->>Widget: ws agent_message
+    Helpdesk->>API: POST /helpdesk/conversations/:id/typing
+    API-->>Widget: ws typing (human_agent)
+    Helpdesk->>API: POST /helpdesk/conversations/:id/resolve
+    API-->>Helpdesk: ws helpdesk.conversation_resolved
+    API-->>Widget: ws resolved
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+#### Typing Indicators
+
+- The widget sends `POST /conversations/:id/typing` heartbeats once a thread is escalated so the dashboard can show "Customer is typing...".
+- When an agent with the claim drafts a reply, the dashboard POSTs `/helpdesk/conversations/:id/typing`, and the API forwards a `typing` event over `/ws/conversations/:id` so the widget can surface an agent typing badge.
+
+### Files of Interest
+
+- `app/helpdesk/page.tsx` – Shell that loads conversations, opens websockets, and wires state.
+- `components/conversations/ConversationsPanel.tsx` – Sidebar list and filtering.
+- `components/conversations/Conversation.tsx` – Transcript, claim, resolve UI.
+- `lib/api.ts` – Thin client for helpdesk-specific endpoints (fetch, websocket helpers, etc.).
+
+### Testing & Linting
+
+```bash
+pnpm lint --filter web
+pnpm check-types --filter web
+```
+
+End-to-end flows currently rely on the API + widget running locally; start those apps before testing claim/resolve behavior.

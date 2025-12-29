@@ -1,0 +1,31 @@
+{
+  "name": "@repo/db",
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "db:push": "prisma db push",
+    "db:studio": "prisma studio",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:start": "docker-compose up -d",
+    "db:watch": "docker-compose up",
+    "db:stop": "docker-compose stop",
+    "db:down": "docker-compose down"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./client": "./generated/prisma/client.ts"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.15.6",
+    "prisma": "^7.1.0",
+    "tsx": "4.19.2"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "^7.0.0",
+    "@prisma/client": "^7.1.0",
+    "dotenv": "catalog:",
+    "pg": "^8.16.3"
+  }
+}

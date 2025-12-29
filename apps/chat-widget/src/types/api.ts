@@ -37,6 +37,9 @@ export type {
   ErrorEvent,
   EscalatedEvent,
   AgentJoinedEvent,
+  AgentMessageEvent,
+  TypingEvent,
+  ResolvedEvent,
 
   // Upload types
   Document,
@@ -72,4 +75,7 @@ export {
   ErrorEventSchema,
   EscalatedEventSchema,
   AgentJoinedEventSchema,
+  AgentMessageEventSchema,
+  TypingEventSchema,
+  ResolvedEventSchema,
 } from '@repo/dto';

@@ -1,9 +1,7 @@
-import { PrismaClient } from '../generated/prisma/client';
+import { prisma } from "@repo/db";
 import { createEmbedding } from './embeddings';
 import { Document } from '@langchain/core/documents';
 import { VECTOR_SEARCH_CONFIG } from '../config/rag.config';
-
-const prisma = new PrismaClient();
 
 /**
  * LangChain Document with similarity score

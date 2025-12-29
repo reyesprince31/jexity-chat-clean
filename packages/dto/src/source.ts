@@ -42,7 +42,7 @@ export const GetMessageSourcesResponseSchema = z.object({
   success: z.literal(true),
   message: z.object({
     id: z.string().uuid(),
-    role: z.enum(["user", "assistant", "system"]),
+    role: z.enum(["user", "assistant", "system", "human_agent"]),
     content: z.string(),
     sources: z.array(MessageSourceDetailSchema),
   }),

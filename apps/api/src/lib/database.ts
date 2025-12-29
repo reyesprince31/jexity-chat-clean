@@ -1,6 +1,10 @@
-import { PrismaClient } from "../generated/prisma/client";
-
-const prisma = new PrismaClient();
+import { prisma } from "@repo/db";
+import type {
+  CreateMessageRecordInput,
+  MessageRecord,
+  MessageRole,
+  MessageWithSourcesRecord,
+} from "@repo/dto";
 
 // Database types
 export interface Document {
@@ -139,44 +143,27 @@ export interface Conversation {
   is_escalated: boolean;
   escalated_reason: string | null;
   escalated_at: Date | null;
+  is_resolved: boolean;
+  resolved_at: Date | null;
+  resolved_by: string | null;
   agent_name: string | null;
   agent_joined_at: Date | null;
+  organization_id: string | null;
   created_at: Date;
   updated_at: Date;
 }
 
 export interface ConversationWithMessages extends Conversation {
-  messages: Message[];
+  messages: MessageRecord[];
 }
 
-export interface Message {
-  id: string;
-  conversation_id: string;
-  role: string;
-  content: string;
-  created_at: Date;
-}
-
-export interface MessageWithSources extends Message {
-  sources: MessageSource[];
-}
-
-export interface MessageSource {
-  id: string;
-  message_id: string;
-  chunk_id: string;
-  similarity_score: number;
-  created_at: Date;
-}
-
-export interface CreateMessageInput {
-  conversation_id: string;
-  role: 'user' | 'assistant' | 'system';
-  content: string;
-  sources?: {
-    chunk_id: string;
-    similarity_score: number;
-  }[];
+function withMessageRole<T extends { role: string }>(
+  message: T
+): Omit<T, "role"> & { role: MessageRole } {
+  return {
+    ...message,
+    role: message.role as MessageRole,
+  };
 }
 
 /**
@@ -237,13 +224,22 @@ export async function getConversationWithMessages(
       include: {
         messages: {
           orderBy: {
-            created_at: 'asc',
+            created_at: "asc",
           },
         },
       },
     });
 
-    return conversation;
+    if (!conversation) {
+      return null;
+    }
+
+    return {
+      ...conversation,
+      messages: conversation.messages.map((message) =>
+        withMessageRole(message)
+      ),
+    };
   } catch (error) {
     throw new Error(`Failed to get conversation with messages: ${error}`);
   }
@@ -262,7 +258,7 @@ export async function listConversations(
   try {
     const conversations = await prisma.conversations.findMany({
       orderBy: {
-        updated_at: 'desc',
+        updated_at: "desc",
       },
       take: limit,
       skip: offset,
@@ -271,6 +267,47 @@ export async function listConversations(
     return conversations;
   } catch (error) {
     throw new Error(`Failed to list conversations: ${error}`);
+  }
+}
+
+/**
+ * List escalated conversations with their messages for the helpdesk dashboard.
+ * @param limit - Maximum number of conversations to return (default: 50)
+ * @param organizationId - Optional organization ID to filter by
+ */
+export async function listEscalatedConversations(
+  limit: number = 50,
+  organizationId?: string
+): Promise<ConversationWithMessages[]> {
+  try {
+    const conversations = await prisma.conversations.findMany({
+      where: {
+        is_escalated: true,
+        is_resolved: false,
+        ...(organizationId && { organization_id: organizationId }),
+      },
+      orderBy: {
+        escalated_at: "desc",
+      },
+      take: limit,
+      include: {
+        messages: {
+          orderBy: {
+            created_at: "asc",
+          },
+          take: 200,
+        },
+      },
+    });
+
+    return conversations.map((conversation) => ({
+      ...conversation,
+      messages: conversation.messages.map((message) =>
+        withMessageRole(message)
+      ),
+    }));
+  } catch (error) {
+    throw new Error(`Failed to list escalated conversations: ${error}`);
   }
 }
 
@@ -326,6 +363,9 @@ export async function setConversationEscalationStatus(
         escalated_at: isEscalated ? escalatedAt : null,
         agent_name: isEscalated ? undefined : null,
         agent_joined_at: isEscalated ? undefined : null,
+        is_resolved: isEscalated ? undefined : false,
+        resolved_at: isEscalated ? undefined : null,
+        resolved_by: isEscalated ? undefined : null,
         updated_at: new Date(),
       },
     });
@@ -367,6 +407,35 @@ export async function setConversationAgentJoin(
 }
 
 /**
+ * Mark a conversation as resolved by a human agent.
+ */
+export async function setConversationResolutionStatus(
+  id: string,
+  options: {
+    resolvedBy: string;
+    resolvedAt?: Date;
+  }
+): Promise<Conversation> {
+  const { resolvedBy, resolvedAt = new Date() } = options;
+
+  try {
+    const conversation = await prisma.conversations.update({
+      where: { id },
+      data: {
+        is_resolved: true,
+        resolved_at: resolvedAt,
+        resolved_by: resolvedBy,
+        updated_at: new Date(),
+      },
+    });
+
+    return conversation;
+  } catch (error) {
+    throw new Error(`Failed to resolve conversation: ${error}`);
+  }
+}
+
+/**
  * Delete a conversation (cascades to messages and message_sources)
  * @param id - The conversation ID
  * @returns The deleted conversation
@@ -391,8 +460,8 @@ export async function deleteConversation(id: string): Promise<Conversation> {
  * @returns The created message
  */
 export async function createMessage(
-  input: CreateMessageInput
-): Promise<Message> {
+  input: CreateMessageRecordInput
+): Promise<MessageRecord> {
   try {
     const message = await prisma.messages.create({
       data: {
@@ -401,11 +470,11 @@ export async function createMessage(
         content: input.content,
         sources: input.sources
           ? {
-              create: input.sources.map((source) => ({
-                chunk_id: source.chunk_id,
-                similarity_score: source.similarity_score,
-              })),
-            }
+            create: input.sources.map((source) => ({
+              chunk_id: source.chunk_id,
+              similarity_score: source.similarity_score,
+            })),
+          }
           : undefined,
       },
     });
@@ -420,7 +489,7 @@ export async function createMessage(
       },
     });
 
-    return message;
+    return withMessageRole(message);
   } catch (error) {
     throw new Error(`Failed to create message: ${error}`);
   }
@@ -435,19 +504,19 @@ export async function createMessage(
 export async function getMessages(
   conversationId: string,
   limit?: number
-): Promise<Message[]> {
+): Promise<MessageRecord[]> {
   try {
     const messages = await prisma.messages.findMany({
       where: {
         conversation_id: conversationId,
       },
       orderBy: {
-        created_at: 'asc',
+        created_at: "asc",
       },
       take: limit,
     });
 
-    return messages;
+    return messages.map((message) => withMessageRole(message));
   } catch (error) {
     throw new Error(`Failed to get messages: ${error}`);
   }
@@ -460,7 +529,7 @@ export async function getMessages(
  */
 export async function getMessageWithSources(
   messageId: string
-): Promise<MessageWithSources | null> {
+): Promise<MessageWithSourcesRecord | null> {
   try {
     const message = await prisma.messages.findUnique({
       where: {
@@ -484,7 +553,9 @@ export async function getMessageWithSources(
       },
     });
 
-    return message;
+    return message
+      ? (withMessageRole(message) as MessageWithSourcesRecord)
+      : null;
   } catch (error) {
     throw new Error(`Failed to get message with sources: ${error}`);
   }

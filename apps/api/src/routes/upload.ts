@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { createHash } from "crypto";
-import { inngest } from "../inngest/client.js";
+import { start } from "workflow/api";
+import { processDocument } from "../workflows/processDocument.js";
 import { uploadFileToStorage } from "../lib/storage.js";
 import {
   findDocumentByHash,
@@ -126,22 +127,17 @@ export default async function uploadRoutes(
         storage_path: uploadResult.path,
         public_url: uploadResult.publicUrl,
         storage_bucket: uploadResult.bucket,
-        extracted_text_length: 0, // Will be updated by Inngest
-        has_embedding: false, // Will be updated by Inngest
+        extracted_text_length: 0, // Will be updated by workflow
+        has_embedding: false, // Will be updated by workflow
       });
 
       fastify.log.info(`Document record created with ID: ${document.id}`);
 
-      // Trigger Inngest for post-upload processing (embeddings, text extraction)
-      const eventId = await inngest.send({
-        name: "app/document.process",
-        data: {
-          documentId: document.id,
-        },
-      });
+      // Trigger workflow for post-upload processing (embeddings, text extraction)
+      await start(processDocument, [document.id]);
 
       fastify.log.info(
-        `Triggered post-upload processing for document ${document.id}, Event ID: ${eventId.ids[0]}`
+        `Triggered post-upload processing for document ${document.id}`
       );
 
       return reply.code(201).send({
@@ -158,7 +154,6 @@ export default async function uploadRoutes(
           isDuplicate: false,
           uploadedAt: document.created_at.toISOString(),
         },
-        eventId: eventId.ids[0],
       });
     } catch (error) {
       fastify.log.error(error);
